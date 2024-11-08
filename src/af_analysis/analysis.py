@@ -97,7 +97,7 @@ def pdockq(data, verbose=True):
 
     Parameters
     ----------
-    data : AF2Data
+    data : AFData
         object containing the data
     verbose : bool
         print progress bar
@@ -152,7 +152,7 @@ def mpdockq(data, verbose=True):
 
     Parameters
     ----------
-    data : AF2Data
+    data : AFData
         object containing the data
     verbose : bool
         print progress bar
@@ -260,7 +260,7 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
 
     Parameters
     ----------
-    data : AF2Data
+    data : AFData
         object containing the data
     fun : function
         function to apply to the PAE scores
@@ -386,7 +386,7 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
 
     Parameters
     ----------
-    data : AF2Data
+    data : AFData
         object containing the data
     pae_cutoff : float
         cutoff for PAE matrix values, default is 12.0 A

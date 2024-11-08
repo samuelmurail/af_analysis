@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-"""Format library for af2_analysis module."""
+"""Format library for af_analysis module."""
 
 # Autorship information
 __author__ = "Samuel Murail"

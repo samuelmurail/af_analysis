@@ -1,1 +1,1 @@
-"""Format library for af2_analysis.format module."""
+"""Format library for af_analysis.format module."""

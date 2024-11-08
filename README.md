@@ -1,4 +1,4 @@
-[![Documentation Status](https://readthedocs.org/projects/af-analysis/badge/?version=latest)](https://af-analysis.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/af2-analysis/badge/?version=latest)](https://af2-analysis.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/samuelmurail/af_analysis/graph/badge.svg?token=WOJYQKKOP7)](https://codecov.io/gh/samuelmurail/af_analysis)
 [![Build Status](https://dev.azure.com/samuelmurailRPBS/af_analysis/_apis/build/status%2Fsamuelmurail.af_analysis?branchName=main)](https://dev.azure.com/samuelmurailRPBS/af_analysis/_build/latest?definitionId=2&branchName=main)
 [![PyPI - Version](https://img.shields.io/pypi/v/af-analysis)](https://pypi.org/project/af-analysis/)
