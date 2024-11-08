@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'AF2 Analysis'
+project = 'AlphaFold Analysis'
 copyright = '2023, Samuel Murail'
 author = 'Samuel Murail'
 release = '0.1.0'
@@ -21,7 +21,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../../src/'))
 
 # This command doesn't get any sense for me (previous one should be enough)
-sys.path.insert(0, os.path.abspath('../../src/af2_analysis/'))
+sys.path.insert(0, os.path.abspath('../../src/af_analysis/'))
 
 print(sys.path)
 
@@ -61,8 +61,8 @@ html_static_path = ['_static']
 master_doc = 'index'
 
 man_pages = [
-    (master_doc, 'af2_analysis',
-     'AF2-Analysis Documentation',
+    (master_doc, 'af_analysis',
+     'AF-Analysis Documentation',
      [author], 1)
 ]
 
@@ -74,4 +74,4 @@ man_pages = [
 #autodoc_mock_imports = ["numpy", "scipy", "pytest"]
 
 # Exclude unit pages (tests and data) from the documentation
-exclude_patterns = ['af2_analysis.test.*']
+exclude_patterns = ['af_analysis.test.*']

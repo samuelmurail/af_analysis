@@ -1,55 +1,55 @@
-af2\_analysis package
+af\_analysis package
 =====================
 
 
 Submodules
 ----------
 
-af2\_analysis.data module
+af\_analysis.data module
 -------------------------
 
-.. automodule:: af2_analysis.data
+.. automodule:: af_analysis.data
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.plot module
+af\_analysis.plot module
 -------------------------
 
-.. automodule:: af2_analysis.plot
+.. automodule:: af_analysis.plot
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.sequence module
+af\_analysis.sequence module
 -----------------------------
 
-.. automodule:: af2_analysis.sequence
+.. automodule:: af_analysis.sequence
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.docking module
+af\_analysis.docking module
 -----------------------------
 
-.. automodule:: af2_analysis.docking
+.. automodule:: af_analysis.docking
    :members:
    :undoc-members:
    :show-inheritance:
 
 
-af2\_analysis.analysis module
+af\_analysis.analysis module
 -----------------------------
 
-.. automodule:: af2_analysis.analysis
+.. automodule:: af_analysis.analysis
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.format module
+af\_analysis.format module
 -----------------------------
 
 .. toctree::
    :maxdepth: 2
 
-   af2_analysis.format.rst
+   af_analysis.format.rst

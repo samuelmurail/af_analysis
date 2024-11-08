@@ -18,7 +18,7 @@
 <article-id pub-id-type="publisher-id">0</article-id>
 <article-id pub-id-type="doi">N/A</article-id>
 <title-group>
-<article-title>Af2-analysis: a Python package for Alphafold 2
+<article-title>Af-analysis: a Python package for Alphafold
 analysis</article-title>
 </title-group>
 <contrib-group>
@@ -88,13 +88,13 @@ a Creative Commons Attribution 4.0 International License (CC BY
   employs a deep learning-based approach, has demonstrated unprecedented
   accuracy in protein structure prediction, outperforming other
   contemporary methods. In this paper, we present
-  <monospace>af2-analysis</monospace>, a Python package that provides
+  <monospace>af-analysis</monospace>, a Python package that provides
   tools for the analysis of Alphafold 2 results.
-  <monospace>af2-analysis</monospace> has been designed to facilitate
-  the analysis of protein structures predicted by Alphafold 2. It
-  provides functions for the comparison of predicted structures with
-  experimental structures, the visualisation of predicted structures,
-  and the calculation of structural quality metrics.</p>
+  <monospace>af-analysis</monospace> has been designed to facilitate the
+  analysis of protein structures predicted by Alphafold. It provides
+  functions for the comparison of predicted structures with experimental
+  structures, the visualisation of predicted structures, and the
+  calculation of structural quality metrics.</p>
 </sec>
 <sec id="statement-of-need">
   <title>Statement of need</title>
@@ -127,7 +127,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
   AFsample(<xref alt="Wallner, 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad573" ref-type="bibr">Wallner,
   2023</xref>), there are occasions when it is necessary to compute up
   to ten thousand models, and then cluster them in order to select the
-  most appropriate models. The <monospace>Af2-analysis</monospace> has
+  most appropriate models. The <monospace>af-analysis</monospace> has
   been developed with the objective of facilitating the analysis of sets
   of model structures and associated metrics. The library has been
   constructed on the <monospace>pandas</monospace> library and is

@@ -5,15 +5,15 @@ import os
 import numpy as np
 import pytest
 
-import af2_analysis
-from af2_analysis import docking
+import af_analysis
+from af_analysis import docking
 from .data_files import TEST_FILE_PATH
 
 
 def test_cf_1_5_5_relax():
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
 
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
 
     docking.pdockq2_lig(my_data)
 

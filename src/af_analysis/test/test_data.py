@@ -6,17 +6,17 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import af2_analysis
-from af2_analysis import analysis
+import af_analysis
+from af_analysis import analysis
 from .data_files import TEST_FILE_PATH
 
 
 def test_cf_1_5_5_write_read_csv(tmp_path):
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
     my_data.export_csv(os.path.join(tmp_path, "test.csv"))
 
-    my_data2 = af2_analysis.Data(csv=os.path.join(tmp_path, "test.csv"))
+    my_data2 = af_analysis.Data(csv=os.path.join(tmp_path, "test.csv"))
 
     assert my_data2.format == "csv"
     assert len(my_data2.df) == 40
@@ -140,7 +140,7 @@ def test_cf_1_5_5_write_read_csv(tmp_path):
 
 def test_get_plddt():
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
 
     plddt_array = my_data.get_plddt(0)
 
@@ -240,7 +240,7 @@ def test_get_plddt():
 
 def test_get_plddt_dna_ions():
     data_path = os.path.join(TEST_FILE_PATH, "fold_2024_07_01_12_14_prot_dna_zn")
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
 
     plddt_array = my_data.get_plddt(0)
 
@@ -371,12 +371,12 @@ def test_get_plddt_dna_ions():
 
 def test_concat():
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
 
     data_path_2 = os.path.join(TEST_FILE_PATH, "fold_2024_07_01_12_14_prot_dna_zn")
-    my_data_2 = af2_analysis.Data(data_path_2)
+    my_data_2 = af_analysis.Data(data_path_2)
 
-    my_data_all = af2_analysis.data.concat_data([my_data, my_data_2])
+    my_data_all = af_analysis.data.concat_data([my_data, my_data_2])
     assert len(my_data_all.df) == 45
     assert len(my_data_all.chain_length) == 2
     assert len(my_data_all.chains) == 2
@@ -384,7 +384,7 @@ def test_concat():
 
 def test_extract_json():
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
     print(my_data.df.columns)
     new_column = ["plddt", "max_pae", "pae", "ptm", "iptm"]
     assert np.all([not (col in my_data.df.columns) for col in new_column])

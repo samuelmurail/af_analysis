@@ -2,35 +2,35 @@
 
 ## Through Pypi
 
-AF2-Analysis can install easily through Pypi:
+AF-Analysis can install easily through Pypi:
 
 ```
-pip install af2_analysis
+pip install af_analysis
 ```
 
 ## Get sources from the GithubRepo
 
-The sources for AF2-Analysis can be downloaded from the GithubRepo.
+The sources for AF-Analysis can be downloaded from the GithubRepo.
 
 You can either clone the public repository:
 
 ```bash
-$ git clone git@github.com:samuelmurail/af2_analysis.git
+$ git clone git@github.com:samuelmurail/af_analysis.git
 ```
 
 Or download the tarball:
 
 ```bash
-$ curl -OJL https://github.com/samuelmurail/af2_analysis/tarball/master
+$ curl -OJL https://github.com/samuelmurail/af_analysis/tarball/master
 ```
 
-Once you have a copy of the source, switch to the `af2_analysis` directory.
+Once you have a copy of the source, switch to the `af_analysis` directory.
 
 ```bash
-$ cd af2_analysis
+$ cd af_analysis
 ```
 
-##  Install `af2_analysis`
+##  Install `af_analysis`
 
 Once you have a copy of the source and have created a conda environment, you can install it with:
 
@@ -47,15 +47,15 @@ $ pip install pytest
 $ pytest
 ============================ test session starts =============================
 platform linux -- Python 3.10.13, pytest-7.4.3, pluggy-1.3.0
-rootdir: /home/murail/Documents/Code/af2_analysis
+rootdir: /home/murail/Documents/Code/af_analysis
 plugins: anyio-4.0.0
 collected 9 items                                                            
 
-src/af2_analysis/test/test_analysis.py ..                              [ 22%]
-src/af2_analysis/test/test_clustering.py .                             [ 33%]
-src/af2_analysis/test/test_data.py ...                                 [ 66%]
-src/af2_analysis/test/test_docking.py .                                [ 77%]
-src/af2_analysis/test/test_format.py ..                                [100%]
+src/af_analysis/test/test_analysis.py ..                              [ 22%]
+src/af_analysis/test/test_clustering.py .                             [ 33%]
+src/af_analysis/test/test_data.py ...                                 [ 66%]
+src/af_analysis/test/test_docking.py .                                [ 77%]
+src/af_analysis/test/test_format.py ..                                [100%]
 
 ============================== warnings summary ==============================
 ../../../miniforge3/envs/docking/lib/python3.10/site-packages/Bio/Application/__init__.py:40
@@ -69,10 +69,10 @@ src/af2_analysis/test/test_format.py ..                                [100%]
   with the subprocess module.
     warnings.warn(
 
-src/af2_analysis/test/test_clustering.py::test_cf_1_5_5_relax
-src/af2_analysis/test/test_clustering.py::test_cf_1_5_5_relax
-src/af2_analysis/test/test_clustering.py::test_cf_1_5_5_relax
-src/af2_analysis/test/test_clustering.py::test_cf_1_5_5_relax
+src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
+src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
+src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
+src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
   /home/murail/miniforge3/envs/docking/lib/python3.10/site-packages/MDAnalysis/coordinates/base.py:725: UserWarning: Reader has no dt information, set to 1.0 ps
     return self.ts.dt
 

@@ -1,35 +1,35 @@
-af2\_analysis.format package
+af\_analysis.format package
 ============================
 
 
-af2\_analysis.format.af3\_webserver module
+af\_analysis.format.af3\_webserver module
 ------------------------------------------
 
-.. automodule:: af2_analysis.format.af3_webserver
+.. automodule:: af_analysis.format.af3_webserver
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.format.afpulldown module
+af\_analysis.format.afpulldown module
 --------------------------------------
 
-.. automodule:: af2_analysis.format.afpulldown
+.. automodule:: af_analysis.format.afpulldown
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.format.colabfold\_1\_5 module
+af\_analysis.format.colabfold\_1\_5 module
 -------------------------------------------
 
-.. automodule:: af2_analysis.format.colabfold_1_5
+.. automodule:: af_analysis.format.colabfold_1_5
    :members:
    :undoc-members:
    :show-inheritance:
 
-af2\_analysis.format.default module
+af\_analysis.format.default module
 -----------------------------------
 
-.. automodule:: af2_analysis.format.default
+.. automodule:: af_analysis.format.default
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,6 +1,6 @@
-# Contributing to AF2-Analysis
+# Contributing to AF-Analysis
 
-We appreciate your interest in contributing to AF2-Analysis! This guide details how to contribute to the AF2-Analysis project in a way that is efficient for everyone.
+We appreciate your interest in contributing to AF-Analysis! This guide details how to contribute to the AF-Analysis project in a way that is efficient for everyone.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ All contributors are expected to adhere to the project's [Code of Conduct](code_
 1. Fork the project repository and clone your fork:
    
     ```
-    git clone git@github.com:samuelmurail/af2_analysis
+    git clone git@github.com:samuelmurail/af_analysis
     ```
 
 2. Create a new branch for your changes:
@@ -41,7 +41,7 @@ All contributors are expected to adhere to the project's [Code of Conduct](code_
     git push origin name-of-your-branch
     ```
 
-5. Create a pull request from your branch to the AF2-Analysis main branch.
+5. Create a pull request from your branch to the AF-Analysis main branch.
 
 ## How Can I Contribute?
 

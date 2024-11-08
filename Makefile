@@ -38,7 +38,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	black src/af2_analysis
+	black src/af_analysis
 
 test: ## run tests quickly with the default Python
 	pytest
@@ -53,10 +53,10 @@ coverage: ## check code coverage quickly with the default Python
 	$(BROWSER) htmlcov/index.html
 
 simple-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/source/af2_analysis.data.rst
-	rm -f docs/source/af2_analysis.tests.rst
+	rm -f docs/source/af_analysis.data.rst
+	rm -f docs/source/af_analysis.tests.rst
 	rm -f docs/source/modules.rst
-	sphinx-apidoc -o docs/source src/af2_analysis/
+	sphinx-apidoc -o docs/source src/af_analysis/
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 

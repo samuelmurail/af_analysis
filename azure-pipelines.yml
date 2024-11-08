@@ -33,11 +33,11 @@ steps:
     pip install pytest pytest-azurepipelines pytest-cov
     # python setup.py build_ext --inplace
     pip install .
-    pytest --cov-report=xml --cov=af2_analysis
+    pytest --cov-report=xml --cov=af_analysis
   displayName: 'pytest'
 
 - script: |
       curl -Os https://uploader.codecov.io/latest/linux/codecov
       chmod +x codecov
-      ./codecov -f coverage.xml -F af2_analysis
+      ./codecov -f coverage.xml -F af_analysis
   displayName: 'Upload to codecov.io'

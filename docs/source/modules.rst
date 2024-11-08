@@ -1,7 +1,7 @@
-af2_analysis
-============
+af_analysis
+===========
 
 .. toctree::
    :maxdepth: 4
 
-   af2_analysis
+   af_analysis

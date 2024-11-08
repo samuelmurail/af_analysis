@@ -3,10 +3,10 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "af2-analysis"
+name = "af-analysis"
 version = "0.1.0"
 dynamic = ["readme", "dependencies"]
-description = "`AF2 analysis` is a python library allowing analysis of Alphafold results."
+description = "`AF analysis` is a python library allowing analysis of Alphafold results."
 license = {text = " GPL-2.0"}
 requires-python = ">=3.8"
 authors = [
@@ -16,7 +16,7 @@ keywords = [
     "AlphaFold2",
     "ColabFold",
     "Python",
-    "af2_analysis",
+    "af_analysis",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -35,12 +35,12 @@ classifiers = [
 ]
 
 [project.scripts]
-af2_analysis = "af2_analysis.__main__:main"
+af_analysis = "af_analysis.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/samuelmurail/af2_analysis"
+Homepage = "https://github.com/samuelmurail/af_analysis"
 
 [tool.setuptools.dynamic]
-# version = {attr = "af2_analysis.VERSION"}
+# version = {attr = "af_analysis.VERSION"}
 readme = {file = ["README.md"]}
 dependencies = {file = ["requirements.txt"]}

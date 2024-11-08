@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 import random
 
-import af2_analysis
-from af2_analysis import analysis
+import af_analysis
+from af_analysis import analysis
 from .data_files import TEST_FILE_PATH
-from af2_analysis.sequence import parse_a3m
+from af_analysis.sequence import parse_a3m
 
 
 def test_parse_a3m_with_lines():

@@ -7,7 +7,7 @@ Importing Alphafold Data
 Supported formats
 -----------------
 
-The ``af2_analysis`` package supports the following file formats for input data:
+The ``af_analysis`` package supports the following file formats for input data:
 
 - Alphafold 2 [#AF2]_ and 3 [#AF3]_ 
 - ColabFold [#ColabFold]_
@@ -20,8 +20,8 @@ Create the ``Data`` object, giving the path of the directory containing the resu
 
 .. code-block:: python
 
-    import af2_analysis
-    my_data = af2_analysis.Data('MY_AF2_RESULTS_DIR')
+    import af_analysis
+    my_data = af_analysis.Data('MY_AF_RESULTS_DIR')
 
 
 Extracted data are available in the ``df`` attribute of the ``Data`` object as a ``pandas`` dataframe. 
@@ -37,9 +37,9 @@ You can merge multiple ``Data`` objects into a single object using the ``concat_
 
 .. code-block:: python
 
-    my_data1 = af2_analysis.Data('MY_AF2_RESULTS_DIR1')
-    my_data2 = af2_analysis.Data('MY_AF2_RESULTS_DIR2')
-    my_data = af2_analysis.concat_data([my_data1, my_data2])
+    my_data1 = af_analysis.Data('MY_AF_RESULTS_DIR1')
+    my_data2 = af_analysis.Data('MY_AF_RESULTS_DIR2')
+    my_data = af_analysis.concat_data([my_data1, my_data2])
 
 
 Scores
@@ -73,7 +73,7 @@ of the sigmoid.
 
 .. code-block:: python
 
-    from af2_analysis import analysis
+    from af_analysis import analysis
     analysis.pdockq(my_data)
 
 
@@ -82,7 +82,7 @@ For the *multiple* pDockQ or `mpDockQ` [#mpdockq]_ this values are used:
 
 .. code-block:: python
 
-    from af2_analysis import analysis
+    from af_analysis import analysis
     analysis.mpdockq(my_data)
 
 
@@ -107,7 +107,7 @@ Implementation was inspired from `https://gitlab.com/ElofssonLab/afm-benchmark/-
 
 .. code-block:: python
 
-    from af2_analysis import analysis
+    from af_analysis import analysis
     analysis.pdockq2(my_data)
 
 
@@ -134,7 +134,7 @@ Figure from ``github.com/flyark/AFM-LIS``. Implementation was inspired from `htt
 
 .. code-block:: python
 
-    from af2_analysis import analysis
+    from af_analysis import analysis
     import seaborn as sns
     from cmcrameri import cm
     
@@ -157,7 +157,7 @@ Example of LIS heatmap among subunits on a protein-DNA-Zn complex computed with 
 Protein-Protein and Protein-Peptide Docking
 ===========================================
 
-The ``af2_analysis`` package provides a simple interface to score protein-protein and protein-peptide docking using the ``docking`` package.
+The ``af_analysis`` package provides a simple interface to score protein-protein and protein-peptide docking using the ``docking`` package.
 
 .. note::
 
@@ -179,7 +179,7 @@ The ``docking`` package allow to compute:
 
 .. code-block:: python
 
-    from af2_analysis import docking
+    from af_analysis import docking
 
     #extract_pae_pep
     docking.pae_pep(my_data, verbose=False)
@@ -297,7 +297,7 @@ classification is computed to determine the clusters based on the distance thres
 
 .. code-block:: python
 
-    from af2_analysis import clustering
+    from af_analysis import clustering
 
     clustering.hierarchical(my_data.df, threshold=2.5)
 

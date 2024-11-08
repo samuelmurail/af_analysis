@@ -23,16 +23,16 @@ filename = "docs/source/conf.py"
 filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
-filename = "src/af2_analysis/__init__.py"
+filename = "src/af_analysis/__init__.py"
 
 [[tool.bumpversion.files]]
-filename = "src/af2_analysis/analysis.py"
+filename = "src/af_analysis/analysis.py"
 
 [[tool.bumpversion.files]]
-filename = "src/af2_analysis/clustering.py"
+filename = "src/af_analysis/clustering.py"
 
 [[tool.bumpversion.files]]
-filename = "src/af2_analysis/data.py"
+filename = "src/af_analysis/data.py"
 
 [[tool.bumpversion.files]]
-filename = "src/af2_analysis/docking.py"
+filename = "src/af_analysis/docking.py"

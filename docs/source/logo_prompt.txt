@@ -1,9 +1,9 @@
-Create a simple logo for a library called "AF2 Analysis".
+Create a simple logo for a library called "AF Analysis".
 This library is a python library designed to facilitate
 analysis of Alphafold2 results.
 
 The logo should be simple and modern, and should include
-the name of the library ("AF2 Analysis") as well as an
+the name of the library ("AF Analysis") as well as an
 icon or symbol that represents the library's focus on
 structural bioinformatics prediction. 
 

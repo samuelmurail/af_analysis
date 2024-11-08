@@ -4,8 +4,8 @@
 import os
 import pytest
 import numpy as np
-import af2_analysis
-from af2_analysis import clustering
+import af_analysis
+from af_analysis import clustering
 
 from .data_files import TEST_FILE_PATH
 from unittest.mock import patch
@@ -15,7 +15,7 @@ from unittest.mock import patch
 def test_cf_1_5_5_relax_new_clust(mock_show):
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
 
-    my_data = af2_analysis.Data(data_path)
+    my_data = af_analysis.Data(data_path)
 
     assert "cluster" not in my_data.df.columns
     clustering.hierarchical(my_data.df, threshold=0.3, MDS_coors=False, rmsd_scale=True)
