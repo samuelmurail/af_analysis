@@ -198,8 +198,8 @@ def test_boltz1():
 
     query = my_data.df.iloc[0]["query"]
 
-    assert my_data.chain_length[query] == [26, 13, 13, 1]
-    assert my_data.chains[query] == ["A", "B", "C", "D"]
+    assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
+    assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
 
     # There should be 0 relaxed structures
 
@@ -207,7 +207,7 @@ def test_boltz1():
     print(my_data.df.iloc[:, :])
     assert list(my_data.df["model"]) == list(range(2))
     print(my_data.df["iptm"])
-    expected_iptm = [0.692179, 0.687620]
+    expected_iptm = [0.967552, 0.968439]
 
     precision = 0.01
 

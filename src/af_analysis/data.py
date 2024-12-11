@@ -468,7 +468,7 @@ class Data:
         np.array
             pLDDT array.
         """
-        
+
         row = self.df.iloc[index]
 
         if row['format'] in ["AF3_webserver", "csv", "AlphaPulldown"]:
@@ -560,6 +560,8 @@ class Data:
         for file in raw_list:
             if file.endswith(".a3m"):
                 file_list.append(file)
+        
+        
 
         for a3m_file in file_list:
             logger.info(f"Reading MSA file:{a3m_file}")
