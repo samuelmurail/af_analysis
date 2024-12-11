@@ -34,6 +34,7 @@ def test_cf_1_5_5_write_read_csv(tmp_path):
                 "pTM",
                 "ipTM",
                 "ranking_confidence",
+                "format",
                 "pdb",
                 "relaxed_pdb",
                 "json",

@@ -31,6 +31,7 @@ def test_cf_1_5_5_relax():
                 "pTM",
                 "ipTM",
                 "ranking_confidence",
+                "format",
                 "pdb",
                 "relaxed_pdb",
                 "json",

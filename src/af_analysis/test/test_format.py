@@ -29,6 +29,7 @@ def test_cf_1_5_5_relax():
                 "pTM",
                 "ipTM",
                 "ranking_confidence",
+                "format",
                 "pdb",
                 "relaxed_pdb",
                 "json",
@@ -140,7 +141,6 @@ def test_af3_webserver():
 
     assert my_data.format == "AF3_webserver"
     assert len(my_data.df) == 5
-    print(my_data.df.columns)
     assert (
         my_data.df.columns
         == np.array(
@@ -159,6 +159,7 @@ def test_af3_webserver():
                 "num_recycles",
                 "ptm",
                 "ranking_score",
+                "format",
             ]
         )
     ).all()
@@ -175,3 +176,41 @@ def test_af3_webserver():
     assert list(my_data.df["num_recycles"]) == [10] * 5
 
     assert list(my_data.df["iptm"]) == [0.93, 0.94, 0.93, 0.93, 0.93]
+
+
+def test_boltz1():
+    data_path = os.path.join(TEST_FILE_PATH, "boltz_results_prot_dna_ligand")
+
+    my_data = af_analysis.Data(data_path)
+
+    assert my_data.format == "boltz1"
+    assert len(my_data.df) == 2
+    assert (
+        my_data.df.columns
+        == np.array(
+            ['pdb', 'query', 'model', 'plddt', 'json', 'pde', 'confidence_score',
+       'ptm', 'iptm', 'ligand_iptm', 'protein_iptm', 'complex_plddt',
+       'complex_iplddt', 'complex_pde', 'complex_ipde', 'chains_ptm',
+       'pair_chains_iptm', 'format'
+            ]
+        )
+    ).all()
+
+    query = my_data.df.iloc[0]["query"]
+
+    assert my_data.chain_length[query] == [26, 13, 13, 1]
+    assert my_data.chains[query] == ["A", "B", "C", "D"]
+
+    # There should be 0 relaxed structures
+
+    assert "relaxed_pdb" not in my_data.df.columns
+    print(my_data.df.iloc[:, :])
+    assert list(my_data.df["model"]) == list(range(2))
+    print(my_data.df["iptm"])
+    expected_iptm = [0.692179, 0.687620]
+
+    precision = 0.01
+
+    np.testing.assert_allclose(
+        np.array(list(my_data.df["iptm"])), np.array(expected_iptm), atol=precision
+    )

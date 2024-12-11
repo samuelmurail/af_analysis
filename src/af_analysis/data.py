@@ -14,7 +14,7 @@ import json
 import logging
 import ipywidgets as widgets
 
-from .format import colabfold_1_5, af3_webserver, afpulldown, default
+from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, default
 from . import sequence, plot
 from .analysis import get_pae, extract_fields_json
 
@@ -107,7 +107,7 @@ class Data:
             self.format = "csv"
             self.import_csv(csv)
 
-    def read_directory(self, directory, keep_recycles=False, verbose=True):
+    def read_directory(self, directory, keep_recycles=False, verbose=True, format=None):
         """Read a directory.
 
         If the directory contains a `log.txt` file, the format is set to `colabfold_1.5`.
@@ -127,22 +127,37 @@ class Data:
         """
         self.dir = directory
 
-        if os.path.isfile(os.path.join(directory, "log.txt")):
+        if format == "colabfold_1.5" or os.path.isfile(
+            os.path.join(directory, "log.txt")
+        ):
             self.format = "colabfold_1.5"
             self.df = colabfold_1_5.read_log(directory, keep_recycles)
+            self.df["format"] = "colabfold_1.5"
             self.add_pdb(verbose=verbose)
             self.add_json(verbose=verbose)
-        elif os.path.isfile(os.path.join(directory, "terms_of_use.md")):
+        elif format == "AF3_webserver" or os.path.isfile(
+            os.path.join(directory, "terms_of_use.md")
+        ):
             self.format = "AF3_webserver"
             self.df = af3_webserver.read_dir(directory)
-        elif os.path.isfile(os.path.join(directory, "ranking_debug.json")):
+            self.df["format"] = "AF3_webserver"
+        elif format == "AlphaPulldown" or os.path.isfile(
+            os.path.join(directory, "ranking_debug.json")
+        ):
             self.format = "AlphaPulldown"
             self.df = afpulldown.read_dir(directory)
+            self.df["format"] = "AlphaPulldown"
+        elif format == "boltz1" or (
+            os.path.isdir(os.path.join(directory, "predictions"))
+        ):
+            self.format = "boltz1"
+            self.df = boltz1.read_dir(directory)
+            self.df["format"] = "boltz1"
         else:
             self.format = "default"
             self.df = default.read_dir(directory)
+            self.df["format"] = "default"
             self.add_json()
-            # self.extract_json()
 
         self.set_chain_length()
 
@@ -440,14 +455,33 @@ class Data:
         return (fig, ax)
 
     def get_plddt(self, index):
+        """Extract the pLDDT array either from the pdb file or form the 
+        json/plddt files.
+        
+        Parameters
+        ----------
+        index : int
+            Index of the dataframe.
+        
+        Returns
+        -------
+        np.array
+            pLDDT array.
+        """
+        
         row = self.df.iloc[index]
 
-        if self.format in ["AF3_webserver", "csv", "AlphaPulldown"]:
+        if row['format'] in ["AF3_webserver", "csv", "AlphaPulldown"]:
             model = pdb_numpy.Coor(row["pdb"])
             plddt_array = model.models[0].beta[
                 np.isin(model.models[0].name, plddt_main_atom_list)
             ]
             return plddt_array
+        
+        if row['format'] in ["boltz1"]:
+            data_npz = np.load(row["plddt"])
+            plddt_array = data_npz['plddt']
+            return plddt_array * 100
 
         if row["json"] is None:
             return None

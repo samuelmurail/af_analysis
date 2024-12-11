@@ -18,7 +18,7 @@ import logging
 import sys
 
 # Logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def show_log():
