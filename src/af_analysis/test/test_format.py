@@ -185,6 +185,7 @@ def test_boltz1():
 
     assert my_data.format == "boltz1"
     assert len(my_data.df) == 2
+    print(my_data.df.columns)
     assert (
         my_data.df.columns
         == np.array(
@@ -195,7 +196,7 @@ def test_boltz1():
                 "plddt",
                 "json",
                 "pde",
-                "ranking_confidence",
+                "confidence_score",
                 "pTM",
                 "ipTM",
                 "ligand_iptm",
@@ -206,6 +207,7 @@ def test_boltz1():
                 "complex_ipde",
                 "chains_ptm",
                 "pair_chains_iptm",
+                "ranking_confidence",
                 "format",
             ]
         )
