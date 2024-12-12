@@ -455,14 +455,14 @@ class Data:
         return (fig, ax)
 
     def get_plddt(self, index):
-        """Extract the pLDDT array either from the pdb file or form the 
+        """Extract the pLDDT array either from the pdb file or form the
         json/plddt files.
-        
+
         Parameters
         ----------
         index : int
             Index of the dataframe.
-        
+
         Returns
         -------
         np.array
@@ -471,16 +471,16 @@ class Data:
 
         row = self.df.iloc[index]
 
-        if row['format'] in ["AF3_webserver", "csv", "AlphaPulldown"]:
+        if row["format"] in ["AF3_webserver", "csv", "AlphaPulldown"]:
             model = pdb_numpy.Coor(row["pdb"])
             plddt_array = model.models[0].beta[
                 np.isin(model.models[0].name, plddt_main_atom_list)
             ]
             return plddt_array
-        
-        if row['format'] in ["boltz1"]:
+
+        if row["format"] in ["boltz1"]:
             data_npz = np.load(row["plddt"])
-            plddt_array = data_npz['plddt']
+            plddt_array = data_npz["plddt"]
             return plddt_array * 100
 
         if row["json"] is None:
@@ -560,8 +560,6 @@ class Data:
         for file in raw_list:
             if file.endswith(".a3m"):
                 file_list.append(file)
-        
-        
 
         for a3m_file in file_list:
             logger.info(f"Reading MSA file:{a3m_file}")

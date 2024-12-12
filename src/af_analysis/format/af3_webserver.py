@@ -53,6 +53,15 @@ def read_dir(directory):
 
     log_pd = pd.DataFrame(log_dict_list)
 
+    # Update column names
+    log_pd = log_pd.rename(
+        columns={
+            "ranking_score": "ranking_confidence",
+            "ptm": "pTM",
+            "iptm": "ipTM",
+        }
+    )
+
     # To ensure that tests are consistent across different systems
     # we sort the dataframe by pdb
     log_pd = log_pd.sort_values(by=["pdb"]).reset_index(drop=True)

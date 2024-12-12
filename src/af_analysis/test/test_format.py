@@ -155,10 +155,10 @@ def test_af3_webserver():
                 "chain_ptm",
                 "fraction_disordered",
                 "has_clash",
-                "iptm",
+                "ipTM",
                 "num_recycles",
-                "ptm",
-                "ranking_score",
+                "pTM",
+                "ranking_confidence",
                 "format",
             ]
         )
@@ -175,7 +175,7 @@ def test_af3_webserver():
     print(my_data.df.iloc[:, :])
     assert list(my_data.df["num_recycles"]) == [10] * 5
 
-    assert list(my_data.df["iptm"]) == [0.93, 0.94, 0.93, 0.93, 0.93]
+    assert list(my_data.df["ipTM"]) == [0.93, 0.94, 0.93, 0.93, 0.93]
 
 
 def test_boltz1():
@@ -188,10 +188,25 @@ def test_boltz1():
     assert (
         my_data.df.columns
         == np.array(
-            ['pdb', 'query', 'model', 'plddt', 'json', 'pde', 'confidence_score',
-       'ptm', 'iptm', 'ligand_iptm', 'protein_iptm', 'complex_plddt',
-       'complex_iplddt', 'complex_pde', 'complex_ipde', 'chains_ptm',
-       'pair_chains_iptm', 'format'
+            [
+                "pdb",
+                "query",
+                "model",
+                "plddt",
+                "json",
+                "pde",
+                "ranking_confidence",
+                "pTM",
+                "ipTM",
+                "ligand_iptm",
+                "protein_iptm",
+                "complex_plddt",
+                "complex_iplddt",
+                "complex_pde",
+                "complex_ipde",
+                "chains_ptm",
+                "pair_chains_iptm",
+                "format",
             ]
         )
     ).all()
@@ -206,11 +221,11 @@ def test_boltz1():
     assert "relaxed_pdb" not in my_data.df.columns
     print(my_data.df.iloc[:, :])
     assert list(my_data.df["model"]) == list(range(2))
-    print(my_data.df["iptm"])
+    print(my_data.df["ipTM"])
     expected_iptm = [0.967552, 0.968439]
 
     precision = 0.01
 
     np.testing.assert_allclose(
-        np.array(list(my_data.df["iptm"])), np.array(expected_iptm), atol=precision
+        np.array(list(my_data.df["ipTM"])), np.array(expected_iptm), atol=precision
     )

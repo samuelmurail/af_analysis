@@ -32,13 +32,14 @@ def get_pae(json_file):
 
     if json_file is None:
         return None
-    
+
     if json_file.endswith(".json"):
         return extract_pae_json(json_file)
     elif json_file.endswith(".npz"):
         return extract_pae_npz(json_file)
     else:
         raise ValueError("Unknown file format.")
+
 
 def extract_pae_json(json_file):
     """Get the PAE matrix from a json file.
@@ -47,7 +48,7 @@ def extract_pae_json(json_file):
     ----------
     json_file : str
         Path to the json file.
-    
+
     Returns
     -------
     np.array
@@ -74,7 +75,7 @@ def extract_pae_npz(npz_file):
     ----------
     npz_file : str
         Path to the npz file.
-    
+
     Returns
     -------
     np.array
@@ -82,9 +83,10 @@ def extract_pae_npz(npz_file):
     """
 
     data_npz = np.load(npz_file)
-    pae_array = data_npz['pae']
+    pae_array = data_npz["pae"]
 
     return pae_array
+
 
 def extract_fields_json(json_file, fields):
     """Get the PAE matrix from a json file.
@@ -263,8 +265,10 @@ def pdockq2(data, verbose=True):
 
     disable = False if verbose else True
 
-    if 'json' not in data.df.columns:
-        raise ValueError("No json column found in the dataframe. pae scores are required to compute pdockq2.")
+    if "json" not in data.df.columns:
+        raise ValueError(
+            "No json column found in the dataframe. pae scores are required to compute pdockq2."
+        )
 
     for pdb, json_path in tqdm(
         zip(data.df["pdb"], data.df["json"]), total=len(data.df["pdb"]), disable=disable
@@ -318,8 +322,10 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
 
     disable = False if verbose else True
 
-    if 'json' not in data.df.columns:
-        raise ValueError("No json column found in the dataframe. pae scores are required to compute pdockq2.")
+    if "json" not in data.df.columns:
+        raise ValueError(
+            "No json column found in the dataframe. pae scores are required to compute pdockq2."
+        )
 
     for query, json_path in tqdm(
         zip(data.df["query"], data.df["json"]),
