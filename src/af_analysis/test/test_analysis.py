@@ -277,3 +277,96 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
+
+
+def test_af3_boltz1():
+    data_path = os.path.join(TEST_FILE_PATH, "boltz_results_prot_dna_ligand")
+
+    my_data = af_analysis.Data(data_path)
+
+    assert my_data.format == "boltz1"
+
+    analysis.pdockq(my_data)
+
+    expected_pdockq = [0.018281, 0.018281]
+
+    # print([round(i, 6) for i in my_data.df["pdockq"]])
+    precision = 0.001
+    assert np.all(
+        [
+            my_data.df.iloc[i]["pdockq"] == pytest.approx(expected_pdockq[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.mpdockq(my_data)
+    expected_mpdockq = [0.262, 0.262]
+
+    # print([round(i, 6) for i in my_data.df["mpdockq"]])
+    precision = 0.001
+    assert np.all(
+        [
+            my_data.df.iloc[i]["mpdockq"]
+            == pytest.approx(expected_mpdockq[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.pdockq2(my_data)
+    # print([round(i, 6) for i in my_data.df["pdockq2_A"]])
+    expected_pdockq2 = [0.007527, 0.007527]
+    assert np.all(
+        [
+            my_data.df.iloc[i]["pdockq2_A"]
+            == pytest.approx(expected_pdockq2[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    # print([round(i, 6) for i in my_data.df["pdockq2_D"]])
+    expected_pdockq2 = [0.007526, 0.007526]
+    assert np.all(
+        [
+            my_data.df.iloc[i]["pdockq2_D"]
+            == pytest.approx(expected_pdockq2[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.LIS_matrix(my_data)
+    expected_LIS_0 = [
+        [0.781716, 0.77767, 0.78187, 0.774672, 0.833509],
+        [0.72203, 0.769744, 0.767006, 0.767054, 0.753537],
+        [0.711757, 0.757241, 0.857382, 0.654726, 0.741389],
+        [0.707814, 0.750932, 0.662734, 0.854446, 0.770577],
+        [0.280363, 0.323815, 0.455396, 0.289744, 0.978317],
+    ]
+    for j in range(len(my_data.df["LIS"][0])):
+        print([round(i, 6) for i in my_data.df["LIS"][0][j]])
+
+
+    np.testing.assert_allclose(
+        np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
+    )
+
+    analysis.inter_chain_pae(my_data)
+
+    expected_PAE_A_B = [2.893401, 2.936897]
+    # print([round(i, 6) for i in my_data.df["PAE_A_B"]])
+    assert np.all(
+        [
+            my_data.df.iloc[i]["PAE_A_B"]
+            == pytest.approx(expected_PAE_A_B[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    # print([round(i, 6) for i in my_data.df["PAE_A_E"]])
+    expected_PAE_A_E = [2.181038, 2.197674]
+    assert np.all(
+        [
+            my_data.df.iloc[i]["PAE_A_E"]
+            == pytest.approx(expected_PAE_A_E[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )

@@ -333,13 +333,11 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
         disable=disable,
     ):
         if json_path is not None and json_path is not np.nan:
-            with open(json_path) as f:
-                local_json = json.load(f)
-            pae_array = np.array(local_json["pae"])
+
+            pae_array = get_pae(json_path)
 
             chain_lens = data.chain_length[query]
             chain_len_sums = np.cumsum([0] + chain_lens)
-            # pae_chain_array = np.empty((len(chain_lens), len(chain_lens)))
             chain_ids = data.chains[query]
 
             pae_dict = {}
