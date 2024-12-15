@@ -270,30 +270,27 @@ class Data:
         -------
         None
         """
-
+        
         index_list = []
         json_list = []
-
-        for i, row in self.df.iterrows():
-            if row.json is not None:
-                index_list.append(i)
-
-                with open(row.json, "r") as f:
+        for index, json_path in zip(self.df.index, self.df['json']):
+            if json_path is not None:
+                with open(json_path, "r") as f:
                     data = json.load(f)
-
                 json_list.append(data)
+                index_list.append(index)
 
         new_column = {}
-        for keys in json_list[0].keys():
-            new_column[keys] = []
+        for key in json_list[0].keys():
+            new_column[key] = []
         for data in json_list:
-            for keys in data.keys():
-                new_column[keys].append(data[keys])
+            for key in data.keys():
+                new_column[key].append(data[key])
 
-        for keys in new_column.keys():
-            self.df[keys] = None
-            new_col = pd.Series(new_column[keys], index=index_list)
-            self.df[keys].iloc[index_list] = new_col
+        for key in new_column.keys():
+            self.df.loc[:,key] = None
+            self.df.loc[index_list, key] = pd.Series(new_column[key], index=index_list)
+
 
     def extract_fields(self, fields, disable=False):
         """Extract json files to the dataframe.
