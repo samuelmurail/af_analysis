@@ -98,11 +98,11 @@ class Data:
 
     """
 
-    def __init__(self, directory=None, csv=None, verbose=True):
+    def __init__(self, directory=None, csv=None, verbose=True, format=None):
         """ """
 
         if directory is not None:
-            self.read_directory(directory, verbose=verbose)
+            self.read_directory(directory, verbose=verbose, format=format)
         elif csv is not None:
             self.format = "csv"
             self.import_csv(csv)

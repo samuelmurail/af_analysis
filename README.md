@@ -68,8 +68,8 @@ pip install .
 
 ## Documentation
 
-The full documentation is available at [ReadTheDocs](https://af-analysis.readthedocs.io/en/latest/).
-
+The complete documentation is available at [ReadTheDocs](https://af-analysis.readthedocs.io/en/latest/).
+A notebook showing the basic usage of the `af_analysis` library can be found [here](https://af-analysis.readthedocs.io/en/latest/notebooks/basic_example.html).
 
 ## Usage
 
