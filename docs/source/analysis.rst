@@ -48,14 +48,18 @@ Scores
 pDockq
 ------
 
-pDockQ (Predicted DockQ) [#pdockq]_ is a metric that predicts the quality of protein-protein interactions in dimer models.  It uses a sigmoid function that considers the number of contacts in the interface (:math:`log(number \: of \: interface \: contacts)`) and the average pLDDT (predicted lDDT score) of the interface residues (:math:`\overline{plDDT_{interface}}`).
+pDockQ (Predicted DockQ) [#pdockq]_ is a metric that predicts the quality of protein-protein interactions in dimer models.
+It uses a sigmoid function that considers the number of contacts in the interface
+(:math:`log(number \: of \: interface \: contacts)`) and the average pLDDT (predicted lDDT score) of the
+interface residues (:math:`\overline{plDDT_{interface}}`).
 
 
 
 Implementation was inspired from `https://gitlab.com/ElofssonLab/FoldDock/-/blob/main/src/pdockq.py <https://gitlab.com/ElofssonLab/FoldDock/-/blob/main/src/pdockq.py>`_.
 
 
-The ``pdockq()`` function calculates the pDockq [#pdockq]_ score for each model in the dataframe. The pDockq score ranges from 0 to 1, with higher scores indicating better model quality.
+The ``pdockq()`` function calculates the pDockq [#pdockq]_ score for each model in the dataframe.
+The pDockq score ranges from 0 to 1, with higher scores indicating better model quality.
 
 .. math::
     pDockQ = \frac{L}{1 + e^{-k (x-x_{0})}} + b
@@ -89,7 +93,11 @@ For the *multiple* pDockQ or `mpDockQ` [#mpdockq]_ this values are used:
 pDockq2
 -------
 
-pDockQ2, or Predicted DockQ version 2 [#pdockq2]_, is a metric used to estimate the quality of individual interfaces in multimeric protein complex models. Unlike the original pDockQ, pDockQ2 incorporates AlphaFold-Multimer's Predicted Aligned Error (PAE) in its calculation, making it more sensitive to large, incorrect interfaces that might have high confidence scores based solely on interface size and pLDDT. pDockQ2 scores range from 0 to 1, with higher scores indicating better interface quality.
+pDockQ2, or Predicted DockQ version 2 [#pdockq2]_, is a metric used to estimate the quality of individual interfaces in
+multimeric protein complex models. Unlike the original pDockQ, pDockQ2 incorporates AlphaFold-Multimer's Predicted
+Aligned Error (PAE) in its calculation, making it more sensitive to large, incorrect interfaces that might have high
+confidence scores based solely on interface size and pLDDT. pDockQ2 scores range from 0 to 1, with higher scores
+indicating better interface quality.
 
 .. math::
     pDockQ_2 = \frac{L}{1 + exp [-k*(X_i-X_0)]} + b
@@ -114,14 +122,25 @@ Implementation was inspired from `https://gitlab.com/ElofssonLab/afm-benchmark/-
 LIS Score
 ---------
 
-The Local Interaction Score (LIS) [#LIS]_ is a metric specifically designed to predict the likelihood of direct protein-protein interactions (PPIs) using output data from AlphaFold-Multimer [#AF2M].
-Unlike metrics like interface pTM (ipTM), which measures the overall structural accuracy of a predicted complex, LIS focuses on areas within the predicted interface that have low Predicted Aligned Error (PAE) values. These low PAE values, often visualized as blue regions in AlphaFold output maps, represent areas of high confidence in the interaction prediction
+The Local Interaction Score (LIS) [#LIS]_ is a metric specifically designed to predict the likelihood of direct
+protein-protein interactions (PPIs) using output data from AlphaFold-Multimer [#AF2M]_.
+Unlike metrics like interface pTM (ipTM), which measures the overall structural accuracy of a predicted complex,
+LIS focuses on areas within the predicted interface that have low Predicted Aligned Error (PAE) values. These low
+PAE values, often visualized as blue regions in AlphaFold output maps, represent areas of high confidence in the
+interaction prediction
 
 Here's how LIS is calculated:
 
-* Local Interaction Areas (LIAs) are identified: Regions of the predicted interface with PAE values below a defined cutoff (typically 12 Å) are designated as LIAs.
-* PAE values within LIAs are inverted and averaged:  PAE values within LIAs are transformed to a 0-1 scale, with higher numbers indicating stronger interaction likelihood. These values are then averaged across the interface to produce the LIS score.
-* The LIS method is particularly adept at detecting PPIs characterized by localized and flexible interactions, which may be missed by ipTM-based evaluations. This is particularly relevant for interactions involving intrinsically disordered regions (IDRs), which are often missed by structure-based metrics.
+* Local Interaction Areas (LIAs) are identified: Regions of the predicted interface with PAE values below a defined
+    cutoff (typically 12 Å) are designated as LIAs.
+
+* PAE values within LIAs are inverted and averaged:  PAE values within LIAs are transformed to a 0-1 scale, with
+    higher numbers indicating stronger interaction likelihood. These values are then averaged across the interface to
+    produce the LIS score.
+
+* The LIS method is particularly adept at detecting PPIs characterized by localized and flexible interactions, which
+    may be missed by ipTM-based evaluations. This is particularly relevant for interactions involving intrinsically
+    disordered regions (IDRs), which are often missed by structure-based metrics.
 
 .. image:: _static/figure_LIS.png
   :width: 600
@@ -157,7 +176,8 @@ Example of LIS heatmap among subunits on a protein-DNA-Zn complex computed with 
 Protein-Protein and Protein-Peptide Docking
 ===========================================
 
-The ``af_analysis`` package provides a simple interface to score protein-protein and protein-peptide docking using the ``docking`` package.
+The ``af_analysis`` package provides a simple interface to score protein-protein and protein-peptide docking
+using the ``docking`` package.
 
 .. note::
 
@@ -165,7 +185,8 @@ The ``af_analysis`` package provides a simple interface to score protein-protein
 
 The ``docking`` package allow to compute:
 
-* ``pae_pep()``: average interface of Predicted Aligned Error (PAE) between the receptor chain(s) and the ligand/peptide chain (last one). Add the columns ``PAE_pep_red`` and ``PAE_rec_pep`` in the dataframe.
+* ``pae_pep()``: average interface of Predicted Aligned Error (PAE) between the receptor chain(s) and the
+    ligand/peptide chain (last one). Add the columns ``PAE_pep_red`` and ``PAE_rec_pep`` in the dataframe.
 
 .. image:: _static/PAE_ligand.png
   :width: 400
@@ -196,7 +217,9 @@ Plots
 Interactive Visualization
 -------------------------
 
-At first approach the user can visualize the pLDDT, PAE matrix and the model scores. The ``show_info()`` function displays the scores of the models, as well as the pLDDT plot and PAE matrix in a interactive way.
+At first approach the user can visualize the pLDDT, PAE matrix and the model scores.
+The ``show_info()`` function displays the scores of the models, as well as the pLDDT
+plot and PAE matrix in a interactive way.
 
 .. image:: _static/show_info.gif
   :width: 600
@@ -205,7 +228,9 @@ At first approach the user can visualize the pLDDT, PAE matrix and the model sco
 MSA Plot
 --------
 
-The ``plot_msa()`` function generates a multiple sequence alignment (MSA) plot for the predicted models. The MSA plot shows the sequence conservation of the predicted models, highlighting regions of high and low conservation.
+The ``plot_msa()`` function generates a multiple sequence alignment (MSA) plot for the
+predicted models. The MSA plot shows the sequence conservation of the predicted models,
+highlighting regions of high and low conservation.
 
 .. code-block:: python
 
@@ -218,7 +243,9 @@ The ``plot_msa()`` function generates a multiple sequence alignment (MSA) plot f
 pLDDT Plot
 ----------
 
-The ``plot_plddt()`` function generates a pLDDT plot for the predicted models. The pLDDT plot shows the per-residue local distance difference test (pLDDT) score for each residue in the predicted models, highlighting regions of high and low model confidence.
+The ``plot_plddt()`` function generates a pLDDT plot for the predicted models. The pLDDT
+plot shows the per-residue local distance difference test (pLDDT) score for each residue
+in the predicted models, highlighting regions of high and low model confidence.
 
 * you can plot all models plddt at once:
 
@@ -244,7 +271,9 @@ The ``plot_plddt()`` function generates a pLDDT plot for the predicted models. T
 PAE Plot
 --------
 
-The ``plot_pae()`` function generates a predicted aligned error (PAE) plot for the predicted models. The PAE plot shows the per-residue predicted aligned error for each residue in the predicted models, highlighting regions of high and low model accuracy.
+The ``plot_pae()`` function generates a predicted aligned error (PAE) plot for the
+predicted models. The PAE plot shows the per-residue predicted aligned error for each
+residue in the predicted models, highlighting regions of high and low model accuracy.
 
 .. code-block:: python
 
@@ -260,7 +289,9 @@ The ``plot_pae()`` function generates a predicted aligned error (PAE) plot for t
 3D Structure Visualization
 ==========================
 
-The ``show_3d()`` function displays the 3D structure of the predicted models using the ``nglview`` package. The 3D structure visualization allows users to interactively explore the predicted models and compare them with the experimental structure.
+The ``show_3d()`` function displays the 3D structure of the predicted models using the ``nglview``
+package. The 3D structure visualization allows users to interactively explore the predicted models
+and compare them with the experimental structure.
 
 .. code-block:: python
     
@@ -370,4 +401,3 @@ References
 .. [#pdockq2] `Zhu et al. Bioinformatics (2023) doi: 10.1093/bioinformatics/btad424 <https://academic.oup.com/bioinformatics/article/39/7/btad424/7219714>`_
 .. [#LIS] `Kim et al. bioRxiv (2024) doi: 10.1101/2024.02.19.580970 <https://www.biorxiv.org/content/10.1101/2024.02.19.580970v1>`_
 .. [#AF2M] `Evans et al. bioRxiv (2021) doi: 10.1101/2021.10.04.463034 <https://www.biorxiv.org/content/10.1101/2021.10.04.463034v2>`_
-.. [#RMS] `Basu et al. PLOS ONE. 2016 Aug 25;11(8). <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0161879>`_
