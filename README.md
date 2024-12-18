@@ -10,7 +10,7 @@
 
 # About Alphafold Analysis
 
-<img src="https://raw.githubusercontent.com/samuelmurail/af_analysis/master/docs/source/logo.jpeg" alt="AF Analysis Logo" width="200" style="display: block; margin: auto;"/>
+<img src="https://raw.githubusercontent.com/samuelmurail/af_analysis/master/docs/source/logo.jpeg" alt="AF Analysis Logo" width="300" style="display: block; margin: auto;"/>
 
 
 `af-analysis` is a python package for the analysis of AlphaFold protein structure predictions.
