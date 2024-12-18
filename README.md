@@ -5,6 +5,8 @@
 [![Downloads](https://static.pepy.tech/badge/af2-analysis)](https://pepy.tech/project/af2-analysis)
 [![status](https://joss.theoj.org/papers/0c359e32dc2f159688848361530239f5/status.svg)](https://joss.theoj.org/papers/0c359e32dc2f159688848361530239f5)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+[![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/samuelmurail/af_analysis/blob/main/basic_example_colab.ipynb)
+
 
 # About Alphafold Analysis
 
@@ -69,7 +71,12 @@ pip install .
 ## Documentation
 
 The complete documentation is available at [ReadTheDocs](https://af-analysis.readthedocs.io/en/latest/).
-A notebook showing the basic usage of the `af_analysis` library can be found [here](https://af-analysis.readthedocs.io/en/latest/notebooks/basic_example.html).
+
+* A notebook showing the basic usage of the `af_analysis` library can be found [here](https://af-analysis.readthedocs.io/en/latest/notebooks/basic_example.html).
+
+* Alternatively you can test is directly on Google colab:
+
+    [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/samuelmurail/af_analysis/blob/main/basic_example_colab.ipynb)
 
 ## Usage
 
