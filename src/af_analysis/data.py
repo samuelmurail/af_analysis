@@ -14,7 +14,7 @@ import json
 import logging
 import ipywidgets as widgets
 
-from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, default
+from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, chai1, default
 from . import sequence, plot
 from .analysis import get_pae, extract_fields_json
 
@@ -153,6 +153,11 @@ class Data:
             self.format = "boltz1"
             self.df = boltz1.read_dir(directory)
             self.df["format"] = "boltz1"
+        elif format == "chai1"  or os.path.isfile(
+            os.path.join(directory, "msa_depth.pdf")):
+            self.format = "chai1"
+            self.df = chai1.read_dir(directory)
+            self.df["format"] = "chai1"
         else:
             self.format = "default"
             self.df = default.read_dir(directory)
