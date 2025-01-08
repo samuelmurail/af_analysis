@@ -344,7 +344,6 @@ def test_af3_boltz1():
     for j in range(len(my_data.df["LIS"][0])):
         print([round(i, 6) for i in my_data.df["LIS"][0][j]])
 
-
     np.testing.assert_allclose(
         np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
     )

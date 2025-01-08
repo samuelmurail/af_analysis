@@ -333,7 +333,6 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
         disable=disable,
     ):
         if json_path is not None and json_path is not np.nan:
-
             pae_array = get_pae(json_path)
 
             chain_lens = data.chain_length[query]

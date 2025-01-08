@@ -75,12 +75,12 @@ def read_dir(directory):
     log_pd = log_pd.rename(
         columns={
             # https://github.com/jwohlwend/boltz/issues/73
-            #"confidence_score": "ranking_confidence",
+            # "confidence_score": "ranking_confidence",
             "ptm": "pTM",
             "iptm": "ipTM",
         }
     )
-    log_pd["ranking_confidence"] = 0.2*log_pd["pTM"] + 0.8*log_pd["ipTM"]
+    log_pd["ranking_confidence"] = 0.2 * log_pd["pTM"] + 0.8 * log_pd["ipTM"]
 
     # To ensure that tests are consistent across different systems
     # we sort the dataframe by pdb
