@@ -39,15 +39,15 @@ analysis</article-title>
 </contrib>
 <aff id="aff-1">
 <institution-wrap>
-<institution>Université Paris Cité, Inserm U1133, CNRS UMR 8251, Paris,
+<institution>Université Paris Cité, Inserm, CNRS, BFA, F-75013 Paris,
 France</institution>
 </institution-wrap>
 </aff>
 </contrib-group>
-<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2024-07-11">
-<day>11</day>
-<month>7</month>
-<year>2024</year>
+<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2025-01-08">
+<day>8</day>
+<month>1</month>
+<year>2025</year>
 </pub-date>
 <volume>¿VOL?</volume>
 <issue>¿ISSUE?</issue>
@@ -75,74 +75,95 @@ a Creative Commons Attribution 4.0 International License (CC BY
 <body>
 <sec id="summary">
   <title>Summary</title>
-  <p>The publication of AlphaFold
-  2(<xref alt="Jumper et al., 2021" rid="ref-jumper_highly_2021" ref-type="bibr">Jumper
+  <p>The publication of AlphaFold 2
+  (<xref alt="Jumper et al., 2021" rid="ref-jumper_highly_2021" ref-type="bibr">Jumper
   et al., 2021</xref>) has significantly advanced the field of protein
-  structure prediction. The Prediction of protein structures has long
-  constitued a central challenge in the field of structural
-  bioinformatics, with the ultimate objective of elucidating the
-  relationship between protein structure and function. The accurate
-  prediction of protein structures is of great importance for a number
-  of applications, including drug discovery, protein engineering, and
-  the investigation of protein-protein interactions. AlphaFold, which
-  employs a deep learning-based approach, has demonstrated unprecedented
-  accuracy in protein structure prediction, outperforming other
-  contemporary methods. In this paper, we present
+  structure prediction. The prediction of protein structures has long
+  been a central challenge in the field of structural bioinformatics,
+  with the ultimate goal of elucidating the relationship between protein
+  structure and function. Accurate prediction of protein structure is
+  essential for a number of applications, including drug discovery,
+  protein engineering, and the study of protein-protein interactions.
+  AlphaFold, which employs a deep learning-based approach, has
+  demonstrated unprecedented accuracy in protein structure prediction,
+  outperforming other contemporary methods. In this paper, we present
   <monospace>af-analysis</monospace>, a Python package that provides
-  tools for the analysis of Alphafold results.
-  <monospace>af-analysis</monospace> has been designed to facilitate the
-  analysis of protein structures predicted by Alphafold. It provides
-  functions for the comparison of predicted structures with experimental
-  structures, the visualisation of predicted structures, and the
-  calculation of structural quality metrics.</p>
+  tools for the analysis of AlphaFold results. The
+  <monospace>af-analysis</monospace> library has been designed to
+  facilitate the analysis of many different protein structures predicted
+  by AlphaFold and its derivatives. It provides functions for comparing
+  predicted structures with experimental structures, visualising
+  predicted structures, and calculating structural quality metrics.</p>
 </sec>
 <sec id="statement-of-need">
   <title>Statement of need</title>
-  <p>With the release of AlphaFold
-  2(<xref alt="Jumper et al., 2021" rid="ref-jumper_highly_2021" ref-type="bibr">Jumper
+  <p>With the release of AlphaFold 2
+  (<xref alt="Jumper et al., 2021" rid="ref-jumper_highly_2021" ref-type="bibr">Jumper
   et al., 2021</xref>) in 2021, the scientific community has achieved an
   unprecedented level of accuracy in predicting protein structures.
-  Derivatives of AlphaFold 2, namely
-  Colabfold(<xref alt="Mirdita et al., 2022" rid="ref-mirdita2022colabfold" ref-type="bibr">Mirdita
-  et al., 2022</xref>), AlphaFold
-  Multimer(<xref alt="Evans et al., 2022" rid="ref-Evans2021.10.04.463034" ref-type="bibr">Evans
-  et al., 2022</xref>), AlphaFold
-  3(<xref alt="Abramson et al., 2024" rid="ref-abramson_accurate_2024" ref-type="bibr">Abramson
-  et al., 2024</xref>) and its re-implementations such as
-  Boltz-1(<xref alt="Wohlwend et al., 2024" rid="ref-wohlwend_boltz-1_2024" ref-type="bibr">Wohlwend
-  et al., 2024</xref>) and
-  Chai-1(<xref alt="Discovery et al., 2024" rid="ref-discovery_chai-1_2024" ref-type="bibr">Discovery
+  Derivatives of AlphaFold 2, namely ColabFold
+  (<xref alt="Mirdita et al., 2022" rid="ref-mirdita2022colabfold" ref-type="bibr">Mirdita
+  et al., 2022</xref>), AlphaFold Multimer
+  (<xref alt="Evans et al., 2022" rid="ref-Evans2021.10.04.463034" ref-type="bibr">Evans
+  et al., 2022</xref>), AlphaFold 3
+  (<xref alt="Abramson et al., 2024" rid="ref-abramson_accurate_2024" ref-type="bibr">Abramson
+  et al., 2024</xref>) and its re-implementations such as Boltz-1
+  (<xref alt="Wohlwend et al., 2024" rid="ref-wohlwend_boltz-1_2024" ref-type="bibr">Wohlwend
+  et al., 2024</xref>) and Chai-1
+  (<xref alt="Discovery et al., 2024" rid="ref-discovery_chai-1_2024" ref-type="bibr">Discovery
   et al., 2024</xref>) have been developed to predict the structure of
   protein complexes, setting a new standard for protein-protein and
-  protein-peptide docking. However as demonstrated by Björn Wallner, the
-  generation of thousands of models is sometimes necessary to obtain a
-  few high-quality
-  models(<xref alt="Wallner, 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad573" ref-type="bibr">Wallner,
-  2023</xref>). Subsequent analysis of the results may prove to be a
-  laborious and meticulous process. Furthermore if quality metrics
-  produced by AlphaFold are good, additional metrics have been developed
-  to assess the quality of the models. This include
-  pdockq(<xref alt="Bryant et al., 2022" rid="ref-bryant2022improved" ref-type="bibr">Bryant
-  et al., 2022</xref>),
-  pdockq2(<xref alt="Zhu et al., 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad424" ref-type="bibr">Zhu
-  et al., 2023</xref>), and LIS
-  score(<xref alt="Kim et al., 2024" rid="ref-Kim2024.02.19.580970" ref-type="bibr">Kim
-  et al., 2024</xref>). All of the aforementioned metrics must be
-  calculated from different scripts. A further point to consider is the
-  diversity of the models. As illustrated in
-  AFsample(<xref alt="Wallner, 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad573" ref-type="bibr">Wallner,
-  2023</xref>), there are occasions when it is necessary to compute up
-  to ten thousand models, and then cluster them in order to select the
-  most appropriate models. The <monospace>af-analysis</monospace> has
-  been developed with the objective of facilitating the analysis of sets
-  of model structures and associated metrics. The library has been
-  constructed on the <monospace>pandas</monospace> library and is
-  capable of importing an alphafold or colabfold prediction directory as
-  a <monospace>pandas</monospace> DataFrame. The library provides a
-  range of functions that enable addition of further metrics to the
-  DataFrame, the comparison of models with experimental structures, the
-  visualisation of the models, the clustering of models, and the
-  selection of the best models.</p>
+  protein-peptide docking.</p>
+  <p>Analysis of AlphaFold results is a crucial step in the process of
+  utilising these predictions for scientific research. The AlphaFold
+  software provides several excellent quality metrics that offer
+  valuable information about the accuracy of the predicted structures.
+  Among these scores, the predicted local distance difference test
+  (pLDDT) is a per-residue measure of local confidence, as the predicted
+  aligned error (PAE) provides confidence over the relative position of
+  two residues within the predicted structure. To analyze these results,
+  the AlphaBridge webserver
+  (<xref alt="Álvarez-Salmoral et al., 2024" rid="ref-alvarez-salmoral_alphabridge_2024" ref-type="bibr">Álvarez-Salmoral
+  et al., 2024</xref>) and the PICKLUSTER plugin
+  (<xref alt="Genz et al., 2023" rid="ref-genz_pickluster_2023" ref-type="bibr">Genz
+  et al., 2023</xref>) for the UCSF ChimeraX visualisation software were
+  developed to characterize the different interfaces within protein
+  complexes, and extract their respective scores.</p>
+  <p>Although these tools are very practical, Bjorn Wallner has shown
+  that calculating 5 or 25 basic AlphaFold models may not be enough, it
+  is sometimes necessary to generate thousands of models to obtain a few
+  high quality models, leading to the AlphaFold derivative, AFsample
+  (<xref alt="Wallner, 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad573" ref-type="bibr">Wallner,
+  2023</xref>). Massive sampling altogether with multiple software usage
+  (AFsample and ColabFold), weights and parameters has been integrated
+  into the MassiveFold software
+  (<xref alt="Raouraoua et al., 2024" rid="ref-raouraoua_massivefold_2024" ref-type="bibr">Raouraoua
+  et al., 2024</xref>) and has shown performance approaching the
+  accuracy of AlphaFold 3.</p>
+  <p>The subsequent analysis of hundreds to thousands of models can
+  prove to be a tedious and meticulous process, as dealing with
+  thousands of models and different output formats can be time
+  consuming. Furthermore, if the quality metrics produced by AlphaFold
+  are good, additional metrics have been developed to assess the quality
+  of the models. These include pdockq
+  (<xref alt="Bryant et al., 2022" rid="ref-bryant2022improved" ref-type="bibr">Bryant
+  et al., 2022</xref>), pdockq2
+  (<xref alt="Zhu et al., 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad424" ref-type="bibr">Zhu
+  et al., 2023</xref>), and LIS score
+  (<xref alt="Kim et al., 2024" rid="ref-Kim2024.02.19.580970" ref-type="bibr">Kim
+  et al., 2024</xref>). All of the these metrics have to be calculated
+  from different scripts. Another point to consider is the diversity of
+  the models. As shown in AFsample, it is sometimes necessary to compute
+  up to tens of thousands of models and then cluster them in order to
+  select the best ones. The <monospace>af-analysis</monospace> library
+  has been developed to facilitate the analysis of sets of model
+  structures and associated metrics. The library is based on the
+  <monospace>pandas</monospace> library and is able to import AlphaFold
+  2 and 3, ColabFold, Boltz-1 and Chai-1 prediction directory as a
+  <monospace>pandas</monospace> DataFrame. The library provides a number
+  of functions to add further metrics to the DataFrame, compare models
+  with experimental structures, visualise models, cluster models and
+  select the best models.</p>
 </sec>
 </body>
 <back>
@@ -451,6 +472,69 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <date-in-citation content-type="access-date"><year iso-8601-date="2024-12-16">2024</year><month>12</month><day>16</day></date-in-citation>
       <uri>https://www.biorxiv.org/content/10.1101/2024.10.10.615955v2</uri>
       <pub-id pub-id-type="doi">10.1101/2024.10.10.615955</pub-id>
+    </element-citation>
+  </ref>
+  <ref id="ref-raouraoua_massivefold_2024">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Raouraoua</surname><given-names>Nessim</given-names></name>
+        <name><surname>Mirabello</surname><given-names>Claudio</given-names></name>
+        <name><surname>Véry</surname><given-names>Thibaut</given-names></name>
+        <name><surname>Blanchet</surname><given-names>Christophe</given-names></name>
+        <name><surname>Wallner</surname><given-names>Björn</given-names></name>
+        <name><surname>Lensink</surname><given-names>Marc F.</given-names></name>
+        <name><surname>Brysbaert</surname><given-names>Guillaume</given-names></name>
+      </person-group>
+      <article-title>MassiveFold: Unveiling AlphaFold’s hidden potential with optimized and parallelized massive sampling</article-title>
+      <source>Nat Comput Sci</source>
+      <year iso-8601-date="2024-11">2024</year><month>11</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2025-01-08">2025</year><month>01</month><day>08</day></date-in-citation>
+      <volume>4</volume>
+      <issue>11</issue>
+      <issn>2662-8457</issn>
+      <uri>https://www.nature.com/articles/s43588-024-00714-4</uri>
+      <pub-id pub-id-type="doi">10.1038/s43588-024-00714-4</pub-id>
+      <fpage>824</fpage>
+      <lpage>828</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-alvarez-salmoral_alphabridge_2024">
+    <element-citation>
+      <person-group person-group-type="author">
+        <name><surname>Álvarez-Salmoral</surname><given-names>Daniel</given-names></name>
+        <name><surname>Borza</surname><given-names>Razvan</given-names></name>
+        <name><surname>Xie</surname><given-names>Ren</given-names></name>
+        <name><surname>Joosten</surname><given-names>Robbie P.</given-names></name>
+        <name><surname>Hekkelman</surname><given-names>Maarten L.</given-names></name>
+        <name><surname>Perrakis</surname><given-names>Anastassis</given-names></name>
+      </person-group>
+      <article-title>AlphaBridge: Tools for the analysis of predicted macromolecular complexes</article-title>
+      <publisher-name>bioRxiv</publisher-name>
+      <year iso-8601-date="2024-10">2024</year><month>10</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2025-01-08">2025</year><month>01</month><day>08</day></date-in-citation>
+      <uri>https://www.biorxiv.org/content/10.1101/2024.10.23.619601v1</uri>
+      <pub-id pub-id-type="doi">10.1101/2024.10.23.619601</pub-id>
+    </element-citation>
+  </ref>
+  <ref id="ref-genz_pickluster_2023">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Genz</surname><given-names>Luca R</given-names></name>
+        <name><surname>Mulvaney</surname><given-names>Thomas</given-names></name>
+        <name><surname>Nair</surname><given-names>Sanjana</given-names></name>
+        <name><surname>Topf</surname><given-names>Maya</given-names></name>
+      </person-group>
+      <article-title>PICKLUSTER: A protein-interface clustering and analysis plug-in for UCSF ChimeraX</article-title>
+      <source>Bioinformatics</source>
+      <year iso-8601-date="2023-11">2023</year><month>11</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2025-01-08">2025</year><month>01</month><day>08</day></date-in-citation>
+      <volume>39</volume>
+      <issue>11</issue>
+      <issn>1367-4811</issn>
+      <uri>https://doi.org/10.1093/bioinformatics/btad629</uri>
+      <pub-id pub-id-type="doi">10.1093/bioinformatics/btad629</pub-id>
+      <fpage>btad629</fpage>
+      <lpage></lpage>
     </element-citation>
   </ref>
 </ref-list>

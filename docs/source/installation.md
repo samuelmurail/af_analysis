@@ -4,8 +4,14 @@
 
 AF-Analysis can install easily through Pypi:
 
+```bash
+$ pip install af_analysis
 ```
-pip install af_analysis
+
+or you can install the last version directly from the github repo:
+
+```bash
+$ pip install git+https://github.com/samuelmurail/af_analysis.git@main
 ```
 
 ## Get sources from the GithubRepo
