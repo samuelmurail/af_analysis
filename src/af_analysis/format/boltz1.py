@@ -59,7 +59,7 @@ def read_dir(directory):
                     pred_dir, os.path.join(query, f"pae_{query}_model_{model}.npz")
                 )
                 if os.path.isfile(pae_file):
-                    info_dict["json"] = pae_file
+                    info_dict["data_file"] = pae_file
                 pde_file = os.path.join(
                     pred_dir, os.path.join(query, f"pae_{query}_model_{model}.npz")
                 )

@@ -114,4 +114,4 @@ def add_json(log_pd, directory):
             logger.warning(f"Multiple json file for {reg}: {res}")
             json_list.append(res[0])
 
-    log_pd.loc[:, "json"] = json_list
+    log_pd.loc[:, "data_file"] = json_list

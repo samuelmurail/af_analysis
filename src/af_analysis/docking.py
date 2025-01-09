@@ -44,15 +44,15 @@ def pae_pep(my_data, fun=np.mean, verbose=True):
 
     disable = False if verbose else True
 
-    for i, (query, json) in tqdm(
-        enumerate(zip(my_data.df["query"], my_data.df["json"])),
+    for i, (query, data_file) in tqdm(
+        enumerate(zip(my_data.df["query"], my_data.df["data_file"])),
         total=len(my_data.df),
         disable=disable,
     ):
         chain_length = my_data.chain_length[query]
         cum_sum_chain = np.cumsum([0] + chain_length)
 
-        pae = data.get_pae(json)
+        pae = data.get_pae(data_file)
 
         # print(f"0:{cum_sum_chain[-2]} , {cum_sum_chain[-2]}:{cum_sum_chain[-1]}")
         # print(pae.shape)
@@ -97,19 +97,19 @@ def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True, max_pae=30.9
 
     disable = False if verbose else True
 
-    for i, (query, json, pdb) in tqdm(
-        enumerate(zip(my_data.df["query"], my_data.df["json"], my_data.df["pdb"])),
+    for i, (query, data_file, pdb) in tqdm(
+        enumerate(zip(my_data.df["query"], my_data.df["data_file"], my_data.df["pdb"])),
         total=len(my_data.df),
         disable=disable,
     ):
         chains = my_data.chains[query]
 
-        if pdb is None or json is None:
+        if pdb is None or data_file is None:
             pep_rec_pae_list.append(None)
             rec_pep_pae_list.append(None)
             continue
 
-        pae = data.get_pae(json)
+        pae = data.get_pae(data_file)
 
         model = pdb_numpy.Coor(pdb)
         model_CA = model.select_atoms("name CA")

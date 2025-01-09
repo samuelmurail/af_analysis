@@ -32,7 +32,7 @@ def test_cf_1_5_5_relax():
                 "format",
                 "pdb",
                 "relaxed_pdb",
-                "json",
+                "data_file",
             ]
         )
     ).all()
@@ -148,7 +148,7 @@ def test_af3_webserver():
                 "pdb",
                 "query",
                 "model",
-                "json",
+                "data_file",
                 "chain_iptm",
                 "chain_pair_iptm",
                 "chain_pair_pae_min",
@@ -194,7 +194,7 @@ def test_boltz1():
                 "query",
                 "model",
                 "plddt",
-                "json",
+                "data_file",
                 "pde",
                 "confidence_score",
                 "pTM",

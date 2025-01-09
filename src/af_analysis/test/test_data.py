@@ -37,7 +37,7 @@ def test_cf_1_5_5_write_read_csv(tmp_path):
                 "format",
                 "pdb",
                 "relaxed_pdb",
-                "json",
+                "data_file",
             ]
         )
     ).all()
@@ -383,13 +383,13 @@ def test_concat():
     assert len(my_data_all.chains) == 2
 
 
-def test_extract_json():
+def test_extract_data():
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
     my_data = af_analysis.Data(data_path)
     print(my_data.df.columns)
     new_column = ["plddt", "max_pae", "pae", "ptm", "iptm"]
     assert np.all([not (col in my_data.df.columns) for col in new_column])
-    my_data.extract_json()
+    my_data.extract_data()
     print(my_data.df.columns)
     assert np.all([col in my_data.df.columns for col in new_column])
 

@@ -16,13 +16,13 @@ __email__ = "samuel.murail@u-paris.fr"
 __status__ = "Beta"
 
 
-def get_pae(json_file):
-    """Get the PAE matrix from a json file.
+def get_pae(data_file):
+    """Get the PAE matrix from a json/npz file.
 
     Parameters
     ----------
-    json_file : str
-        Path to the json file.
+    data_file : str
+        Path to the json/npz file.
 
     Returns
     -------
@@ -30,13 +30,13 @@ def get_pae(json_file):
         PAE matrix.
     """
 
-    if json_file is None:
+    if data_file is None:
         return None
 
-    if json_file.endswith(".json"):
-        return extract_pae_json(json_file)
-    elif json_file.endswith(".npz"):
-        return extract_pae_npz(json_file)
+    if data_file.endswith(".json"):
+        return extract_pae_json(data_file)
+    elif data_file.endswith(".npz"):
+        return extract_pae_npz(data_file)
     else:
         raise ValueError("Unknown file format.")
 
@@ -88,12 +88,12 @@ def extract_pae_npz(npz_file):
     return pae_array
 
 
-def extract_fields_json(json_file, fields):
-    """Get the PAE matrix from a json file.
+def extract_fields_file(data_file, fields):
+    """Get the PAE matrix from a json/pickle file.
 
     Parameters
     ----------
-    json_file : str
+    file : str
         Path to the json file.
     fields : list
         List of fields to extract.
@@ -103,18 +103,21 @@ def extract_fields_json(json_file, fields):
     value
     """
 
-    if json_file is None:
+    if data_file is None:
         return None
 
-    with open(json_file) as f:
-        local_json = json.load(f)
+    if data_file.endswith(".json"):
+        with open(data_file) as f:
+            local_data = json.load(f)
+    elif data_file.endswith(".npz"):
+        local_data = np.load(data_file)
 
     values = []
     for field in fields:
-        if field in local_json:
-            values.append(local_json[field])
+        if field in local_data:
+            values.append(local_data[field])
         else:
-            raise ValueError(f"No field {field} found in the json file.")
+            raise ValueError(f"No field {field} found in the json/npz file.")
 
     return values
 
@@ -265,25 +268,25 @@ def pdockq2(data, verbose=True):
 
     disable = False if verbose else True
 
-    if "json" not in data.df.columns:
+    if "data_file" not in data.df.columns:
         raise ValueError(
-            "No json column found in the dataframe. pae scores are required to compute pdockq2."
+            "No \`data_file\` column found in the dataframe. pae scores are required to compute pdockq2."
         )
 
-    for pdb, json_path in tqdm(
-        zip(data.df["pdb"], data.df["json"]), total=len(data.df["pdb"]), disable=disable
+    for pdb, data_path in tqdm(
+        zip(data.df["pdb"], data.df["data_file"]), total=len(data.df["pdb"]), disable=disable
     ):
         if (
             pdb is not None
             and pdb is not np.nan
-            and json_path is not None
-            and json_path is not np.nan
+            and data_path is not None
+            and data_path is not np.nan
         ):
             model = pdb_numpy.Coor(pdb)
             # with open(json_path) as f:
             #     local_json = json.load(f)
             # pae_array = np.array(local_json["pae"])
-            pae_array = get_pae(json_path)
+            pae_array = get_pae(data_path)
 
             pdockq2 = compute_pdockQ2(model, pae_array)
 
@@ -322,18 +325,18 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
 
     disable = False if verbose else True
 
-    if "json" not in data.df.columns:
+    if "data_file" not in data.df.columns:
         raise ValueError(
-            "No json column found in the dataframe. pae scores are required to compute pdockq2."
+            "No \'data_file\' column found in the dataframe. pae scores are required to compute pdockq2."
         )
 
-    for query, json_path in tqdm(
-        zip(data.df["query"], data.df["json"]),
-        total=len(data.df["json"]),
+    for query, data_path in tqdm(
+        zip(data.df["query"], data.df["data_file"]),
+        total=len(data.df["data_file"]),
         disable=disable,
     ):
-        if json_path is not None and json_path is not np.nan:
-            pae_array = get_pae(json_path)
+        if data_path is not None and data_path is not np.nan:
+            pae_array = get_pae(data_path)
 
             chain_lens = data.chain_length[query]
             chain_len_sums = np.cumsum([0] + chain_lens)
@@ -457,8 +460,8 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
 
     disable = False if verbose else True
 
-    for query, json_path in tqdm(
-        zip(data.df["query"], data.df["json"]),
+    for query, data_path in tqdm(
+        zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
     ):
@@ -466,7 +469,7 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
             LIS_matrix_list.append(None)
             continue
 
-        pae_array = get_pae(json_path)
+        pae_array = get_pae(data_path)
         LIS_matrix = compute_LIS_matrix(pae_array, data.chain_length[query], pae_cutoff)
         LIS_matrix_list.append(LIS_matrix)
 

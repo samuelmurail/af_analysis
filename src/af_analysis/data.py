@@ -16,7 +16,7 @@ import ipywidgets as widgets
 
 from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, chai1, default
 from . import sequence, plot
-from .analysis import get_pae, extract_fields_json
+from .analysis import get_pae, extract_fields_file
 
 
 # Autorship information
@@ -75,8 +75,8 @@ class Data:
         Import a csv file to the dataframe.
     add_json()
         Add json files to the dataframe.
-    extract_json()
-        Extract json files to the dataframe.
+    extract_data()
+        Extract json/npz files to the dataframe.
     add_pdb()
         Add pdb files to the dataframe.
     add_fasta(csv)
@@ -264,8 +264,8 @@ class Data:
         if self.format == "default":
             default.add_json(self.df, self.dir, verbose=verbose)
 
-    def extract_json(self):
-        """Extract json files to the dataframe.
+    def extract_data(self):
+        """Extract json/npz files to the dataframe.
 
         Parameters
         ----------
@@ -277,18 +277,26 @@ class Data:
         """
 
         index_list = []
-        json_list = []
-        for index, json_path in zip(self.df.index, self.df["json"]):
-            if json_path is not None:
-                with open(json_path, "r") as f:
-                    data = json.load(f)
-                json_list.append(data)
-                index_list.append(index)
+        data_list = []
+        for index, data_path in zip(self.df.index, self.df["data_file"]):
+            if data_path is not None:
+                if data_path.endswith(".json"):
+                    with open(data_path, "r") as f:
+                        data = json.load(f)
+                    data_list.append(data)
+                    index_list.append(index)
+                elif data_path.endswith(".npz"):
+                    data_npz = np.load(data_path)
+                    data = {}
+                    for key in data_npz.keys():
+                        data[key] = data_npz[key]
+                    data_list.append(data)
+                    index_list.append(index)
 
         new_column = {}
-        for key in json_list[0].keys():
+        for key in data_list[0].keys():
             new_column[key] = []
-        for data in json_list:
+        for data in data_list:
             for key in data.keys():
                 new_column[key].append(data[key])
 
@@ -297,7 +305,7 @@ class Data:
             self.df.loc[index_list, key] = pd.Series(new_column[key], index=index_list)
 
     def extract_fields(self, fields, disable=False):
-        """Extract json files to the dataframe.
+        """Extract fields from data files to the dataframe.
 
         Parameters
         ----------
@@ -314,11 +322,11 @@ class Data:
         values_list = []
         for field in fields:
             values_list.append([])
-        for json_path in tqdm(
+        for data_path in tqdm(
             self.df["json"], total=len(self.df["json"]), disable=disable
         ):
-            if json_path is not None:
-                local_values = extract_fields_json(json_path, fields)
+            if data_path is not None:
+                local_values = extract_fields_file(data_path, fields)
 
                 for i in range(len(fields)):
                     values_list[i].append(local_values[i])
@@ -484,17 +492,23 @@ class Data:
             plddt_array = data_npz["plddt"]
             return plddt_array * 100
 
-        if row["json"] is None:
+        if row["data_file"] is None:
             return None
+        elif row["data_file"].endswith(".json"):
+            with open(row["data_file"]) as f:
+                local_json = json.load(f)
 
-        with open(row["json"]) as f:
-            local_json = json.load(f)
-
-        if "plddt" in local_json:
-            plddt_array = np.array(local_json["plddt"])
-        else:
-            return None
-
+            if "plddt" in local_json:
+                plddt_array = np.array(local_json["plddt"])
+            else:
+                return None
+        elif row["data_file"].endswith(".npz"):
+            data_npz = np.load(row["data_file"])
+            if "plddt" in data_npz:
+                plddt_array = data_npz["plddt"]
+            else:
+                return None
+        
         return plddt_array
 
     def plot_plddt(self, index_list=None):

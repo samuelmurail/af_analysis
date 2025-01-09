@@ -226,7 +226,7 @@ def add_json(log_pd, directory, verbose=True):
             json_list.append(res[0])
             # file_list.remove(res[0])
 
-    log_pd.loc[:, "json"] = json_list
+    log_pd.loc[:, "data_file"] = json_list
 
 
 def add_fasta(log_pd, csv):

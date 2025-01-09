@@ -34,7 +34,7 @@ def test_cf_1_5_5_relax():
                 "format",
                 "pdb",
                 "relaxed_pdb",
-                "json",
+                "data_file",
             ]
         )
     ).all()

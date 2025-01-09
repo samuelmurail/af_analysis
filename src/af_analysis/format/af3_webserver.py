@@ -46,7 +46,7 @@ def read_dir(directory):
                 "pdb": os.path.join(directory, file),
                 "query": query,
                 "model": model,
-                "json": os.path.join(directory, f"fold_{query}_full_data_{model}.json"),
+                "data_file": os.path.join(directory, f"fold_{query}_full_data_{model}.json"),
             }
             info_dict.update(json_dict)
             log_dict_list.append(info_dict)

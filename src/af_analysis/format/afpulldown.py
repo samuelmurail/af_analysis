@@ -78,7 +78,7 @@ def read_dir(directory, query=None):
                 "state": "unrelaxed_",
                 "model": int(token[1]),
                 "weight": weight,
-                "json": json_file,
+                "data_file": json_file,
                 "ipTM": iptm,
                 "ranking_confidence": conf,
                 "pTM": ptm,
