@@ -98,7 +98,9 @@ class Data:
 
     """
 
-    def __init__(self, directory=None, csv=None, verbose=True, format=None):
+    def __init__(
+        self, directory=None, data_dict=None, csv=None, verbose=True, format=None
+    ):
         """ """
 
         if directory is not None:
@@ -106,6 +108,15 @@ class Data:
         elif csv is not None:
             self.format = "csv"
             self.import_csv(csv)
+        elif data_dict is not None:
+            assert "pdb" in data_dict.keys()
+            assert "query" in data_dict.keys()
+            assert "data_file" in data_dict.keys()
+
+            self.df = pd.DataFrame(data_dict)
+            self.dir = None
+            self.df["format"] = "custom"
+            self.set_chain_length()
 
     def read_directory(self, directory, keep_recycles=False, verbose=True, format=None):
         """Read a directory.
@@ -153,8 +164,9 @@ class Data:
             self.format = "boltz1"
             self.df = boltz1.read_dir(directory)
             self.df["format"] = "boltz1"
-        elif format == "chai1"  or os.path.isfile(
-            os.path.join(directory, "msa_depth.pdf")):
+        elif format == "chai1" or os.path.isfile(
+            os.path.join(directory, "msa_depth.pdf")
+        ):
             self.format = "chai1"
             self.df = chai1.read_dir(directory)
             self.df["format"] = "chai1"
@@ -323,7 +335,7 @@ class Data:
         for field in fields:
             values_list.append([])
         for data_path in tqdm(
-            self.df["json"], total=len(self.df["json"]), disable=disable
+            self.df["data_file"], total=len(self.df["data_file"]), disable=disable
         ):
             if data_path is not None:
                 local_values = extract_fields_file(data_path, fields)
@@ -508,7 +520,7 @@ class Data:
                 plddt_array = data_npz["plddt"]
             else:
                 return None
-        
+
         return plddt_array
 
     def plot_plddt(self, index_list=None):

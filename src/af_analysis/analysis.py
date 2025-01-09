@@ -274,7 +274,9 @@ def pdockq2(data, verbose=True):
         )
 
     for pdb, data_path in tqdm(
-        zip(data.df["pdb"], data.df["data_file"]), total=len(data.df["pdb"]), disable=disable
+        zip(data.df["pdb"], data.df["data_file"]),
+        total=len(data.df["pdb"]),
+        disable=disable,
     ):
         if (
             pdb is not None
@@ -327,7 +329,7 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
 
     if "data_file" not in data.df.columns:
         raise ValueError(
-            "No \'data_file\' column found in the dataframe. pae scores are required to compute pdockq2."
+            "No 'data_file' column found in the dataframe. pae scores are required to compute pdockq2."
         )
 
     for query, data_path in tqdm(

@@ -16,13 +16,51 @@ The ``af_analysis`` package supports the following file formats for input data:
 Importing procedure
 -------------------
 
-Create the ``Data`` object, giving the path of the directory containing the results of the AlphaFold or ColabFold run. 
+Create the ``Data`` object, giving the path of the directory containing the results of the AlphaFold results. `af_analysis`
+supports reading the following directory formats:
+
+- Alphafold 2 [#AF2]_
+- Alphafold 3 [#AF3]_
+- ColabFold [#ColabFold]_
+- AlphaPulldown [#AlphaPulldown]_
+- Chai-1 [#Chai1]_
+- Boltz1 [#Boltz1]_
+
 
 .. code-block:: python
 
     import af_analysis
     my_data = af_analysis.Data('MY_AF_RESULTS_DIR')
 
+Alternatively, you can use a python dictionary containing the ``pdb`` file list, the ``.json`` / ``.npz`` data file and the query name.
+
+.. code-block:: python
+
+    import af_analysis
+
+    pdb_list = [
+        "test/model_5_seed_002.pdb",
+        "test/model_5_seed_007.pdb",
+        "test/model_5_seed_003.pdb",
+        "test/model_5_seed_006.pdb",
+        "test/model_5_seed_004.pdb",
+    ]
+    json_list = [
+        "test/model_5_seed_002.json",
+        "test/model_5_seed_007.json",
+        "test/model_5_seed_003.json",
+        "test/model_5_seed_006.json",
+        "test/model_5_seed_004.json",
+    ]
+    data_dict = {
+        "data_file": json_list,
+        "pdb": pdb_list,
+        "query": "test_amyloid",
+    }
+
+    my_data = af_analysis.Data(data_dict=data_dict)
+    # Extract the data that you know are present in the json/pickle files
+    my_data.extract_fields(["plddt", "ptm", "iptm"])
 
 Extracted data are available in the ``df`` attribute of the ``Data`` object as a ``pandas`` dataframe. 
 
@@ -48,7 +86,7 @@ Scores
 pDockq
 ------
 
-pDockQ (Predicted DockQ) [#pdockq]_ is a metric that predicts the quality of protein-protein interactions in dimer models.
+pDockQ (Predicted DockQ) [#pdockq1]_ is a metric that predicts the quality of protein-protein interactions in dimer models.
 It uses a sigmoid function that considers the number of contacts in the interface
 (:math:`log(number \: of \: interface \: contacts)`) and the average pLDDT (predicted lDDT score) of the
 interface residues (:math:`\overline{plDDT_{interface}}`).
@@ -58,7 +96,7 @@ interface residues (:math:`\overline{plDDT_{interface}}`).
 Implementation was inspired from `https://gitlab.com/ElofssonLab/FoldDock/-/blob/main/src/pdockq.py <https://gitlab.com/ElofssonLab/FoldDock/-/blob/main/src/pdockq.py>`_.
 
 
-The ``pdockq()`` function calculates the pDockq [#pdockq]_ score for each model in the dataframe.
+The ``pdockq()`` function calculates the pDockq [#pdockq1]_ score for each model in the dataframe.
 The pDockq score ranges from 0 to 1, with higher scores indicating better model quality.
 
 .. math::
@@ -123,7 +161,7 @@ LIS Score
 ---------
 
 The Local Interaction Score (LIS) [#LIS]_ is a metric specifically designed to predict the likelihood of direct
-protein-protein interactions (PPIs) using output data from AlphaFold-Multimer [#AF2M]_.
+protein-protein interactions (PPIs) using output data from AlphaFold-Multimer [#AFM]_.
 Unlike metrics like interface pTM (ipTM), which measures the overall structural accuracy of a predicted complex,
 LIS focuses on areas within the predicted interface that have low Predicted Aligned Error (PAE) values. These low
 PAE values, often visualized as blue regions in AlphaFold output maps, represent areas of high confidence in the
@@ -396,8 +434,11 @@ References
 .. [#AF3] `Abramson et al. Nature (2024) doi: 10.1038/s41586-024-07487-w <https://www.nature.com/articles/s41586-024-07487-w>`_
 .. [#ColabFold] `Mirdita et al. Nat Methods (2022) doi: 10.1038/s41592-022-01488-1 <https://www.nature.com/articles/s41592-022-01488-1>`_
 .. [#AlphaPulldown] `Yu et al. Bioinformatics (2023) doi: 10.1093/bioinformatics/btac749 <https://doi.org/10.1093/bioinformatics/btac749>`_
-.. [#pdockq] `Bryant et al. Nat Commun (2022) doi: 10.1038/s41467-022-28865-w <https://www.nature.com/articles/s41467-022-28865-w>`_
+.. [#Chai1] `Chai Discovery et al. bioRxiv (2024) doi: 10.1101/2024.10.10.615955v2 <https://doi.org/10.1101/2024.10.10.615955v2>`_
+.. [#Boltz1] `Wohlwend et al. bioRxiv (2024) doi: 10.1101/2024.11.19.624167 <https://doi.org/10.1101/2024.11.19.624167>`_
+.. [#pdockq1] `Bryant et al. Nat Commun (2022) doi: 10.1038/s41467-022-28865-w <https://www.nature.com/articles/s41467-022-28865-w>`_
 .. [#mpdockq] `Bryant et al. Nat Commun (2022) doi: 10.1038/s41467-022-33729-4 <https://www.nature.com/articles/s41467-022-33729-4>`_
 .. [#pdockq2] `Zhu et al. Bioinformatics (2023) doi: 10.1093/bioinformatics/btad424 <https://academic.oup.com/bioinformatics/article/39/7/btad424/7219714>`_
 .. [#LIS] `Kim et al. bioRxiv (2024) doi: 10.1101/2024.02.19.580970 <https://www.biorxiv.org/content/10.1101/2024.02.19.580970v1>`_
-.. [#AF2M] `Evans et al. bioRxiv (2021) doi: 10.1101/2021.10.04.463034 <https://www.biorxiv.org/content/10.1101/2021.10.04.463034v2>`_
+.. [#AFM] `Evans et al. bioRxiv (2021) doi: 10.1101/2021.10.04.463034 <https://www.biorxiv.org/content/10.1101/2021.10.04.463034v2>`_
+

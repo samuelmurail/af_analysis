@@ -406,3 +406,44 @@ def test_extract_data():
         )
         < rtol
     )
+
+
+def test_read_data_dict():
+    data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
+
+    pdb_list = [
+        "beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb",
+        "beta_amyloid_dimer_d2fa3_0_relaxed_rank_002_alphafold2_multimer_v3_model_5_seed_007.pdb",
+        "beta_amyloid_dimer_d2fa3_0_relaxed_rank_003_alphafold2_multimer_v3_model_5_seed_003.pdb",
+        "beta_amyloid_dimer_d2fa3_0_relaxed_rank_004_alphafold2_multimer_v3_model_5_seed_006.pdb",
+        "beta_amyloid_dimer_d2fa3_0_relaxed_rank_005_alphafold2_multimer_v3_model_5_seed_004.pdb",
+    ]
+    pdb_list = [os.path.join(data_path, pdb) for pdb in pdb_list]
+    json_list = [
+        "beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json",
+        "beta_amyloid_dimer_d2fa3_0_scores_rank_002_alphafold2_multimer_v3_model_5_seed_007.json",
+        "beta_amyloid_dimer_d2fa3_0_scores_rank_003_alphafold2_multimer_v3_model_5_seed_003.json",
+        "beta_amyloid_dimer_d2fa3_0_scores_rank_004_alphafold2_multimer_v3_model_5_seed_006.json",
+        "beta_amyloid_dimer_d2fa3_0_scores_rank_005_alphafold2_multimer_v3_model_5_seed_004.json",
+    ]
+    json_list = [os.path.join(data_path, json) for json in json_list]
+
+    data_dict = {
+        "data_file": json_list,
+        "pdb": pdb_list,
+        "query": "beta_amyloid_dimer_d2fa3_0",
+    }
+
+    my_data = af_analysis.Data(data_dict=data_dict)
+    my_data.extract_fields(["plddt", "ptm", "iptm"])
+
+    assert len(my_data.df) == 5
+    assert my_data.chain_length == {"beta_amyloid_dimer_d2fa3_0": [42, 42]}
+    assert my_data.chains == {"beta_amyloid_dimer_d2fa3_0": ["A", "B"]}
+    print(my_data.df.columns)
+    assert (
+        my_data.df.columns
+        == np.array(["data_file", "pdb", "query", "format", "plddt", "ptm", "iptm"])
+    ).all()
+    print(my_data.df["iptm"])
+    assert list(my_data.df["iptm"]) == [0.6, 0.6, 0.59, 0.58, 0.56]
