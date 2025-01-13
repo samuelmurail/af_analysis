@@ -36,11 +36,18 @@ analysis</article-title>
 <given-names>Samuel</given-names>
 </name>
 <xref ref-type="aff" rid="aff-1"/>
+<xref ref-type="aff" rid="aff-2"/>
 </contrib>
 <aff id="aff-1">
 <institution-wrap>
 <institution>Université Paris Cité, Inserm, CNRS, BFA, F-75013 Paris,
 France</institution>
+</institution-wrap>
+</aff>
+<aff id="aff-2">
+<institution-wrap>
+<institution>Ressource Parisienne en Bioinformatique Structurale (RPBS),
+Paris, France.</institution>
 </institution-wrap>
 </aff>
 </contrib-group>

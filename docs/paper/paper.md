@@ -10,11 +10,13 @@ authors:
     affiliation: "1"
   - name: Samuel Murail
     orcid: "0000-0002-3842-5333"
-    affiliation: "1"
+    affiliation: [1, 2]
 
 affiliations:
  - name: "Université Paris Cité, Inserm, CNRS, BFA, F-75013 Paris, France"
    index: 1
+ - name: "Ressource Parisienne en Bioinformatique Structurale (RPBS), Paris, France."
+   index: 2
 
 date: 8 January 2025
 bibliography: paper.bib
