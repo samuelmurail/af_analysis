@@ -63,7 +63,7 @@ simple-docs: ## generate Sphinx HTML documentation, including API docs
 docs: simple-docs ## generate Sphinx HTML documentation, including API docs
 	$(BROWSER) docs/build/html/index.html
 
-ervedocs: docs ## compile the docs watching for changes
+servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 release: dist ## package and upload a release
