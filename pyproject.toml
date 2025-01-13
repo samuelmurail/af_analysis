@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "af-analysis"
-version = "0.1.1"
+version = "0.1.2"
 dynamic = ["readme", "dependencies"]
 description = "`AF analysis` is a python library allowing analysis of Alphafold results."
 license = {text = " GPL-2.0"}
