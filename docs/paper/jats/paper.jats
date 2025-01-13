@@ -29,7 +29,7 @@ analysis</article-title>
 </name>
 <xref ref-type="aff" rid="aff-1"/>
 </contrib>
-<contrib contrib-type="author">
+<contrib contrib-type="author" corresp="yes">
 <contrib-id contrib-id-type="orcid">https://orcid.org/0000-0002-3842-5333</contrib-id>
 <name>
 <surname>Murail</surname>
@@ -37,6 +37,7 @@ analysis</article-title>
 </name>
 <xref ref-type="aff" rid="aff-1"/>
 <xref ref-type="aff" rid="aff-2"/>
+<xref ref-type="corresp" rid="cor-1"><sup>*</sup></xref>
 </contrib>
 <aff id="aff-1">
 <institution-wrap>
@@ -51,6 +52,9 @@ F-75013 Paris, France.</institution>
 </institution-wrap>
 </aff>
 </contrib-group>
+<author-notes>
+<corresp id="cor-1">* E-mail: <email></email></corresp>
+</author-notes>
 <pub-date date-type="pub" publication-format="electronic" iso-8601-date="2025-01-08">
 <day>8</day>
 <month>1</month>
