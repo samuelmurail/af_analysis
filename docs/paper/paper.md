@@ -15,7 +15,7 @@ authors:
 affiliations:
  - name: "Université Paris Cité, Inserm, CNRS, BFA, F-75013 Paris, France"
    index: 1
- - name: "Ressource Parisienne en Bioinformatique Structurale (RPBS), Paris, France."
+ - name: "Ressource Parisienne en Bioinformatique Structurale (RPBS), F-75013 Paris, France."
    index: 2
 
 date: 8 January 2025
