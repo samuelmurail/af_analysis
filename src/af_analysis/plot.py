@@ -120,7 +120,7 @@ def show_info(
     plddt_array = data_af2.get_plddt(rank_num - 1)
     (plddt_plot,) = ax_plddt.plot(plddt_array)
     query = data_af2.df.iloc[model_widget.value - 1]["query"]
-    json_file = data_af2.df.iloc[model_widget.value - 1]["json"]
+    data_file = data_af2.df.iloc[model_widget.value - 1]["data_file"]
     vline_plot = ax_plddt.vlines(
         np.cumsum(data_af2.chain_length[query][:-1]),
         ymin=0,
@@ -133,7 +133,7 @@ def show_info(
     ax_plddt.set_xlabel("Residue")
     ax_plddt.set_ylabel("predicted LDDT")
 
-    pae_array = get_pae(json_file)
+    pae_array = get_pae(data_file)
     pae_plot = ax_pae.imshow(
         pae_array,
         cmap=cmap,
@@ -194,8 +194,8 @@ def show_info(
         )
         # ax_plddt.set_title(self.chain_length[query][:-1])
 
-        json_file = data_af2.df.iloc[rank_num - 1]["json"]
-        pae_array = get_pae(json_file)
+        data_file = data_af2.df.iloc[rank_num - 1]["data_file"]
+        pae_array = get_pae(data_file)
         pae_plot.set_extent((0, res_num, 0, res_num))
         pae_plot.set_data(pae_array)
         ax_pae.set_xlim(0, res_num)

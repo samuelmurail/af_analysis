@@ -454,12 +454,6 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
     """
     LIS_matrix_list = []
 
-    max_chain_num = 0
-    for query in data.chains:
-        chain_num = len(data.chains[query])
-        if chain_num > max_chain_num:
-            max_chain_num = chain_num
-
     disable = False if verbose else True
 
     for query, data_path in tqdm(
@@ -477,3 +471,52 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
 
     assert len(LIS_matrix_list) == len(data.df["query"])
     data.df.loc[:, "LIS"] = LIS_matrix_list
+
+
+
+def PAE_matrix(data, verbose=True, fun=np.average):
+    """
+    Compute the average (or something else) PAE matrix.
+
+    Parameters
+    ----------
+    data : AFData
+        object containing the data
+    verbose : bool
+        print progress bar
+    fun : function
+        function to apply to the PAE scores
+    
+    Returns
+    -------
+    None
+        The dataframe is modified in place.
+    """
+
+    PAE_avg_list = []
+
+    disable = False if verbose else True
+
+    for query, data_path in tqdm(
+        zip(data.df["query"], data.df["data_file"]),
+        total=len(data.df["query"]),
+        disable=disable,
+    ):
+        if data.chain_length[query] is None:
+            PAE_avg_list.append(None)
+            continue
+
+        pae_array = get_pae(data_path)
+        chain_len_cum = np.cumsum([data.chain_length[query]])
+        chain_len_cum = np.insert(chain_len_cum, 0, 0)
+
+        avg_matrix = np.zeros((len(chain_len_cum)-1, len(chain_len_cum)-1))
+        
+        for i in range(len(chain_len_cum)-1):
+            for j in range(len(chain_len_cum)-1):
+                avg_matrix[i,j] = fun(pae_array[chain_len_cum[i]:chain_len_cum[i+1], chain_len_cum[j]:chain_len_cum[j+1]])
+
+        PAE_avg_list.append(avg_matrix)
+
+    assert len(PAE_avg_list) == len(data.df["query"])
+    data.df.loc[:, "PAE_avg"] = PAE_avg_list
