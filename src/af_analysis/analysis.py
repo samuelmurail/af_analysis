@@ -519,4 +519,4 @@ def PAE_matrix(data, verbose=True, fun=np.average):
         PAE_avg_list.append(avg_matrix)
 
     assert len(PAE_avg_list) == len(data.df["query"])
-    data.df.loc[:, "PAE_avg"] = PAE_avg_list
+    data.df.loc[:, "PAE_fun"] = PAE_avg_list

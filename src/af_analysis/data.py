@@ -431,9 +431,9 @@ class Data:
     def plot_pae(self, index, cmap=cm.vik):
         row = self.df.iloc[index]
 
-        if row["json"] is None:
+        if row["data_file"] is None:
             return None
-        pae_array = get_pae(row["json"])
+        pae_array = get_pae(row["data_file"])
 
         fig, ax = plt.subplots()
         res_max = sum(self.chain_length[row["query"]])
@@ -713,7 +713,7 @@ class Data:
             plddt_array = self.get_plddt(rank_num - 1)
             (plddt_plot,) = ax_plddt.plot(plddt_array)
             query = self.df.iloc[model_widget.value - 1]["query"]
-            json_file = self.df.iloc[model_widget.value - 1]["json"]
+            data_file = self.df.iloc[model_widget.value - 1]["data_file"]
             ax_plddt.vlines(
                 np.cumsum(self.chain_length[query][:-1]),
                 ymin=0,
@@ -726,7 +726,7 @@ class Data:
             ax_plddt.set_xlabel("Residue")
             ax_plddt.set_ylabel("predicted LDDT")
 
-            pae_array = get_pae(json_file)
+            pae_array = get_pae(data_file)
             ax_pae.imshow(
                 pae_array,
                 cmap=cmap,
