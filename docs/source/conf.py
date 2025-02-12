@@ -9,7 +9,7 @@
 project = 'AlphaFold Analysis'
 copyright = '2023, Samuel Murail'
 author = 'Samuel Murail'
-release = '0.1.3'
+release = '0.1.4'
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
