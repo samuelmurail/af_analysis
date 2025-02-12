@@ -6,6 +6,8 @@
 [![status](https://joss.theoj.org/papers/0c359e32dc2f159688848361530239f5/status.svg)](https://joss.theoj.org/papers/0c359e32dc2f159688848361530239f5)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/samuelmurail/af_analysis/blob/main/basic_example_colab.ipynb)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14859764.svg)](https://doi.org/10.5281/zenodo.14859764)
+
 
 # About Alphafold Analysis
 
