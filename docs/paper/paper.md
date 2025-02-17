@@ -7,7 +7,7 @@ tags:
   - Structural bioinformatics
 authors:
   - name: Alaa Reguei
-  - orcid: "0009-0006-1718-4864"
+    orcid: "0009-0006-1718-4864"
     affiliation: 1
   - name: Samuel Murail
     orcid: "0000-0002-3842-5333"

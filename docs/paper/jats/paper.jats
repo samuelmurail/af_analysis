@@ -23,15 +23,11 @@ analysis</article-title>
 </title-group>
 <contrib-group>
 <contrib contrib-type="author">
+<contrib-id contrib-id-type="orcid">https://orcid.org/0009-0006-1718-4864</contrib-id>
 <name>
 <surname>Reguei</surname>
 <given-names>Alaa</given-names>
 </name>
-<xref ref-type="aff" rid="aff-"/>
-</contrib>
-<contrib contrib-type="author">
-<contrib-id contrib-id-type="orcid">https://orcid.org/0009-0006-1718-4864</contrib-id>
-<string-name>true</string-name>
 <xref ref-type="aff" rid="aff-1"/>
 </contrib>
 <contrib contrib-type="author" corresp="yes">
