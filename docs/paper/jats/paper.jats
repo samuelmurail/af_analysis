@@ -27,6 +27,11 @@ analysis</article-title>
 <surname>Reguei</surname>
 <given-names>Alaa</given-names>
 </name>
+<xref ref-type="aff" rid="aff-"/>
+</contrib>
+<contrib contrib-type="author">
+<contrib-id contrib-id-type="orcid">https://orcid.org/0009-0006-1718-4864</contrib-id>
+<string-name>true</string-name>
 <xref ref-type="aff" rid="aff-1"/>
 </contrib>
 <contrib contrib-type="author" corresp="yes">
@@ -48,16 +53,16 @@ France</institution>
 <aff id="aff-2">
 <institution-wrap>
 <institution>Ressource Parisienne en Bioinformatique Structurale (RPBS),
-F-75013 Paris, France.</institution>
+F-75013 Paris, France</institution>
 </institution-wrap>
 </aff>
 </contrib-group>
 <author-notes>
 <corresp id="cor-1">* E-mail: <email></email></corresp>
 </author-notes>
-<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2025-01-08">
-<day>8</day>
-<month>1</month>
+<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2025-02-17">
+<day>17</day>
+<month>2</month>
 <year>2025</year>
 </pub-date>
 <volume>¿VOL?</volume>
@@ -92,7 +97,11 @@ a Creative Commons Attribution 4.0 International License (CC BY
   structure prediction. The prediction of protein structures has long
   been a central challenge in the field of structural bioinformatics,
   with the ultimate goal of elucidating the relationship between protein
-  structure and function. Accurate prediction of protein structure is
+  structure and function
+  (<xref alt="Baker &amp; Sali, 2001" rid="ref-baker_protein_2001" ref-type="bibr">Baker
+  &amp; Sali, 2001</xref>;
+  <xref alt="Pearce &amp; Zhang, 2021" rid="ref-pearce_toward_2021" ref-type="bibr">Pearce
+  &amp; Zhang, 2021</xref>). Accurate prediction of protein structure is
   essential for a number of applications, including drug discovery,
   protein engineering, and the study of protein-protein interactions.
   AlphaFold, which employs a deep learning-based approach, has
@@ -154,9 +163,9 @@ a Creative Commons Attribution 4.0 International License (CC BY
   <p>The subsequent analysis of hundreds to thousands of models can
   prove to be a tedious and meticulous process, as dealing with
   thousands of models and different output formats can be time
-  consuming. Furthermore, if the quality metrics produced by AlphaFold
-  are good, additional metrics have been developed to assess the quality
-  of the models. These include pdockq
+  consuming. Furthermore, while the quality metrics produced by
+  AlphaFold are good, additional metrics have been developed to assess
+  the quality of the models. These include pdockq
   (<xref alt="Bryant et al., 2022" rid="ref-bryant2022improved" ref-type="bibr">Bryant
   et al., 2022</xref>), pdockq2
   (<xref alt="Zhu et al., 2023" rid="ref-10.1093U002FbioinformaticsU002Fbtad424" ref-type="bibr">Zhu
@@ -323,42 +332,6 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <lpage></lpage>
     </element-citation>
   </ref>
-  <ref id="ref-Kim2024.02.19.580970">
-    <element-citation publication-type="article-journal">
-      <person-group person-group-type="author">
-        <name><surname>Kim</surname><given-names>Ah-Ram</given-names></name>
-        <name><surname>Hu</surname><given-names>Yanhui</given-names></name>
-        <name><surname>Comjean</surname><given-names>Aram</given-names></name>
-        <name><surname>Rodiger</surname><given-names>Jonathan</given-names></name>
-        <name><surname>Mohr</surname><given-names>Stephanie E.</given-names></name>
-        <name><surname>Perrimon</surname><given-names>Norbert</given-names></name>
-      </person-group>
-      <article-title>Enhanced protein-protein interaction discovery via AlphaFold-multimer</article-title>
-      <source>bioRxiv</source>
-      <publisher-name>Cold Spring Harbor Laboratory</publisher-name>
-      <year iso-8601-date="2024">2024</year>
-      <uri>https://www.biorxiv.org/content/early/2024/02/21/2024.02.19.580970</uri>
-      <pub-id pub-id-type="doi">10.1101/2024.02.19.580970</pub-id>
-    </element-citation>
-  </ref>
-  <ref id="ref-Kim2024.02.19.580970">
-    <element-citation publication-type="article-journal">
-      <person-group person-group-type="author">
-        <name><surname>Kim</surname><given-names>Ah-Ram</given-names></name>
-        <name><surname>Hu</surname><given-names>Yanhui</given-names></name>
-        <name><surname>Comjean</surname><given-names>Aram</given-names></name>
-        <name><surname>Rodiger</surname><given-names>Jonathan</given-names></name>
-        <name><surname>Mohr</surname><given-names>Stephanie E.</given-names></name>
-        <name><surname>Perrimon</surname><given-names>Norbert</given-names></name>
-      </person-group>
-      <article-title>Enhanced protein-protein interaction discovery via AlphaFold-multimer</article-title>
-      <source>bioRxiv</source>
-      <publisher-name>Cold Spring Harbor Laboratory</publisher-name>
-      <year iso-8601-date="2024">2024</year>
-      <uri>https://www.biorxiv.org/content/early/2024/02/21/2024.02.19.580970</uri>
-      <pub-id pub-id-type="doi">10.1101/2024.02.19.580970</pub-id>
-    </element-citation>
-  </ref>
   <ref id="ref-bryant2022improved">
     <element-citation publication-type="article-journal">
       <person-group person-group-type="author">
@@ -443,7 +416,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     </element-citation>
   </ref>
   <ref id="ref-wohlwend_boltz-1_2024">
-    <element-citation>
+    <element-citation publication-type="article-journal">
       <person-group person-group-type="author">
         <name><surname>Wohlwend</surname><given-names>Jeremy</given-names></name>
         <name><surname>Corso</surname><given-names>Gabriele</given-names></name>
@@ -458,7 +431,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
         <name><surname>Barzilay</surname><given-names>Regina</given-names></name>
       </person-group>
       <article-title>Boltz-1 democratizing biomolecular interaction modeling</article-title>
-      <publisher-name>bioRxiv</publisher-name>
+      <source>bioRxiv</source>
+      <publisher-name>Cold Spring Harbor Laboratory</publisher-name>
       <year iso-8601-date="2024-11-20">2024</year><month>11</month><day>20</day>
       <date-in-citation content-type="access-date"><year iso-8601-date="2024-12-16">2024</year><month>12</month><day>16</day></date-in-citation>
       <uri>https://www.biorxiv.org/content/10.1101/2024.11.19.624167v1</uri>
@@ -466,7 +440,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
     </element-citation>
   </ref>
   <ref id="ref-discovery_chai-1_2024">
-    <element-citation>
+    <element-citation publication-type="article-journal">
       <person-group person-group-type="author">
         <name><surname>Discovery</surname><given-names>Chai</given-names></name>
         <name><surname>Boitreaud</surname><given-names>Jacques</given-names></name>
@@ -478,7 +452,8 @@ a Creative Commons Attribution 4.0 International License (CC BY
         <name><surname>Wu</surname><given-names>Kevin</given-names></name>
       </person-group>
       <article-title>Chai-1: Decoding the molecular interactions of life</article-title>
-      <publisher-name>bioRxiv</publisher-name>
+      <source>bioRxiv</source>
+      <publisher-name>Cold Spring Harbor Laboratory</publisher-name>
       <year iso-8601-date="2024-10-15">2024</year><month>10</month><day>15</day>
       <date-in-citation content-type="access-date"><year iso-8601-date="2024-12-16">2024</year><month>12</month><day>16</day></date-in-citation>
       <uri>https://www.biorxiv.org/content/10.1101/2024.10.10.615955v2</uri>
@@ -497,7 +472,7 @@ a Creative Commons Attribution 4.0 International License (CC BY
         <name><surname>Brysbaert</surname><given-names>Guillaume</given-names></name>
       </person-group>
       <article-title>MassiveFold: Unveiling AlphaFold’s hidden potential with optimized and parallelized massive sampling</article-title>
-      <source>Nat Comput Sci</source>
+      <source>Nature Computational Science</source>
       <year iso-8601-date="2024-11">2024</year><month>11</month>
       <date-in-citation content-type="access-date"><year iso-8601-date="2025-01-08">2025</year><month>01</month><day>08</day></date-in-citation>
       <volume>4</volume>
@@ -507,24 +482,6 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <pub-id pub-id-type="doi">10.1038/s43588-024-00714-4</pub-id>
       <fpage>824</fpage>
       <lpage>828</lpage>
-    </element-citation>
-  </ref>
-  <ref id="ref-alvarez-salmoral_alphabridge_2024">
-    <element-citation>
-      <person-group person-group-type="author">
-        <name><surname>Álvarez-Salmoral</surname><given-names>Daniel</given-names></name>
-        <name><surname>Borza</surname><given-names>Razvan</given-names></name>
-        <name><surname>Xie</surname><given-names>Ren</given-names></name>
-        <name><surname>Joosten</surname><given-names>Robbie P.</given-names></name>
-        <name><surname>Hekkelman</surname><given-names>Maarten L.</given-names></name>
-        <name><surname>Perrakis</surname><given-names>Anastassis</given-names></name>
-      </person-group>
-      <article-title>AlphaBridge: Tools for the analysis of predicted macromolecular complexes</article-title>
-      <publisher-name>bioRxiv</publisher-name>
-      <year iso-8601-date="2024-10">2024</year><month>10</month>
-      <date-in-citation content-type="access-date"><year iso-8601-date="2025-01-08">2025</year><month>01</month><day>08</day></date-in-citation>
-      <uri>https://www.biorxiv.org/content/10.1101/2024.10.23.619601v1</uri>
-      <pub-id pub-id-type="doi">10.1101/2024.10.23.619601</pub-id>
     </element-citation>
   </ref>
   <ref id="ref-genz_pickluster_2023">
@@ -546,6 +503,80 @@ a Creative Commons Attribution 4.0 International License (CC BY
       <pub-id pub-id-type="doi">10.1093/bioinformatics/btad629</pub-id>
       <fpage>btad629</fpage>
       <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-baker_protein_2001">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Baker</surname><given-names>David</given-names></name>
+        <name><surname>Sali</surname><given-names>Andrej</given-names></name>
+      </person-group>
+      <article-title>Protein Structure Prediction and Structural Genomics</article-title>
+      <source>Science</source>
+      <year iso-8601-date="2001-10">2001</year><month>10</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2025-02-17">2025</year><month>02</month><day>17</day></date-in-citation>
+      <volume>294</volume>
+      <issue>5540</issue>
+      <uri>https://www.science.org/doi/10.1126/science.1065659</uri>
+      <pub-id pub-id-type="doi">10.1126/science.1065659</pub-id>
+      <fpage>93</fpage>
+      <lpage>96</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-pearce_toward_2021">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Pearce</surname><given-names>Robin</given-names></name>
+        <name><surname>Zhang</surname><given-names>Yang</given-names></name>
+      </person-group>
+      <article-title>Toward the solution of the protein structure prediction problem</article-title>
+      <source>Journal of Biological Chemistry</source>
+      <year iso-8601-date="2021-07">2021</year><month>07</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2025-02-17">2025</year><month>02</month><day>17</day></date-in-citation>
+      <volume>297</volume>
+      <issue>1</issue>
+      <issn>0021-9258</issn>
+      <uri>https://www.sciencedirect.com/science/article/pii/S0021925821006700</uri>
+      <pub-id pub-id-type="doi">10.1016/j.jbc.2021.100870</pub-id>
+      <fpage>100870</fpage>
+      <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Kim2024.02.19.580970">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Kim</surname><given-names>Ah-Ram</given-names></name>
+        <name><surname>Hu</surname><given-names>Yanhui</given-names></name>
+        <name><surname>Comjean</surname><given-names>Aram</given-names></name>
+        <name><surname>Rodiger</surname><given-names>Jonathan</given-names></name>
+        <name><surname>Mohr</surname><given-names>Stephanie E.</given-names></name>
+        <name><surname>Perrimon</surname><given-names>Norbert</given-names></name>
+      </person-group>
+      <article-title>Enhanced protein-protein interaction discovery via AlphaFold-multimer</article-title>
+      <source>bioRxiv</source>
+      <publisher-name>Cold Spring Harbor Laboratory</publisher-name>
+      <year iso-8601-date="2024">2024</year>
+      <uri>https://www.biorxiv.org/content/early/2024/02/21/2024.02.19.580970</uri>
+      <pub-id pub-id-type="doi">10.1101/2024.02.19.580970</pub-id>
+    </element-citation>
+  </ref>
+  <ref id="ref-alvarez-salmoral_alphabridge_2024">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Álvarez-Salmoral</surname><given-names>Daniel</given-names></name>
+        <name><surname>Borza</surname><given-names>Razvan</given-names></name>
+        <name><surname>Xie</surname><given-names>Ren</given-names></name>
+        <name><surname>Joosten</surname><given-names>Robbie P.</given-names></name>
+        <name><surname>Hekkelman</surname><given-names>Maarten L.</given-names></name>
+        <name><surname>Perrakis</surname><given-names>Anastassis</given-names></name>
+      </person-group>
+      <article-title>AlphaBridge: Tools for the analysis of predicted macromolecular complexes</article-title>
+      <source>bioRxiv</source>
+      <publisher-name>Cold Spring Harbor Laboratory</publisher-name>
+      <year iso-8601-date="2024-10">2024</year><month>10</month>
+      <date-in-citation content-type="access-date"><year iso-8601-date="2025-01-08">2025</year><month>01</month><day>08</day></date-in-citation>
+      <uri>https://www.biorxiv.org/content/10.1101/2024.10.23.619601v1</uri>
+      <pub-id pub-id-type="doi">10.1101/2024.10.23.619601</pub-id>
     </element-citation>
   </ref>
 </ref-list>
