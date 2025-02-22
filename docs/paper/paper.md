@@ -20,7 +20,7 @@ affiliations:
  - name: Ressource Parisienne en Bioinformatique Structurale (RPBS), F-75013 Paris, France
    index: 2
 
-date: 17 February 2025
+date: 22 February 2025
 bibliography: paper.bib
 ---
 
@@ -32,7 +32,7 @@ The publication of AlphaFold 2 [@jumper_highly_2021] has significantly advanced 
 
 With the release of AlphaFold 2 [@jumper_highly_2021] in 2021, the scientific community has achieved an unprecedented level of accuracy in predicting protein structures. Derivatives of AlphaFold 2, namely ColabFold [@mirdita2022colabfold], AlphaFold Multimer [@Evans2021.10.04.463034], AlphaFold 3 [@abramson_accurate_2024] and its re-implementations such as Boltz-1 [@wohlwend_boltz-1_2024] and Chai-1 [@discovery_chai-1_2024] have been developed to predict the structure of protein complexes, setting a new standard for protein-protein and protein-peptide docking.
 
-Analysis of AlphaFold results is a crucial step in the process of utilising these predictions for scientific research. The AlphaFold software provides several excellent quality metrics that offer valuable information about the accuracy of the predicted structures. Among these scores, the predicted local distance difference test (pLDDT) is a per-residue measure of local confidence, as the predicted aligned error (PAE) provides confidence over the relative position of two residues within the predicted structure. To analyze these results, the AlphaBridge webserver [@alvarez-salmoral_alphabridge_2024] and the PICKLUSTER plugin [@genz_pickluster_2023] for the UCSF ChimeraX visualisation software were developed to characterize the different interfaces within protein complexes, and extract their respective scores.
+Analysis of AlphaFold results is a crucial step in the process of utilising these predictions for scientific research. The AlphaFold software provides several excellent quality metrics that offer valuable information about the accuracy of the predicted structures. Among these scores, the predicted local distance difference test (pLDDT) is a per-residue measure of local confidence, as the predicted aligned error (PAE) provides confidence over the relative position of two residues within the predicted structure. To analyse these results, the AlphaBridge webserver [@alvarez-salmoral_alphabridge_2024] and the PICKLUSTER plugin [@genz_pickluster_2023] for the UCSF ChimeraX visualisation software were developed to characterise the different interfaces within protein complexes, and extract their respective scores.
 
 Although these tools are very practical, Bjorn Wallner has shown that calculating 5 or 25 basic AlphaFold models may not be enough, it is sometimes necessary to generate thousands of models to obtain a few high quality models, leading to the AlphaFold derivative, AFsample [@10.1093/bioinformatics/btad573]. Massive sampling altogether with multiple software usage (AFsample and ColabFold), weights and parameters has been integrated into the MassiveFold software [@raouraoua_massivefold_2024] and has shown performance approaching the accuracy of AlphaFold 3.
 

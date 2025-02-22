@@ -56,8 +56,8 @@ F-75013 Paris, France</institution>
 <author-notes>
 <corresp id="cor-1">* E-mail: <email></email></corresp>
 </author-notes>
-<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2025-02-17">
-<day>17</day>
+<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2025-02-22">
+<day>22</day>
 <month>2</month>
 <year>2025</year>
 </pub-date>
@@ -68,7 +68,7 @@ F-75013 Paris, France</institution>
 <copyright-statement>Authors of papers retain copyright and release the
 work under a Creative Commons Attribution 4.0 International License (CC
 BY 4.0)</copyright-statement>
-<copyright-year>2022</copyright-year>
+<copyright-year>1970</copyright-year>
 <copyright-holder>The article authors</copyright-holder>
 <license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/4.0/">
 <license-p>Authors of papers retain copyright and release the work under
@@ -137,13 +137,13 @@ a Creative Commons Attribution 4.0 International License (CC BY
   Among these scores, the predicted local distance difference test
   (pLDDT) is a per-residue measure of local confidence, as the predicted
   aligned error (PAE) provides confidence over the relative position of
-  two residues within the predicted structure. To analyze these results,
+  two residues within the predicted structure. To analyse these results,
   the AlphaBridge webserver
   (<xref alt="Álvarez-Salmoral et al., 2024" rid="ref-alvarez-salmoral_alphabridge_2024" ref-type="bibr">Álvarez-Salmoral
   et al., 2024</xref>) and the PICKLUSTER plugin
   (<xref alt="Genz et al., 2023" rid="ref-genz_pickluster_2023" ref-type="bibr">Genz
   et al., 2023</xref>) for the UCSF ChimeraX visualisation software were
-  developed to characterize the different interfaces within protein
+  developed to characterise the different interfaces within protein
   complexes, and extract their respective scores.</p>
   <p>Although these tools are very practical, Bjorn Wallner has shown
   that calculating 5 or 25 basic AlphaFold models may not be enough, it
