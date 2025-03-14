@@ -427,6 +427,34 @@ The custom analysis results are then stored in the dataframe as the ``contact_nu
 column and can be used for further analysis.
 
 
+Citing this work
+================
+
+If you use the code of this package, please cite:
+
+* | Reguei A and Murail S. Af-analysis: a Python package for Alphafold analysis.
+  | Journal of Open Source Software (2025) doi: `10.21105/joss.07577 <https://joss.theoj.org/papers/10.21105/joss.07577>`_
+
+.. code-block:: bibtex
+
+    @Article{reguei_af-analysis_2025,
+        title = {Af-analysis: a {Python} package for {Alphafold} analysis},
+        volume = {10},
+        issn = {2475-9066},
+        shorttitle = {Af-analysis},
+        url = {https://joss.theoj.org/papers/10.21105/joss.07577},
+        doi = {10.21105/joss.07577},
+        language = {en},
+        number = {107},
+        urldate = {2025-03-14},
+        journal = {Journal of Open Source Software},
+        author = {Reguei, Alaa and Murail, Samuel},
+        month = mar,
+        year = {2025},
+        pages = {7577},
+    }
+
+
 References
 ==========
 

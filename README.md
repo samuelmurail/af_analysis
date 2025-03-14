@@ -165,6 +165,32 @@ to contribute code, please fork the repository and submit a pull request.
 
 See also the list of [contributors](https://github.com/samuelmurail/af_analysis/contributors) who participated in this project.
 
+## Citing this work
+
+If you use the code of this package, please cite:
+
+- Reguei A and Murail S. Af-analysis: a Python package for Alphafold analysis. <br>
+  Journal of Open Source Software (2025) doi: [10.21105/joss.07577](https://joss.theoj.org/papers/10.21105/joss.07577)
+
+```bibtex
+@Article{reguei_af-analysis_2025,
+	title = {Af-analysis: a {Python} package for {Alphafold} analysis},
+	volume = {10},
+	issn = {2475-9066},
+	shorttitle = {Af-analysis},
+	url = {https://joss.theoj.org/papers/10.21105/joss.07577},
+	doi = {10.21105/joss.07577},
+	language = {en},
+	number = {107},
+	urldate = {2025-03-14},
+	journal = {Journal of Open Source Software},
+	author = {Reguei, Alaa and Murail, Samuel},
+	month = mar,
+	year = {2025},
+	pages = {7577},
+}
+```
+
 ## License
 
 This project is licensed under the GNU General Public License version 2 - see the `LICENSE` file for details.
