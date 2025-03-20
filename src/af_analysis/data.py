@@ -174,7 +174,7 @@ class Data:
             self.format = "default"
             self.df = default.read_dir(directory)
             self.df["format"] = "default"
-            self.add_json()
+            self.add_json(verbose=verbose)
 
         self.set_chain_length()
 
