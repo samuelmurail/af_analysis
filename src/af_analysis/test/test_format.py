@@ -278,3 +278,51 @@ def test_chai1():
     np.testing.assert_allclose(
         np.array(list(my_data.df["ipTM"])), np.array(expected_iptm), atol=precision
     )
+
+
+def test_chai1_webserver():
+    data_path = os.path.join(TEST_FILE_PATH, "chai1_webserver_prot_dna_ligand")
+
+    my_data = af_analysis.Data(data_path)
+
+    assert my_data.format == "chai1"
+    assert len(my_data.df) == 5
+    print(my_data.df.columns)
+    assert (
+        my_data.df.columns
+        == np.array(
+            [
+                'pdb',
+                'model',
+                'ranking_confidence',
+                'pTM',
+                'ipTM',
+                'per_chain_ptm',
+                'per_chain_pair_iptm',
+                'has_inter_chain_clashes',
+                'chain_chain_clashes',
+                'data_file',
+                'query',
+                'format'
+            ]
+        )
+    ).all()
+
+    query = my_data.df.iloc[0]["query"]
+
+    assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
+    assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
+
+    # There should be 0 relaxed structures
+
+    assert "relaxed_pdb" not in my_data.df.columns
+    print(my_data.df.iloc[:, :])
+    assert list(my_data.df["model"]) == list(range(5))
+    print(my_data.df["ipTM"])
+    expected_iptm = [0.918220,0.918036,0.917979,0.917922,0.917824]
+
+    precision = 0.01
+
+    np.testing.assert_allclose(
+        np.array(list(my_data.df["ipTM"])), np.array(expected_iptm), atol=precision
+    )

@@ -95,7 +95,7 @@ def plot_msa_v2(feature_dict, sort_lines=True, dpi=100):
 
 
 def show_info(
-    data_af2, cmap=cm.vik, score_list=["pLDDT", "pTM", "ipTM", "ranking_confidence"]
+    data_af, cmap=cm.vik, score_list=["pLDDT", "pTM", "ipTM", "ranking_confidence"]
 ):
     """
     Use with
@@ -107,7 +107,7 @@ def show_info(
     model_widget = widgets.IntSlider(
         value=1,
         min=1,
-        max=len(data_af2.df),
+        max=len(data_af.df),
         step=1,
         description="model:",
         disabled=False,
@@ -117,18 +117,18 @@ def show_info(
     rank_num = 1
 
     fig, (ax_plddt, ax_pae) = plt.subplots(1, 2, figsize=(10, 4))
-    plddt_array = data_af2.get_plddt(rank_num - 1)
+    plddt_array = data_af.get_plddt(rank_num - 1)
     (plddt_plot,) = ax_plddt.plot(plddt_array)
-    query = data_af2.df.iloc[model_widget.value - 1]["query"]
-    data_file = data_af2.df.iloc[model_widget.value - 1]["data_file"]
+    query = data_af.df.iloc[model_widget.value - 1]["query"]
+    data_file = data_af.df.iloc[model_widget.value - 1]["data_file"]
     vline_plot = ax_plddt.vlines(
-        np.cumsum(data_af2.chain_length[query][:-1]),
+        np.cumsum(data_af.chain_length[query][:-1]),
         ymin=0,
         ymax=100.0,
         colors="black",
     )
     ax_plddt.set_ylim(0, 100)
-    res_max = sum(data_af2.chain_length[query])
+    res_max = sum(data_af.chain_length[query])
     ax_plddt.set_xlim(0, res_max)
     ax_plddt.set_xlabel("Residue")
     ax_plddt.set_ylabel("predicted LDDT")
@@ -141,13 +141,13 @@ def show_info(
         vmax=30.0,
     )
     vline_pae = ax_pae.vlines(
-        np.cumsum(data_af2.chain_length[query][:-1]),
+        np.cumsum(data_af.chain_length[query][:-1]),
         ymin=-0.5,
         ymax=res_max,
         colors="yellow",
     )
     hline_pae = ax_pae.hlines(
-        np.cumsum(data_af2.chain_length[query][:-1]),
+        np.cumsum(data_af.chain_length[query][:-1]),
         xmin=-0.5,
         xmax=res_max,
         colors="yellow",
@@ -156,11 +156,11 @@ def show_info(
     ax_pae.set_ylim(res_max - 0.5, -0.5)
     chain_pos = []
     len_sum = 0
-    for longueur in data_af2.chain_length[query]:
+    for longueur in data_af.chain_length[query]:
         chain_pos.append(len_sum + longueur / 2)
         len_sum += longueur
     ax_pae.set_yticks(chain_pos)
-    ax_pae.set_yticklabels(data_af2.chains[query])
+    ax_pae.set_yticklabels(data_af.chains[query])
     plt.show(fig)
 
     # out_score = widgets.Output(layout={'border': '1px solid black'})
@@ -170,31 +170,31 @@ def show_info(
     pattern = "<p style='display: inline-block; width:100px'> <strong>{score_name:15} : </strong> {score_value:7.2f} </p>"
 
     for score in score_list:
-        if score in data_af2.df.columns:
+        if score in data_af.df.columns:
             out_score.value += pattern.format(
                 score_name=score,
-                score_value=data_af2.df.iloc[model_widget.value - 1][score],
+                score_value=data_af.df.iloc[model_widget.value - 1][score],
             )
-            # (f"<div> <strong>{score:15} : </strong> {data_af2.df.iloc[model_widget.value - 1][score]:7.2f} </div>")
+            # (f"<div> <strong>{score:15} : </strong> {data_af.df.iloc[model_widget.value - 1][score]:7.2f} </div>")
 
     def update_model(change):
         rank_num = model_widget.value
         # print("Update")
-        plddt_array = data_af2.get_plddt(rank_num - 1)
+        plddt_array = data_af.get_plddt(rank_num - 1)
         res_num = len(plddt_array)
         plddt_plot.set_data(range(res_num), plddt_array)
         ax_plddt.set_xlim(0, len(plddt_array))
 
-        query = data_af2.df.iloc[rank_num - 1]["query"]
+        query = data_af.df.iloc[rank_num - 1]["query"]
         vline_plot.set_segments(
             [
                 np.array([[x, 0], [x, 100]])
-                for x in np.cumsum(data_af2.chain_length[query][:-1])
+                for x in np.cumsum(data_af.chain_length[query][:-1])
             ]
         )
         # ax_plddt.set_title(self.chain_length[query][:-1])
 
-        data_file = data_af2.df.iloc[rank_num - 1]["data_file"]
+        data_file = data_af.df.iloc[rank_num - 1]["data_file"]
         pae_array = get_pae(data_file)
         pae_plot.set_extent((0, res_num, 0, res_num))
         pae_plot.set_data(pae_array)
@@ -204,31 +204,31 @@ def show_info(
         vline_pae.set_segments(
             [
                 np.array([[x, -0.5], [x, res_num]])
-                for x in np.cumsum(data_af2.chain_length[query][:-1])
+                for x in np.cumsum(data_af.chain_length[query][:-1])
             ]
         )
         hline_pae.set_segments(
             [
                 np.array([[-0.5, res_num - x], [res_num, res_num - x]])
-                for x in np.cumsum(data_af2.chain_length[query][:-1])
+                for x in np.cumsum(data_af.chain_length[query][:-1])
             ]
         )
         chain_pos = []
         len_sum = 0
-        for longueur in data_af2.chain_length[query]:
+        for longueur in data_af.chain_length[query]:
             chain_pos.append(res_num - (len_sum + longueur / 2))
             len_sum += longueur
         ax_pae.set_yticks(chain_pos)
-        ax_pae.set_yticklabels(data_af2.chains[query])
+        ax_pae.set_yticklabels(data_af.chains[query])
         fig.canvas.draw()
 
         new_out_score = ""
         for score in score_list:
-            if score in data_af2.df.columns:
-                # new_out_score += (f"<div> <strong>{score:15} : </strong> {data_af2.df.iloc[model_widget.value - 1][score]:7.2f} </div>")
+            if score in data_af.df.columns:
+                # new_out_score += (f"<div> <strong>{score:15} : </strong> {data_af.df.iloc[model_widget.value - 1][score]:7.2f} </div>")
                 new_out_score += pattern.format(
                     score_name=score,
-                    score_value=data_af2.df.iloc[model_widget.value - 1][score],
+                    score_value=data_af.df.iloc[model_widget.value - 1][score],
                 )
 
         out_score.value = new_out_score
@@ -236,7 +236,7 @@ def show_info(
         # out_score.clear_output()
         # with out_score:
         #    for score in score_list:
-        #        if score in data_af2.df.columns:
-        #            print(f"{score:15} : {data_af2.df.iloc[model_widget.value - 1][score]:7.2f}")
+        #        if score in data_af.df.columns:
+        #            print(f"{score:15} : {data_af.df.iloc[model_widget.value - 1][score]:7.2f}")
 
     model_widget.observe(update_model, names="value")

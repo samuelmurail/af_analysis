@@ -166,6 +166,8 @@ class Data:
             self.df["format"] = "boltz1"
         elif format == "chai1" or os.path.isfile(
             os.path.join(directory, "msa_depth.pdf")
+        ) or os.path.isfile(
+            os.path.join(directory, "pae.rank_0.npy")
         ):
             self.format = "chai1"
             self.df = chai1.read_dir(directory)
@@ -492,7 +494,7 @@ class Data:
 
         row = self.df.iloc[index]
 
-        if row["format"] in ["AF3_webserver", "csv", "AlphaPulldown"]:
+        if row["format"] in ["AF3_webserver", "csv", "AlphaPulldown", "chai1"]:
             model = pdb_numpy.Coor(row["pdb"])
             plddt_array = model.models[0].beta[
                 np.isin(model.models[0].name, plddt_main_atom_list)

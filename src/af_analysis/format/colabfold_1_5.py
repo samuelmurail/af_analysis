@@ -174,6 +174,10 @@ def add_json(log_pd, directory, verbose=True):
         Dataframe containing the information extracted from the `log.txt` file.
     directory : str
         Path to the directory containing the json files.
+    verbose : bool
+        If True, show a progress bar.
+        If False, no progress bar is shown.
+
 
     Returns
     -------

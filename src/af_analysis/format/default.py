@@ -60,7 +60,7 @@ def read_dir(directory):
     return log_pd
 
 
-def add_json(log_pd, directory):
+def add_json(log_pd, directory, verbose=True):
     """Find json files in the directory.
 
     Parameters
@@ -69,6 +69,9 @@ def add_json(log_pd, directory):
         Dataframe containing the information extracted from the `log.txt` file.
     directory : str
         Path to the directory containing the json files.
+    verbose : bool
+        If True, show a progress bar.
+        If False, no progress bar is shown.
 
     Returns
     -------
@@ -97,7 +100,9 @@ def add_json(log_pd, directory):
             == log_pd["recycle"]
         )
 
-    for i, last in tqdm(enumerate(last_recycle), total=len(last_recycle)):
+    disable = False if verbose else True
+
+    for i, last in tqdm(enumerate(last_recycle), total=len(last_recycle), disable=disable):
         row = log_pd.iloc[i]
 
         reg = rf"{row['query']}_scores_.*_{row['weight']}_model_{row['model']}_seed_{row['seed']:03d}\.json"

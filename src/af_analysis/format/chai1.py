@@ -6,6 +6,7 @@ import logging
 from tqdm.auto import tqdm
 import pandas as pd
 import numpy as np
+import json
 
 logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)
@@ -37,19 +38,30 @@ def read_dir(directory):
             token = file[4:-4].split("_")[-1]
             model = int(token[-1])
 
-            npz_dict = np.load(os.path.join(pred_dir, f"scores.model_idx_{model}.npz"))
-
-            # for key in npz_dict.keys():
-            #    print(key, npz_dict[key])
-            # print('ratio', ( 0.2* npz_dict['ptm'] + 0.8*npz_dict['iptm'] )/npz_dict['aggregate_score'])
-
             info_dict = {
                 "pdb": os.path.join(pred_dir, file),
                 "model": model,
             }
 
-            for key in npz_dict.keys():
-                info_dict[key] = npz_dict[key][0]
+            if os.path.isfile(os.path.join(pred_dir, f"scores.model_idx_{model}.npz")):
+                npz_dict = np.load(os.path.join(pred_dir, f"scores.model_idx_{model}.npz"))
+                for key in npz_dict.keys():
+                    info_dict[key] = npz_dict[key][0]
+
+            elif os.path.isfile(os.path.join(pred_dir, f"scores.rank_{model}.json")):
+                with open(os.path.join(pred_dir,  f"scores.rank_{model}.json"), "r") as f:
+                    json_dict = json.load(f)
+                for key in json_dict.keys():
+                    info_dict[key] = json_dict[key]
+                if os.path.isfile(os.path.join(pred_dir, f"pae.rank_{model}.npy")):
+                    info_dict["data_file"] = os.path.join(pred_dir, f"pae.rank_{model}.npy")
+            else:
+                logger.warning(f"File scores.model_idx_{model}.npz or scores.rank_{model}.json could not be found.")
+                continue
+
+            # for key in npz_dict.keys():
+            #    print(key, npz_dict[key])
+            # print('ratio', ( 0.2* npz_dict['ptm'] + 0.8*npz_dict['iptm'] )/npz_dict['aggregate_score'])
 
             """
                 "pTM": npz_dict['ptm'],

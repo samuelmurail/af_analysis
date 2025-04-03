@@ -37,6 +37,8 @@ def get_pae(data_file):
         return extract_pae_json(data_file)
     elif data_file.endswith(".npz"):
         return extract_pae_npz(data_file)
+    elif data_file.endswith(".npy"):
+        return extract_pae_npy(data_file)
     else:
         raise ValueError("Unknown file format.")
 
@@ -69,7 +71,7 @@ def extract_pae_json(json_file):
 
 
 def extract_pae_npz(npz_file):
-    """Get the PAE matrix from a json file.
+    """Get the PAE matrix from a npz file.
 
     Parameters
     ----------
@@ -84,6 +86,25 @@ def extract_pae_npz(npz_file):
 
     data_npz = np.load(npz_file)
     pae_array = data_npz["pae"]
+
+    return pae_array
+
+
+def extract_pae_npy(npy_file):
+    """Get the PAE matrix from a npy file.
+
+    Parameters
+    ----------
+    npy_file : str
+        Path to the npy file.
+
+    Returns
+    -------
+    np.array
+        PAE matrix.
+    """
+
+    pae_array = np.load(npy_file)
 
     return pae_array
 
