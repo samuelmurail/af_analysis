@@ -164,10 +164,10 @@ class Data:
             self.format = "boltz1"
             self.df = boltz1.read_dir(directory)
             self.df["format"] = "boltz1"
-        elif format == "chai1" or os.path.isfile(
-            os.path.join(directory, "msa_depth.pdf")
-        ) or os.path.isfile(
-            os.path.join(directory, "pae.rank_0.npy")
+        elif (
+            format == "chai1"
+            or os.path.isfile(os.path.join(directory, "msa_depth.pdf"))
+            or os.path.isfile(os.path.join(directory, "pae.rank_0.npy"))
         ):
             self.format = "chai1"
             self.df = chai1.read_dir(directory)

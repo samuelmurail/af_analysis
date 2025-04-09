@@ -292,18 +292,18 @@ def test_chai1_webserver():
         my_data.df.columns
         == np.array(
             [
-                'pdb',
-                'model',
-                'ranking_confidence',
-                'pTM',
-                'ipTM',
-                'per_chain_ptm',
-                'per_chain_pair_iptm',
-                'has_inter_chain_clashes',
-                'chain_chain_clashes',
-                'data_file',
-                'query',
-                'format'
+                "pdb",
+                "model",
+                "ranking_confidence",
+                "pTM",
+                "ipTM",
+                "per_chain_ptm",
+                "per_chain_pair_iptm",
+                "has_inter_chain_clashes",
+                "chain_chain_clashes",
+                "data_file",
+                "query",
+                "format",
             ]
         )
     ).all()
@@ -319,7 +319,7 @@ def test_chai1_webserver():
     print(my_data.df.iloc[:, :])
     assert list(my_data.df["model"]) == list(range(5))
     print(my_data.df["ipTM"])
-    expected_iptm = [0.918220,0.918036,0.917979,0.917922,0.917824]
+    expected_iptm = [0.918220, 0.918036, 0.917979, 0.917922, 0.917824]
 
     precision = 0.01
 

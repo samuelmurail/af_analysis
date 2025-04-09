@@ -1,0 +1,2 @@
+ID jury_score GNN_sum_score GNN_pcadscore voromqa_dark voromqa_light voromqa_energy gen_voromqa_energy clash_score area rank_2018 rank_2020 redundancy
+beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 0,000 1827,000 0,000 0,000 0,000 -482,000 -497,000 0,000 834,000 1,000 1,000 0,000

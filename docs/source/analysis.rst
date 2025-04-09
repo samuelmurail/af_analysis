@@ -426,6 +426,55 @@ The custom analysis function can then be applied easily to the dataframe:
 The custom analysis results are then stored in the dataframe as the ``contact_num``
 column and can be used for further analysis.
 
+FTDMP Scores
+============
+
+The ``af_analysis`` package provides a simple interface to extract docking score
+computed using the `FTDMP software <https://github.com/kliment-olechnovic/ftdmp>`_.
+
+First you need to install the `ftdmp` package:
+
+.. code-block:: bash
+
+    git clone https://github.com/kliment-olechnovic/ftdmp.git
+    cd ./ftdmp
+    ./core/build.bash
+
+- and then install dependencies using conda:
+
+.. code-block:: bash
+
+    conda env create -f ftdmp_environment_for_conda.yml
+
+Then you can use the FTDMP sofware to compute different scores from the pdb files:
+
+.. code-block:: bash
+
+    conda activate ftdmp
+    ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
+
+you can then extract the scores using the ``analysis.extract_ftdmp()`` function in a 
+python script or a jupyter notebook :
+
+.. code-block:: python
+
+    import af_analysis
+    from af_analysis import analysis
+
+    my_data = af_analysis.Data('MY_AF_RESULTS_DIR')
+    # Extract the FTDMP scores
+    analysis.extract_ftdmp(my_data, ftdmp_path='ftdmp_beta_amyloid_dimer')
+
+If you use the FTDMP software, please cite:
+
+* Olechnovič K, Banciul R, Dapkūnas J, Venclovas Č. (2025) *FTDMP: A Framework for Protein-Protein, Protein-DNA, and Protein-RNA Docking and Scoring*. Proteins. doi: `10.1002/prot.26792 <https://doi.org/10.1002/prot.26792>`_. PubMed PMID: `39748638 <https://pubmed.ncbi.nlm.nih.gov/39748638/>`_.
+
+Scoring of protein-protein interfaces using the VoroIF-jury algorithm and details of this algorithm are published in our CASP16 article:
+
+* Olechnovič K, Valančauskas L, Dapkūnas J, Venclovas Č. (2023) *Prediction of protein assemblies by structure sampling followed by interface-focused scoring*. Proteins; 91:1724–1733. doi: `10.1002/prot.26569 <https://doi.org/10.1002/prot.26569>`_. PubMed PMID: `37578163 <https://pubmed.ncbi.nlm.nih.gov/37578163/>`_.
+
+
+
 
 Citing this work
 ================

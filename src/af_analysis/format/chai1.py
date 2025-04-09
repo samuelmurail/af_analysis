@@ -44,19 +44,27 @@ def read_dir(directory):
             }
 
             if os.path.isfile(os.path.join(pred_dir, f"scores.model_idx_{model}.npz")):
-                npz_dict = np.load(os.path.join(pred_dir, f"scores.model_idx_{model}.npz"))
+                npz_dict = np.load(
+                    os.path.join(pred_dir, f"scores.model_idx_{model}.npz")
+                )
                 for key in npz_dict.keys():
                     info_dict[key] = npz_dict[key][0]
 
             elif os.path.isfile(os.path.join(pred_dir, f"scores.rank_{model}.json")):
-                with open(os.path.join(pred_dir,  f"scores.rank_{model}.json"), "r") as f:
+                with open(
+                    os.path.join(pred_dir, f"scores.rank_{model}.json"), "r"
+                ) as f:
                     json_dict = json.load(f)
                 for key in json_dict.keys():
                     info_dict[key] = json_dict[key]
                 if os.path.isfile(os.path.join(pred_dir, f"pae.rank_{model}.npy")):
-                    info_dict["data_file"] = os.path.join(pred_dir, f"pae.rank_{model}.npy")
+                    info_dict["data_file"] = os.path.join(
+                        pred_dir, f"pae.rank_{model}.npy"
+                    )
             else:
-                logger.warning(f"File scores.model_idx_{model}.npz or scores.rank_{model}.json could not be found.")
+                logger.warning(
+                    f"File scores.model_idx_{model}.npz or scores.rank_{model}.json could not be found."
+                )
                 continue
 
             # for key in npz_dict.keys():

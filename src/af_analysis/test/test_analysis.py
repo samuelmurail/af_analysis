@@ -224,7 +224,7 @@ def test_af3_webserver():
 
     analysis.pdockq2(my_data)
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
-    expected_pdockq2 = [0.9148, 0.9187, 0.9151, 0.913, 0.9154]
+    expected_pdockq2 = [0.9599, 0.9614, 0.9606, 0.959, 0.9607]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_A"]
@@ -233,7 +233,7 @@ def test_af3_webserver():
         ]
     )
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
-    expected_pdockq2 = [0.8972, 0.8925, 0.8884, 0.889, 0.8785]
+    expected_pdockq2 = [0.9632, 0.9646, 0.9642, 0.9638, 0.964]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_D"]
@@ -366,6 +366,123 @@ def test_af3_boltz1():
         [
             my_data.df.iloc[i]["PAE_A_E"]
             == pytest.approx(expected_PAE_A_E[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+
+def test_cf_1_5_5_ftdmp():
+    data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
+
+    my_data = af_analysis.Data(data_path)
+
+    ftdmp_path = os.path.join(TEST_FILE_PATH, "ftdmp_beta_amyloid_dimer")
+
+    analysis.extract_ftdmp(my_data, ftdmp_path)
+
+    print([round(i, 4) for i in my_data.df["raw_FGV_full_light_score"]])
+    expected_FGV_full_light_score = [
+        0.0992,
+        0.0838,
+        0.2851,
+        0.258,
+        0.3597,
+        0.1517,
+        0.0859,
+        0.3844,
+        0.1133,
+        0.2971,
+        0.1068,
+        0.0879,
+        0.2687,
+        0.376,
+        0.3755,
+        0.1128,
+        0.0894,
+        0.2679,
+        0.3602,
+        0.3529,
+        0.0923,
+        0.0853,
+        0.2877,
+        0.41,
+        0.3564,
+        0.098,
+        0.0842,
+        0.2678,
+        0.1171,
+        0.3017,
+        0.1077,
+        0.0874,
+        0.2723,
+        0.3824,
+        0.3651,
+        0.1024,
+        0.0857,
+        0.2716,
+        0.348,
+        0.3926,
+    ]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["raw_FGV_full_light_score"]
+            == pytest.approx(expected_FGV_full_light_score[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    # raw_FIGNN_average_gnn_score
+    print([round(i, 4) for i in my_data.df["raw_FIGNN_average_gnn_score"]])
+    expected_FIGNN_average_gnn_score = [
+        -1.2378,
+        -0.3711,
+        -0.9664,
+        -1.4222,
+        1.0206,
+        1.9895,
+        -0.8248,
+        1.5024,
+        -0.2968,
+        -0.0947,
+        -1.5941,
+        -0.1801,
+        0.0933,
+        2.1569,
+        0.7643,
+        0.0444,
+        -1.3547,
+        -0.8445,
+        1.0281,
+        0.7819,
+        -1.6051,
+        -0.7928,
+        -0.8217,
+        1.9333,
+        0.3474,
+        -1.5848,
+        -0.6718,
+        -0.7082,
+        -1.2727,
+        -0.6135,
+        0.1668,
+        -1.1248,
+        -0.6884,
+        1.6645,
+        0.4051,
+        -1.736,
+        -1.002,
+        -0.809,
+        1.3703,
+        0.5616,
+    ]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["raw_FIGNN_average_gnn_score"]
+            == pytest.approx(expected_FIGNN_average_gnn_score[i], precision)
             for i in range(len(my_data.df))
         ]
     )

@@ -2,8 +2,13 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 import json
+import os
+import logging
 
 import pdb_numpy
+
+# Logging
+logger = logging.getLogger(__name__)
 
 # Autorship information
 __author__ = "Alaa Reguei"
@@ -494,7 +499,6 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
     data.df.loc[:, "LIS"] = LIS_matrix_list
 
 
-
 def PAE_matrix(data, verbose=True, fun=np.average):
     """
     Compute the average (or something else) PAE matrix.
@@ -507,7 +511,7 @@ def PAE_matrix(data, verbose=True, fun=np.average):
         print progress bar
     fun : function
         function to apply to the PAE scores
-    
+
     Returns
     -------
     None
@@ -531,13 +535,172 @@ def PAE_matrix(data, verbose=True, fun=np.average):
         chain_len_cum = np.cumsum([data.chain_length[query]])
         chain_len_cum = np.insert(chain_len_cum, 0, 0)
 
-        avg_matrix = np.zeros((len(chain_len_cum)-1, len(chain_len_cum)-1))
-        
-        for i in range(len(chain_len_cum)-1):
-            for j in range(len(chain_len_cum)-1):
-                avg_matrix[i,j] = fun(pae_array[chain_len_cum[i]:chain_len_cum[i+1], chain_len_cum[j]:chain_len_cum[j+1]])
+        avg_matrix = np.zeros((len(chain_len_cum) - 1, len(chain_len_cum) - 1))
+
+        for i in range(len(chain_len_cum) - 1):
+            for j in range(len(chain_len_cum) - 1):
+                avg_matrix[i, j] = fun(
+                    pae_array[
+                        chain_len_cum[i] : chain_len_cum[i + 1],
+                        chain_len_cum[j] : chain_len_cum[j + 1],
+                    ]
+                )
 
         PAE_avg_list.append(avg_matrix)
 
     assert len(PAE_avg_list) == len(data.df["query"])
     data.df.loc[:, "PAE_fun"] = PAE_avg_list
+
+
+def read_ftdmp_raw_score(raw_path):
+    """Read raw ftdmp score files
+
+    Parameters
+    ----------
+    raw_path : str
+        Path to the raw score file
+
+    Returns
+    -------
+    raw_score : pandas.DataFrame
+        Dataframe containing the raw score data
+    """
+
+    with open(raw_path, "r") as filin:
+        # extract the header
+        header = filin.readline().strip().split()
+
+        # extract the data
+        data = filin.readlines()
+        # extract the data
+        raw_data = [line.strip().split() for line in data]
+        data = []
+        for line in raw_data:
+            data_line = []
+            for i, val in enumerate(line):
+                if i == 0:
+                    data_line.append(val)
+                else:
+                    data_line.append(float(val))
+            data.append(data_line)
+
+        # convert to pandas dataframe
+        score_df = pd.DataFrame(data, columns=header)
+
+    return score_df
+
+
+def extract_ftdmp(my_data, ftdmp_result_path, score_list=["raw_scoring_results_without_ranks.txt"]):
+    """Read ftdmp output files
+
+    Parameters
+    ----------
+    ftdmp_result_path : str
+        Path to the ftdmp output directory
+
+    Returns
+    -------
+    my_data : AFData
+        object containing the data
+    """
+
+    jobs_dir = os.listdir(os.path.join(ftdmp_result_path, "jobs"))
+    if len(jobs_dir) > 1:
+        logger.warning(f"Two outputs directory founded in {jobs_dir}")
+
+    df_list = []
+
+    for job_dir in jobs_dir:
+        local_job_dir = os.path.join(ftdmp_result_path, "jobs", job_dir)
+
+        file_list = os.listdir(local_job_dir)
+
+        for file in file_list:
+            if file in score_list:
+                logger.info(f"Reading ftdmp score file : {file}")
+                local_score = os.path.join(ftdmp_result_path, "jobs", job_dir, file)
+                df_list.append(read_ftdmp_raw_score(local_score))
+
+    my_data.df["ID"] = [
+        os.path.basename(file_path) if file_path is not None else None
+        for file_path in my_data.df["pdb"]
+    ]
+
+    # return df_list
+
+    for df in df_list:
+        if len(df) == 0:
+            continue
+
+        my_data.df = my_data.df.merge(df, on="ID", how="inner")
+
+
+
+def compute_ftdmp(
+        my_data,
+        ftdmp_path=None,
+        out_path='tmp_ftdmp',
+        score_list=["raw_scoring_results_without_ranks.txt"],
+        env=None,
+        keep_tmp=False,
+        ):
+    """Compute ftdmp scores
+
+    Parameters
+    ----------
+    ftdmp_path : str
+        Path to the ftdmp output directory
+
+    Returns
+    -------
+    my_data : AFData
+        object containing the data
+    """
+
+    import shutil
+    import subprocess
+
+    if ftdmp_path is None:
+        ftdmp_exe_path = shutil.which('ftdmp-qa-all')
+        if ftdmp_exe_path is None:
+            logger.warning("Software ftdmp-qa-all not found in PATH")
+            return
+    else:
+        ftdmp_exe_path = os.path.expanduser(os.path.join(ftdmp_path, "ftdmp-qa-all"))
+    
+    # Test if pytorch is installed
+    try:
+        import torch
+    except ImportError:
+        logger.warning("Pytorch not found, ftdmp will not work")
+        return
+
+    # ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
+
+    cmd = [
+        ftdmp_exe_path,
+        "--workdir", out_path
+        ]
+    
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env)
+    
+    pdb_list = my_data.df["pdb"].tolist()
+    com_input = "\n".join(pdb_list)
+    com_input += "\n"
+
+    (stdout_data, stderr_data) = proc.communicate(com_input.encode())
+
+    #print(stdout_data)
+    #print(stderr_data)
+
+    extract_ftdmp(my_data=my_data, ftdmp_result_path=out_path, score_list=score_list)
+
+    if not keep_tmp:
+        shutil.rmtree(out_path)
+
+    return
