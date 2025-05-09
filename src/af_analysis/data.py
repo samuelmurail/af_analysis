@@ -14,7 +14,7 @@ import json
 import logging
 import ipywidgets as widgets
 
-from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, chai1, default
+from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, chai1, massivefold, default
 from . import sequence, plot
 from .analysis import get_pae, extract_fields_file
 
@@ -152,9 +152,7 @@ class Data:
             self.format = "AF3_webserver"
             self.df = af3_webserver.read_dir(directory)
             self.df["format"] = "AF3_webserver"
-        elif format == "AlphaPulldown" or os.path.isfile(
-            os.path.join(directory, "ranking_debug.json")
-        ):
+        elif format == "AlphaPulldown": # or os.path.isfile(os.path.join(directory, "ranking_debug.json")
             self.format = "AlphaPulldown"
             self.df = afpulldown.read_dir(directory)
             self.df["format"] = "AlphaPulldown"
@@ -172,6 +170,13 @@ class Data:
             self.format = "chai1"
             self.df = chai1.read_dir(directory)
             self.df["format"] = "chai1"
+        elif (
+            format == "massivefold"
+        ):
+            self.format = "massivefold"
+            self.df = massivefold.read_dir(directory)
+            self.df["format"] = "massivefold"
+
         else:
             self.format = "default"
             self.df = default.read_dir(directory)
@@ -494,7 +499,7 @@ class Data:
 
         row = self.df.iloc[index]
 
-        if row["format"] in ["AF3_webserver", "csv", "AlphaPulldown", "chai1"]:
+        if row["format"] in ["AF3_webserver", "csv", "AlphaPulldown", "chai1", "massivefold"]:
             model = pdb_numpy.Coor(row["pdb"])
             plddt_array = model.models[0].beta[
                 np.isin(model.models[0].name, plddt_main_atom_list)

@@ -44,6 +44,8 @@ def get_pae(data_file):
         return extract_pae_npz(data_file)
     elif data_file.endswith(".npy"):
         return extract_pae_npy(data_file)
+    elif data_file.endswith(".pkl"):
+        return extract_pae_pkl(data_file)
     else:
         raise ValueError("Unknown file format.")
 
@@ -113,6 +115,25 @@ def extract_pae_npy(npy_file):
 
     return pae_array
 
+
+def extract_pae_pkl(pkl_file):
+    """Get the PAE matrix from a pkl file.
+
+    Parameters
+    ----------
+    pkl_file : str
+        Path to the pkl file.
+
+    Returns
+    -------
+    np.array
+        PAE matrix.
+    """
+
+    data_pkl = np.load(pkl_file, allow_pickle=True)
+    pae_array = data_pkl['predicted_aligned_error']
+
+    return pae_array
 
 def extract_fields_file(data_file, fields):
     """Get the PAE matrix from a json/pickle file.
