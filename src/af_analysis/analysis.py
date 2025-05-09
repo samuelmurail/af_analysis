@@ -224,6 +224,7 @@ def pdockq(data, verbose=True):
         model = pdb_numpy.Coor(pdb)
         pdockq_list += compute_pdockQ(model)
 
+    
     data.df["pdockq"] = pdockq_list
 
 
@@ -351,7 +352,7 @@ def pdockq2(data, verbose=True):
 
     # print(pdockq_list)
     for i in range(max_chain_num):
-        data.df.loc[:, f"pdockq2_{chr(65+i)}"] = pdockq_list[i]
+        data.df.loc[:, f"pdockq2_{data.chains[query][i]}"] = pdockq_list[i]
 
 
 def inter_chain_pae(data, fun=np.mean, verbose=True):

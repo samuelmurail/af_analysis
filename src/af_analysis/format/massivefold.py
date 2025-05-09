@@ -32,6 +32,7 @@ def read_dir(directory):
     log_dict_list = []
 
     pred_dir = directory
+    query = pred_dir.split("/")[-1]
 
     for file in os.listdir(pred_dir):
         if file.endswith(".pdb"):
@@ -47,7 +48,7 @@ def read_dir(directory):
 
             info_dict = {
                 "pdb": os.path.join(pred_dir, file),
-                "query": "unknown",
+                "query": query,
                 "seed": seed,
                 "model": model,
                 "weight": weight,
