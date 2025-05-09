@@ -25,12 +25,24 @@ supports reading the following directory formats:
 - AlphaPulldown [#AlphaPulldown]_
 - Chai-1 [#Chai1]_
 - Boltz1 [#Boltz1]_
+- MassiveFold [#MassiveFold]
 
 
 .. code-block:: python
 
     import af_analysis
     my_data = af_analysis.Data('MY_AF_RESULTS_DIR')
+
+
+For AlphaPulldown and MassiveFold, you should explicitly define the format when importing the data:
+
+.. code-block:: python
+
+    import af_analysis
+    my_data = af_analysis.Data('MY_AF_RESULTS_DIR', format="alphapulldown")
+    # or
+    my_data = af_analysis.Data("MY_AF_RESULTS_DIR", format="massivefold")
+
 
 Alternatively, you can use a python dictionary containing the ``pdb`` file list, the ``.json`` / ``.npz`` data file and the query name.
 
@@ -518,4 +530,4 @@ References
 .. [#pdockq2] `Zhu et al. Bioinformatics (2023) doi: 10.1093/bioinformatics/btad424 <https://academic.oup.com/bioinformatics/article/39/7/btad424/7219714>`_
 .. [#LIS] `Kim et al. bioRxiv (2024) doi: 10.1101/2024.02.19.580970 <https://www.biorxiv.org/content/10.1101/2024.02.19.580970v1>`_
 .. [#AFM] `Evans et al. bioRxiv (2021) doi: 10.1101/2021.10.04.463034 <https://www.biorxiv.org/content/10.1101/2021.10.04.463034v2>`_
-
+.. [#MassiveFold] `Raouraoua et al. Nat Comput Sci (2024) doi: 10.1038/s43588-024-00714-4 <https://doi.org/10.1038/s43588-024-00714-4>`_

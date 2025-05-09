@@ -152,10 +152,10 @@ class Data:
             self.format = "AF3_webserver"
             self.df = af3_webserver.read_dir(directory)
             self.df["format"] = "AF3_webserver"
-        elif format == "AlphaPulldown": # or os.path.isfile(os.path.join(directory, "ranking_debug.json")
-            self.format = "AlphaPulldown"
+        elif format == "alphapulldown": # or os.path.isfile(os.path.join(directory, "ranking_debug.json")
+            self.format = "alphapulldown"
             self.df = afpulldown.read_dir(directory)
-            self.df["format"] = "AlphaPulldown"
+            self.df["format"] = "alphapulldown"
         elif format == "boltz1" or (
             os.path.isdir(os.path.join(directory, "predictions"))
         ):
@@ -170,9 +170,7 @@ class Data:
             self.format = "chai1"
             self.df = chai1.read_dir(directory)
             self.df["format"] = "chai1"
-        elif (
-            format == "massivefold"
-        ):
+        elif format == "massivefold":
             self.format = "massivefold"
             self.df = massivefold.read_dir(directory)
             self.df["format"] = "massivefold"
@@ -499,7 +497,7 @@ class Data:
 
         row = self.df.iloc[index]
 
-        if row["format"] in ["AF3_webserver", "csv", "AlphaPulldown", "chai1", "massivefold"]:
+        if row["format"] in ["AF3_webserver", "csv", "alphapulldown", "chai1", "massivefold"]:
             model = pdb_numpy.Coor(row["pdb"])
             plddt_array = model.models[0].beta[
                 np.isin(model.models[0].name, plddt_main_atom_list)
