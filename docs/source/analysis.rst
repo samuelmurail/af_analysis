@@ -25,7 +25,7 @@ supports reading the following directory formats:
 - AlphaPulldown [#AlphaPulldown]_
 - Chai-1 [#Chai1]_
 - Boltz1 [#Boltz1]_
-- MassiveFold [#MassiveFold]
+- MassiveFold [#MassiveFold]_
 
 
 .. code-block:: python
@@ -481,7 +481,7 @@ If you use the FTDMP software, please cite:
 
 * Olechnovič K, Banciul R, Dapkūnas J, Venclovas Č. (2025) *FTDMP: A Framework for Protein-Protein, Protein-DNA, and Protein-RNA Docking and Scoring*. Proteins. doi: `10.1002/prot.26792 <https://doi.org/10.1002/prot.26792>`_. PubMed PMID: `39748638 <https://pubmed.ncbi.nlm.nih.gov/39748638/>`_.
 
-Scoring of protein-protein interfaces using the VoroIF-jury algorithm and details of this algorithm are published in our CASP16 article:
+Scoring of protein-protein interfaces using the VoroIF-jury algorithm and details of this algorithm are published in the CASP16 article:
 
 * Olechnovič K, Valančauskas L, Dapkūnas J, Venclovas Č. (2023) *Prediction of protein assemblies by structure sampling followed by interface-focused scoring*. Proteins; 91:1724–1733. doi: `10.1002/prot.26569 <https://doi.org/10.1002/prot.26569>`_. PubMed PMID: `37578163 <https://pubmed.ncbi.nlm.nih.gov/37578163/>`_.
 
