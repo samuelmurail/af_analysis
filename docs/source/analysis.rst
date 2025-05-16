@@ -223,6 +223,33 @@ Figure from ``github.com/flyark/AFM-LIS``. Implementation was inspired from `htt
 
 Example of LIS heatmap among subunits on a protein-DNA-Zn complex computed with AlphaFold 3.
 
+actifpTM and chain ipTM
+-----------------------
+
+The actual interface pTM (actifpTM), has been included in colabfold version 1.5.5 (march 2025).
+If you have used the ``--calc-extra-ptm`` option to launch ``colabfold_batch`` command,
+the ``actifpTM`` and ``chain ipTM`` scores are available in the colabfold ``.json`` output files. 
+
+An extra step is necessary to extract the scores from the ``.json`` files:
+
+.. code-block:: python
+
+    my_data = af_analysis.Data('MY_AF_RESULTS_DIR')
+    my_data.extract_data()
+
+
+You should now have access to additional columns in the dataframe:
+
+.. code-block:: python
+
+    my_data.df[['pairwise_actifptm', 'pairwise_iptm', 'per_chain_ptm', 'actifptm']]
+
+
+- The ``pairwise_actifptm`` column contains the actifpTM scores for each pair of chains in the model.
+- The ``pairwise_iptm`` column contains the ipTM scores for each pair of chains in the model.
+- The ``per_chain_ptm`` column contains the pTM scores for each chain in the model.
+- The ``actifptm`` column contains the actifpTM scores for each model in the dataframe.
+
 Protein-Protein and Protein-Peptide Docking
 ===========================================
 
