@@ -36,7 +36,7 @@ def read_dir(directory):
         for file in os.listdir(os.path.join(os.path.join(pred_dir, query))):
             if file.endswith(".cif"):
                 token = file[len(query) + 1 : -4].split("_")[-1]
-                model = int(token[-1])
+                model = int(token)
 
                 json_score = os.path.join(
                     pred_dir,
@@ -50,16 +50,19 @@ def read_dir(directory):
                     "query": query,
                     "model": model,
                 }
+
                 plddt_file = os.path.join(
                     pred_dir, os.path.join(query, f"plddt_{query}_model_{model}.npz")
                 )
                 if os.path.isfile(plddt_file):
                     info_dict["plddt"] = plddt_file
+                
                 pae_file = os.path.join(
                     pred_dir, os.path.join(query, f"pae_{query}_model_{model}.npz")
                 )
                 if os.path.isfile(pae_file):
                     info_dict["data_file"] = pae_file
+                
                 pde_file = os.path.join(
                     pred_dir, os.path.join(query, f"pae_{query}_model_{model}.npz")
                 )
@@ -70,6 +73,9 @@ def read_dir(directory):
                 log_dict_list.append(info_dict)
 
     log_pd = pd.DataFrame(log_dict_list)
+
+    print(f"Found {len(log_pd)} predictions in {directory}")
+    print(f"Found {log_pd.columns}")
 
     # Update column names
     log_pd = log_pd.rename(

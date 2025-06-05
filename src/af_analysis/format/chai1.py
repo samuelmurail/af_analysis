@@ -36,7 +36,7 @@ def read_dir(directory):
     for file in os.listdir(pred_dir):
         if file.endswith(".cif"):
             token = file[4:-4].split("_")[-1]
-            model = int(token[-1])
+            model = int(token)
 
             info_dict = {
                 "pdb": os.path.join(pred_dir, file),
