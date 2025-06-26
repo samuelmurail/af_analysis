@@ -726,3 +726,64 @@ def compute_ftdmp(
         shutil.rmtree(out_path)
 
     return
+
+def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
+    """Compute the DockQ score from the PAE matrix.
+
+    Parameters
+    ----------
+    data : AFData
+        object containing the data
+    ref_dict : dict
+        dictionary containing the reference PAE matrix for each query
+    verbose : bool
+        print progress bar
+    fun : function
+        function to apply to the PAE scores
+
+    Returns
+    -------
+    None
+        The dataframe is modified in place.
+    """
+    from pdb_numpy import analysis
+
+    dockq_list = []
+    lrmsd_list = []
+    fnat_list = []
+    old_query = ''
+
+    disable = False if verbose else True
+
+    for query, pdb in tqdm(
+        zip(data.df["query"], data.df["pdb"]),
+        total=len(data.df["query"]),
+        disable=disable,
+    ):
+        if data.chain_length[query] is None:
+            dockq_list.append(None)
+            continue
+
+        if query != old_query:
+            if query not in ref_dict:
+                logger.warning(f"No reference PAE structure found for query {query}.")
+                return
+            # print(f"Reading ref file for {query}")
+            ref_coor = pdb_numpy.Coor(ref_dict[query])
+            old_query = query
+
+        model = pdb_numpy.Coor(pdb)
+        dockq_score = analysis.dockQ(
+            model,
+            ref_coor,
+        )
+        #print(dockq_score)
+        # print(f"dockq: {dockq_score['DockQ'][0]:.3f} Lrms:  {dockq_score['LRMS'][0]:.2f}")
+        dockq_list.append(dockq_score['DockQ'][0])
+        lrmsd_list.append(dockq_score['LRMS'][0])
+        fnat_list.append(dockq_score['Fnat'][0])
+
+    assert len(dockq_list) == len(data.df["query"])
+    data.df.loc[:, "dockq"] = dockq_list
+    data.df.loc[:, "lrmsd"] = lrmsd_list
+    data.df.loc[:, "fnat"] = fnat_list

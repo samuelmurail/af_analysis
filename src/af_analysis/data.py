@@ -174,7 +174,10 @@ class Data:
             self.format = "massivefold"
             self.df = massivefold.read_dir(directory)
             self.df["format"] = "massivefold"
-
+        elif format == "full_massivefold":
+            self.format = "massivefold"
+            self.df = massivefold.read_full_directory(directory)
+            self.df["format"] = "massivefold"
         else:
             self.format = "default"
             self.df = default.read_dir(directory)
