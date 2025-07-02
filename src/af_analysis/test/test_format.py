@@ -41,6 +41,7 @@ def test_cf_1_5_5_relax():
 
     assert my_data.chain_length[query] == [42, 42]
     assert my_data.chains[query] == ["A", "B"]
+    assert my_data.chain_type[query] == ['protein', 'protein']
 
     # There should be only 5 relaxed structures
 
@@ -168,6 +169,7 @@ def test_af3_webserver():
 
     assert my_data.chain_length[query] == [90, 1, 1, 1, 11, 11]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E", "F"]
+    assert my_data.chain_type[query] == ['protein', 'ligand', 'ligand', 'ligand', 'nucleic_acid', 'nucleic_acid']
 
     # There should be 0 relaxed structures
 
@@ -217,6 +219,7 @@ def test_boltz1():
 
     assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
+    assert my_data.chain_type[query] == ['protein', 'nucleic_acid', 'nucleic_acid', 'nucleic_acid', 'ligand']
 
     # There should be 0 relaxed structures
 
@@ -264,6 +267,7 @@ def test_chai1():
 
     assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
+    assert my_data.chain_type[query] == ['protein', 'nucleic_acid', 'nucleic_acid', 'nucleic_acid', 'ligand']
 
     # There should be 0 relaxed structures
 
@@ -312,6 +316,7 @@ def test_chai1_webserver():
 
     assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
+    assert my_data.chain_type[query] == ['protein', 'nucleic_acid', 'nucleic_acid', 'nucleic_acid', 'ligand']
 
     # There should be 0 relaxed structures
 

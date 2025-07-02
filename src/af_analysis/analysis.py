@@ -829,6 +829,7 @@ def ipTM_d0(data, verbose=True):
             pae_array=PAE_matrix,
             chain_ids=data.chains[query],
             chain_length=data.chain_length[query],
+            chain_type=data.chain_type[query],
         )
 
         iptm_d0_list.append(iptm_d0_matrix)
@@ -841,7 +842,7 @@ def ipTM_d0(data, verbose=True):
         data.df.loc[:, col] = iptm_d0_df.loc[:, col].to_numpy()
 
 
-def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length):
+def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length, chain_type):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Parameters
@@ -897,7 +898,9 @@ def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length):
         for j in range(len(chain_length)):
             if i != j:
                 do_chain = chain_length[i] + chain_length[j]
-                d0 = calc_d0(do_chain, "protein")
+                type = "nucleic_acid" if (chain_type[i] != "protein" or chain_type[j] != "protein") else "protein"
+
+                d0 = calc_d0(do_chain, type)
                 iptm_d0_matrix = ptm_func_vec(pae_array, d0)
 
                 iptm_d0_mean = fun(

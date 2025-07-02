@@ -46,6 +46,7 @@ def test_cf_1_5_5_write_read_csv(tmp_path):
 
     assert my_data2.chain_length[query] == [42, 42]
     assert my_data2.chains[query] == ["A", "B"]
+    assert my_data2.chain_type[query] == ["protein", "protein"]
 
     # There should be only 5 relaxed structures
 
@@ -236,6 +237,7 @@ def test_get_plddt():
         33.16,
     ]
     precision = 0.001
+
     assert plddt_array == pytest.approx(expected_plddt, precision)
 
 
@@ -440,6 +442,9 @@ def test_read_data_dict():
     assert len(my_data.df) == 5
     assert my_data.chain_length == {"beta_amyloid_dimer_d2fa3_0": [42, 42]}
     assert my_data.chains == {"beta_amyloid_dimer_d2fa3_0": ["A", "B"]}
+    print(my_data.chain_type)
+    assert my_data.chain_type == {"beta_amyloid_dimer_d2fa3_0": ['protein', 'protein']}
+
     print(my_data.df.columns)
     assert (
         my_data.df.columns

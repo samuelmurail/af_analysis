@@ -208,8 +208,42 @@ class Data:
         None
         """
 
+        def get_type(resnames):
+            nuc_list = ["DA", "DC", "DT", "DG", "A", "C", "U", "G", "T"]
+            for resname in resnames:
+                if resname in nuc_list:
+                    return "nucleic_acid"
+            aa_list = [
+                "ALA",
+                "ARG",
+                "ASN",
+                "ASP",
+                "CYS",
+                "GLU",
+                "GLN",
+                "GLY",
+                "HIS",
+                "ILE",
+                "LEU",
+                "LYS",
+                "MET",
+                "PHE",
+                "PRO",
+                "SER",
+                "THR",
+                "TRP",
+                "TYR",
+                "VAL",
+            ]
+            for resname in resnames:
+                if resname in aa_list:
+                    return "protein"
+            return "ligand"
+
         self.chains = {}
         self.chain_length = {}
+        self.chain_type = {}
+
         for querie in self.df["query"].unique():
             # print(querie, self.df[self.df['query'] == querie])
             first_model = pdb_numpy.Coor(
@@ -223,6 +257,15 @@ class Data:
                             first_model.models[0].chain == chain
                         ]
                     )
+                )
+                for chain in self.chains[querie]
+            ]
+        
+            self.chain_type[querie] = [
+                get_type(
+                    first_model.models[0].resname[
+                        first_model.models[0].chain == chain
+                    ]
                 )
                 for chain in self.chains[querie]
             ]
@@ -258,24 +301,7 @@ class Data:
         self.df = pd.read_csv(path)
         self.dir = os.path.dirname(self.df["pdb"][0])
 
-        self.chains = {}
-        self.chain_length = {}
-        for querie in self.df["query"].unique():
-            # print(querie, self.df[self.df['query'] == querie])
-            first_model = pdb_numpy.Coor(
-                self.df[self.df["query"] == querie].iloc[0]["pdb"]
-            )
-            self.chains[querie] = list(np.unique(first_model.models[0].chain))
-            self.chain_length[querie] = [
-                len(
-                    np.unique(
-                        first_model.models[0].uniq_resid[
-                            first_model.models[0].chain == chain
-                        ]
-                    )
-                )
-                for chain in self.chains[querie]
-            ]
+        self.set_chain_length()
 
     def add_json(self, verbose=True):
         """Add json files to the dataframe.
