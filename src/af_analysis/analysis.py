@@ -787,3 +787,99 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
     data.df.loc[:, "dockq"] = dockq_list
     data.df.loc[:, "lrmsd"] = lrmsd_list
     data.df.loc[:, "fnat"] = fnat_list
+
+def ipTM_d0(data, ref_dict, verbose=True):
+    """Compute the ipTM_d0 score from the PAE matrix.
+
+    Implementation is based on the ipTM_d0 function from the IPSAE package
+    https://github.com/DunbrackLab/IPSAE/blob/main/ipsae.py
+
+    Cite:
+
+
+    Parameters
+    ----------
+    data : AFData
+        object containing the data
+    ref_dict : dict
+        dictionary containing the reference PAE matrix for each query
+    verbose : bool
+        print progress bar
+
+    Returns
+    -------
+    None
+        The dataframe is modified in place.
+    """
+
+    iptm_d0_list = []
+    old_query = ''
+
+    disable = False if verbose else True
+
+
+    for query, pdb, data_file in tqdm(
+        zip(data.df["query"], data.df["pdb"], data.df["data_file"]),
+        total=len(data.df["query"]),
+        disable=disable,
+    ):
+
+        iptm_d0_matrix = compute_iptm_d0_matrix(
+            pae_array = PAE_matrix,
+            chain_length = data.chain_length[query],
+            pae_cutoff = 8.0,
+        )
+
+        iptm_d0_list.append(iptm_d0_matrix)
+
+    assert len(iptm_d0_list) == len(data.df["query"])
+    data.df.loc[:, "iptm_d0"] = iptm_d0_list
+
+def compute_iptm_d0_matrix(pae_array, chain_length, pae_cutoff):
+    """Compute the ipTM_d0 score from the PAE matrix.
+
+    Parameters
+    ----------
+    pae_array : np.array
+        array of predicted PAE
+    chain_length : list
+        list of chain lengths
+    pae_cutoff : float
+        cutoff for native contacts, default is 8.0 A
+
+    Returns
+    -------
+    list
+        ipTM_d0 score matrix
+    """
+    
+    # Implementation goes here
+
+    # Define the ptm and d0 functions
+    def ptm_func(x,d0):
+        return 1.0/(1+(x/d0)**2.0)  
+    ptm_func_vec=np.vectorize(ptm_func)  # vector version
+
+
+    # Define the d0 functions for numbers and arrays; minimum value = 1.0; from Yang and Skolnick, PROTEINS: Structure, Function, and Bioinformatics 57:702–710 (2004)
+    def calc_d0(L, pair_type):
+        L=float(L)
+        if L<27: L=27
+        min_value=1.0
+        if pair_type=='nucleic_acid': min_value=2.0
+        d0=1.24*(L-15)**(1.0/3.0) - 1.8
+        return max(min_value, d0)
+
+    def calc_d0_array(L,pair_type):
+        # Convert L to a NumPy array if it isn't already one (enables flexibility in input types)
+        L = np.array(L, dtype=float)
+        L = np.maximum(27,L)
+        min_value=1.0
+
+        if pair_type=='nucleic_acid': min_value=2.0
+
+        # Calculate d0 using the vectorized operation
+        return np.maximum(min_value, 1.24 * (L - 15) ** (1.0/3.0) - 1.8)
+
+
+    return iptm_d0_list
