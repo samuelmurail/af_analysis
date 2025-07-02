@@ -131,9 +131,10 @@ def extract_pae_pkl(pkl_file):
     """
 
     data_pkl = np.load(pkl_file, allow_pickle=True)
-    pae_array = data_pkl['predicted_aligned_error']
+    pae_array = data_pkl["predicted_aligned_error"]
 
     return pae_array
+
 
 def extract_fields_file(data_file, fields):
     """Get the PAE matrix from a json/pickle file.
@@ -224,7 +225,6 @@ def pdockq(data, verbose=True):
         model = pdb_numpy.Coor(pdb)
         pdockq_list += compute_pdockQ(model)
 
-    
     data.df["pdockq"] = pdockq_list
 
 
@@ -612,7 +612,9 @@ def read_ftdmp_raw_score(raw_path):
     return score_df
 
 
-def extract_ftdmp(my_data, ftdmp_result_path, score_list=["raw_scoring_results_without_ranks.txt"]):
+def extract_ftdmp(
+    my_data, ftdmp_result_path, score_list=["raw_scoring_results_without_ranks.txt"]
+):
     """Read ftdmp output files
 
     Parameters
@@ -657,15 +659,14 @@ def extract_ftdmp(my_data, ftdmp_result_path, score_list=["raw_scoring_results_w
         my_data.df = my_data.df.merge(df, on="ID", how="inner")
 
 
-
 def compute_ftdmp(
-        my_data,
-        ftdmp_path=None,
-        out_path='tmp_ftdmp',
-        score_list=["raw_scoring_results_without_ranks.txt"],
-        env=None,
-        keep_tmp=False,
-        ):
+    my_data,
+    ftdmp_path=None,
+    out_path="tmp_ftdmp",
+    score_list=["raw_scoring_results_without_ranks.txt"],
+    env=None,
+    keep_tmp=False,
+):
     """Compute ftdmp scores
 
     Parameters
@@ -683,13 +684,13 @@ def compute_ftdmp(
     import subprocess
 
     if ftdmp_path is None:
-        ftdmp_exe_path = shutil.which('ftdmp-qa-all')
+        ftdmp_exe_path = shutil.which("ftdmp-qa-all")
         if ftdmp_exe_path is None:
             logger.warning("Software ftdmp-qa-all not found in PATH")
             return
     else:
         ftdmp_exe_path = os.path.expanduser(os.path.join(ftdmp_path, "ftdmp-qa-all"))
-    
+
     # Test if pytorch is installed
     try:
         import torch
@@ -699,26 +700,24 @@ def compute_ftdmp(
 
     # ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
 
-    cmd = [
-        ftdmp_exe_path,
-        "--workdir", out_path
-        ]
-    
+    cmd = [ftdmp_exe_path, "--workdir", out_path]
+
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=env)
-    
+        env=env,
+    )
+
     pdb_list = my_data.df["pdb"].tolist()
     com_input = "\n".join(pdb_list)
     com_input += "\n"
 
     (stdout_data, stderr_data) = proc.communicate(com_input.encode())
 
-    #print(stdout_data)
-    #print(stderr_data)
+    # print(stdout_data)
+    # print(stderr_data)
 
     extract_ftdmp(my_data=my_data, ftdmp_result_path=out_path, score_list=score_list)
 
@@ -726,6 +725,7 @@ def compute_ftdmp(
         shutil.rmtree(out_path)
 
     return
+
 
 def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
     """Compute the DockQ score from the PAE matrix.
@@ -751,7 +751,7 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
     dockq_list = []
     lrmsd_list = []
     fnat_list = []
-    old_query = ''
+    old_query = ""
 
     disable = False if verbose else True
 
@@ -777,25 +777,27 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
             model,
             ref_coor,
         )
-        #print(dockq_score)
+        # print(dockq_score)
         # print(f"dockq: {dockq_score['DockQ'][0]:.3f} Lrms:  {dockq_score['LRMS'][0]:.2f}")
-        dockq_list.append(dockq_score['DockQ'][0])
-        lrmsd_list.append(dockq_score['LRMS'][0])
-        fnat_list.append(dockq_score['Fnat'][0])
+        dockq_list.append(dockq_score["DockQ"][0])
+        lrmsd_list.append(dockq_score["LRMS"][0])
+        fnat_list.append(dockq_score["Fnat"][0])
 
     assert len(dockq_list) == len(data.df["query"])
     data.df.loc[:, "dockq"] = dockq_list
     data.df.loc[:, "lrmsd"] = lrmsd_list
     data.df.loc[:, "fnat"] = fnat_list
 
-def ipTM_d0(data, ref_dict, verbose=True):
+
+def ipTM_d0(data, verbose=True):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Implementation is based on the ipTM_d0 function from the IPSAE package
     https://github.com/DunbrackLab/IPSAE/blob/main/ipsae.py
 
     Cite:
-
+    .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
+    ipTM score and how to fix it" bioRxiv (2025).
 
     Parameters
     ----------
@@ -813,10 +815,8 @@ def ipTM_d0(data, ref_dict, verbose=True):
     """
 
     iptm_d0_list = []
-    old_query = ''
 
     disable = False if verbose else True
-
 
     for query, pdb, data_file in tqdm(
         zip(data.df["query"], data.df["pdb"], data.df["data_file"]),
@@ -824,24 +824,32 @@ def ipTM_d0(data, ref_dict, verbose=True):
         disable=disable,
     ):
 
+        PAE_matrix = get_pae(data_file)
         iptm_d0_matrix = compute_iptm_d0_matrix(
-            pae_array = PAE_matrix,
-            chain_length = data.chain_length[query],
-            pae_cutoff = 8.0,
+            pae_array=PAE_matrix,
+            chain_ids=data.chains[query],
+            chain_length=data.chain_length[query],
         )
 
         iptm_d0_list.append(iptm_d0_matrix)
 
     assert len(iptm_d0_list) == len(data.df["query"])
-    data.df.loc[:, "iptm_d0"] = iptm_d0_list
 
-def compute_iptm_d0_matrix(pae_array, chain_length, pae_cutoff):
+    iptm_d0_df = pd.DataFrame(iptm_d0_list)
+
+    for col in iptm_d0_df.columns:
+        data.df.loc[:, col] = iptm_d0_df.loc[:, col].to_numpy()
+
+
+def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Parameters
     ----------
     pae_array : np.array
         array of predicted PAE
+    chain_ids : list
+        list of chain IDs
     chain_length : list
         list of chain lengths
     pae_cutoff : float
@@ -852,34 +860,53 @@ def compute_iptm_d0_matrix(pae_array, chain_length, pae_cutoff):
     list
         ipTM_d0 score matrix
     """
-    
-    # Implementation goes here
 
     # Define the ptm and d0 functions
-    def ptm_func(x,d0):
-        return 1.0/(1+(x/d0)**2.0)  
-    ptm_func_vec=np.vectorize(ptm_func)  # vector version
+    def ptm_func(x, d0):
+        return 1.0 / (1 + (x / d0) ** 2.0)
 
+    ptm_func_vec = np.vectorize(ptm_func)  # vector version
 
     # Define the d0 functions for numbers and arrays; minimum value = 1.0; from Yang and Skolnick, PROTEINS: Structure, Function, and Bioinformatics 57:702–710 (2004)
     def calc_d0(L, pair_type):
-        L=float(L)
-        if L<27: L=27
-        min_value=1.0
-        if pair_type=='nucleic_acid': min_value=2.0
-        d0=1.24*(L-15)**(1.0/3.0) - 1.8
+        L = float(L)
+        if L < 27:
+            L = 27
+        min_value = 1.0
+        if pair_type == "nucleic_acid":
+            min_value = 2.0
+        d0 = 1.24 * (L - 15) ** (1.0 / 3.0) - 1.8
         return max(min_value, d0)
 
-    def calc_d0_array(L,pair_type):
-        # Convert L to a NumPy array if it isn't already one (enables flexibility in input types)
-        L = np.array(L, dtype=float)
-        L = np.maximum(27,L)
-        min_value=1.0
+    def fun(matrix):
+        """Function to apply to the ipTM_d0 matrix."""
+        # return np.mean(x)
 
-        if pair_type=='nucleic_acid': min_value=2.0
+        matrix_res = np.zeros(matrix.shape[0])
 
-        # Calculate d0 using the vectorized operation
-        return np.maximum(min_value, 1.24 * (L - 15) ** (1.0/3.0) - 1.8)
+        for i in range(matrix.shape[0]):
+            matrix_res[i] = np.mean(matrix[i, :])
+
+        max_index = np.argmax(matrix_res)
+        return matrix_res[max_index]
+
+    chain_len_sums = np.cumsum([0] + chain_length)
+
+    iptm_d0_dict = {}
+    for i in range(len(chain_length)):
+        for j in range(len(chain_length)):
+            if i != j:
+                do_chain = chain_length[i] + chain_length[j]
+                d0 = calc_d0(do_chain, "protein")
+                iptm_d0_matrix = ptm_func_vec(pae_array, d0)
+
+                iptm_d0_mean = fun(
+                    iptm_d0_matrix[
+                        chain_len_sums[i] : chain_len_sums[i + 1],
+                        chain_len_sums[j] : chain_len_sums[j + 1],
+                    ]
+                )
+                iptm_d0_dict[f"ipTM_d0_{chain_ids[i]}_{chain_ids[j]}"] = iptm_d0_mean
 
 
-    return iptm_d0_list
+    return iptm_d0_dict

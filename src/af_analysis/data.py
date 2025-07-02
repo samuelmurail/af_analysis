@@ -14,7 +14,15 @@ import json
 import logging
 import ipywidgets as widgets
 
-from .format import colabfold_1_5, af3_webserver, afpulldown, boltz1, chai1, massivefold, default
+from .format import (
+    colabfold_1_5,
+    af3_webserver,
+    afpulldown,
+    boltz1,
+    chai1,
+    massivefold,
+    default,
+)
 from . import sequence, plot
 from .analysis import get_pae, extract_fields_file
 
@@ -152,7 +160,9 @@ class Data:
             self.format = "AF3_webserver"
             self.df = af3_webserver.read_dir(directory)
             self.df["format"] = "AF3_webserver"
-        elif format == "alphapulldown": # or os.path.isfile(os.path.join(directory, "ranking_debug.json")
+        elif (
+            format == "alphapulldown"
+        ):  # or os.path.isfile(os.path.join(directory, "ranking_debug.json")
             self.format = "alphapulldown"
             self.df = afpulldown.read_dir(directory)
             self.df["format"] = "alphapulldown"
@@ -500,7 +510,13 @@ class Data:
 
         row = self.df.iloc[index]
 
-        if row["format"] in ["AF3_webserver", "csv", "alphapulldown", "chai1", "massivefold"]:
+        if row["format"] in [
+            "AF3_webserver",
+            "csv",
+            "alphapulldown",
+            "chai1",
+            "massivefold",
+        ]:
             model = pdb_numpy.Coor(row["pdb"])
             plddt_array = model.models[0].beta[
                 np.isin(model.models[0].name, plddt_main_atom_list)
@@ -689,9 +705,9 @@ class Data:
                         seq_dict[chain_list[i]] += 1
                     start += num
 
-            alignement_len[
-                querie
-            ] = seq_dict  # [seq_dict[chain] for chain in self.chains[querie]]
+            alignement_len[querie] = (
+                seq_dict  # [seq_dict[chain] for chain in self.chains[querie]]
+            )
         return alignement_len
 
     def show_plot_info(self, cmap=cm.vik):

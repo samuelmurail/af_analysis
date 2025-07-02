@@ -38,17 +38,19 @@ def read_dir(directory):
 
     for file in os.listdir(pred_dir):
         if file.endswith(".pdb"):
-            tokens = file[: -4].split("_")
+            tokens = file[:-4].split("_")
             model = int(tokens[4])
-            weight = tokens[5]+'_'+tokens[6]
+            weight = tokens[5] + "_" + tokens[6]
             seed = tokens[-1]
 
             pkl_score = os.path.join(
-                pred_dir, f"result_model_{model}_{weight}_pred_{seed}.pkl",
+                pred_dir,
+                f"result_model_{model}_{weight}_pred_{seed}.pkl",
             )
             if not os.path.exists(pkl_score):
                 pkl_score = os.path.join(
-                    pred_dir, f"light_pkl/result_model_{model}_{weight}_pred_{seed}.pkl",
+                    pred_dir,
+                    f"light_pkl/result_model_{model}_{weight}_pred_{seed}.pkl",
                 )
             if not os.path.exists(pkl_score):
                 logger.warning(f"Score file {pkl_score} does not exist.")
@@ -56,8 +58,8 @@ def read_dir(directory):
 
             np_score = np.load(pkl_score, allow_pickle=True)
 
-            if 'num_recycles' not in np_score:
-                np_score['num_recycles'] = -1
+            if "num_recycles" not in np_score:
+                np_score["num_recycles"] = -1
 
             info_dict = {
                 "pdb": os.path.join(pred_dir, file),
@@ -65,11 +67,11 @@ def read_dir(directory):
                 "seed": seed,
                 "model": model,
                 "weight": weight,
-                "recycle": int(np_score['num_recycles']),
-                "pLDDT": np_score['plddt'].mean(),
-                "pTM": float(np_score['ptm']),
-                "ipTM": float(np_score['iptm']),
-                "ranking_confidence": float(np_score['ranking_confidence']),
+                "recycle": int(np_score["num_recycles"]),
+                "pLDDT": np_score["plddt"].mean(),
+                "pTM": float(np_score["ptm"]),
+                "ipTM": float(np_score["iptm"]),
+                "ranking_confidence": float(np_score["ranking_confidence"]),
                 "data_file": pkl_score,
             }
 
@@ -97,11 +99,10 @@ def read_full_directory(directory):
         Dictionary containing the information extracted from the directory.
 
     """
-    
+
     logger.info(f"Reading full MassiveFold {directory}")
 
-
-    subfolders = [ f.path for f in os.scandir(directory) if f.is_dir() ]
+    subfolders = [f.path for f in os.scandir(directory) if f.is_dir()]
     log_pd_list = []
 
     for folder in subfolders:
@@ -109,9 +110,8 @@ def read_full_directory(directory):
         if not os.path.basename(folder).startswith("msa"):
             log_pd_list.append(read_dir(folder))
 
-    
     log_dict = pd.concat(log_pd_list, ignore_index=True)
-    if os.path.basename(directory) != '':
+    if os.path.basename(directory) != "":
         log_dict["query"] = os.path.basename(directory)
     else:
         log_dict["query"] = os.path.basename(os.path.dirname(directory))
