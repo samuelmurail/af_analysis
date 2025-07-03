@@ -391,9 +391,10 @@ class Data:
 
         for i, field in enumerate(fields):
             self.df[field] = None
-            #new_col = pd.Series(values_list[i])
-            #self.df.loc[:, field] = new_col
-            self.df.loc[:, field] = values_list[i]
+            new_col = pd.Series(values_list[i], index=self.df.index)
+            self.df.loc[:, field] = new_col
+            #print(len(values_list[i]), len(self.df))
+            #self.df.loc[:, field] = values_list[i]
 
     def add_pdb(self, verbose=True):
         """Add pdb files to the dataframe.
