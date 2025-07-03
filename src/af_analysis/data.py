@@ -260,12 +260,10 @@ class Data:
                 )
                 for chain in self.chains[querie]
             ]
-        
+
             self.chain_type[querie] = [
                 get_type(
-                    first_model.models[0].resname[
-                        first_model.models[0].chain == chain
-                    ]
+                    first_model.models[0].resname[first_model.models[0].chain == chain]
                 )
                 for chain in self.chains[querie]
             ]
@@ -393,8 +391,9 @@ class Data:
 
         for i, field in enumerate(fields):
             self.df[field] = None
-            new_col = pd.Series(values_list[i])
-            self.df.loc[:, field] = new_col
+            #new_col = pd.Series(values_list[i])
+            #self.df.loc[:, field] = new_col
+            self.df.loc[:, field] = values_list[i]
 
     def add_pdb(self, verbose=True):
         """Add pdb files to the dataframe.
@@ -840,10 +839,12 @@ def concat_data(data_list):
     concat.df = pd.concat([data.df for data in data_list], ignore_index=True)
     concat.chains = data_list[0].chains
     concat.chain_length = data_list[0].chain_length
+    concat.chain_type = data_list[0].chain_type
     concat.format = data_list[0].format
     for i in range(1, len(data_list)):
         concat.chains.update(data_list[i].chains)
         concat.chain_length.update(data_list[i].chain_length)
+        concat.chain_type.update(data_list[i].chain_type)
 
     return concat
 

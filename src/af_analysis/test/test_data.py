@@ -443,7 +443,7 @@ def test_read_data_dict():
     assert my_data.chain_length == {"beta_amyloid_dimer_d2fa3_0": [42, 42]}
     assert my_data.chains == {"beta_amyloid_dimer_d2fa3_0": ["A", "B"]}
     print(my_data.chain_type)
-    assert my_data.chain_type == {"beta_amyloid_dimer_d2fa3_0": ['protein', 'protein']}
+    assert my_data.chain_type == {"beta_amyloid_dimer_d2fa3_0": ["protein", "protein"]}
 
     print(my_data.df.columns)
     assert (

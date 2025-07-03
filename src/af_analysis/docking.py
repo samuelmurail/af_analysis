@@ -275,7 +275,7 @@ def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
 
 
 def pdockq2_lig(my_data, verbose=True):
-    """Compute the LIS score for the peptide-peptide interface.
+    """Compute the LIS score for the receptor-ligand interface.
 
     Parameters
     ----------
@@ -308,3 +308,161 @@ def pdockq2_lig(my_data, verbose=True):
         pdockq2_list.append(row[f"pdockq2_{lig_chain}"])
 
     my_data.df.loc[:, "pdockq2_lig"] = pdockq2_list
+
+
+def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
+    """Compute the ipTM_d0 score for the receptor-ligand interface.
+
+    Parameters
+    ----------
+    my_data : AF2Data
+        object containing the data
+    verbose : bool
+        whether to print progress information
+
+    Returns
+    -------
+    None
+        The `my_data.df` dataframe is modified in place.
+
+    """
+
+    analysis.ipTM_d0(my_data, verbose=verbose)
+
+    old_query = ""
+    ipTM_list = []
+
+    for index, row in my_data.df.iterrows():
+        if row["query"] != old_query:
+            old_query = row["query"]
+            chains = my_data.chains[old_query]
+            chain_length = my_data.chain_length[old_query]
+            # Get the shortest chain as ligand chain
+            lig_index = np.argmin(chain_length)
+            lig_chain = chains[lig_index]
+            rec_chains = chains[:lig_index] + chains[lig_index + 1 :]
+            rec_chain_indexes = list(range(lig_index)) + list(range(lig_index + 1, len(chains)))
+
+        local_ipTM_list = []
+
+        if weight_avg:
+            sum_chain_length = sum(my_data.chain_length[old_query])
+        else:
+            sum_chain_length = len(rec_chains)
+        
+        for rec_chain, rec_index in zip(rec_chains, rec_chain_indexes):
+            # Get the ipTM_d0 for the ligand chain
+            if weight_avg:
+                local_ipTM_list.append(row[f"ipTM_d0_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
+            else:
+                local_ipTM_list.append(row[f"ipTM_d0_{rec_chain}_{lig_chain}"])
+
+        ipTM_list.append(sum(local_ipTM_list)/sum_chain_length)
+
+
+    my_data.df.loc[:, "ipTM_d0_lig"] = ipTM_list
+
+
+def ipSAE_lig(my_data, weight_avg=False, verbose=True):
+    """Compute the ipSAE score for the receptor-ligand interface.
+
+    Parameters
+    ----------
+    my_data : AF2Data
+        object containing the data
+    verbose : bool
+        whether to print progress information
+lig_index = np.argmin(chain_length)
+    Returns
+    -------
+    None
+        The `my_data.df` dataframe is modified in place.
+
+    """
+
+    analysis.ipSAE(my_data, verbose=verbose)
+
+    old_query = ""
+    ipTM_list = []
+
+    for index, row in my_data.df.iterrows():
+        if row["query"] != old_query:
+            old_query = row["query"]
+            chains = my_data.chains[old_query]
+            chain_length = my_data.chain_length[old_query]
+            # Get the shortest chain as ligand chain
+            lig_index = np.argmin(chain_length)
+            lig_chain = chains[lig_index]
+            rec_chains = chains[:lig_index] + chains[lig_index + 1 :]
+            rec_chain_indexes = list(range(lig_index)) + list(range(lig_index + 1, len(chains)))
+
+        local_ipTM_list = []
+        if weight_avg:
+            sum_chain_length = sum(my_data.chain_length[old_query])
+        else:
+            sum_chain_length = len(rec_chains)
+        
+        for rec_chain, rec_index in zip(rec_chains, rec_chain_indexes):
+            # Get the ipTM_d0 for the ligand chain
+            if weight_avg:
+                local_ipTM_list.append(row[f"ipSAE_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
+            else:
+                local_ipTM_list.append(row[f"ipSAE_{rec_chain}_{lig_chain}"])
+
+        ipTM_list.append(sum(local_ipTM_list)/sum_chain_length)
+
+
+    my_data.df.loc[:, "ipSAE_lig"] = ipTM_list
+
+
+def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
+    """Compute the ipTM_d0 score for the receptor-ligand interface.
+
+    Parameters
+    ----------
+    my_data : AF2Data
+        object containing the data
+    verbose : bool
+        whether to print progress information
+
+    Returns
+    -------
+    None
+        The `my_data.df` dataframe is modified in place.
+
+    """
+
+    analysis.ipTM_d0_interface(my_data, verbose=verbose)
+
+    old_query = ""
+    ipTM_list = []
+
+    for index, row in my_data.df.iterrows():
+        if row["query"] != old_query:
+            old_query = row["query"]
+            chains = my_data.chains[old_query]
+            chain_length = my_data.chain_length[old_query]
+            # Get the shortest chain as ligand chain
+            lig_index = np.argmin(chain_length)
+            lig_chain = chains[lig_index]
+            rec_chains = chains[:lig_index] + chains[lig_index + 1 :]
+            rec_chain_indexes = list(range(lig_index)) + list(range(lig_index + 1, len(chains)))
+
+        local_ipTM_list = []
+
+        if weight_avg:
+            sum_chain_length = sum(my_data.chain_length[old_query])
+        else:
+            sum_chain_length = len(rec_chains)
+        
+        for rec_chain, rec_index in zip(rec_chains, rec_chain_indexes):
+            # Get the ipTM_d0 for the ligand chain
+            if weight_avg:
+                local_ipTM_list.append(row[f"ipTM_interface_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
+            else:
+                local_ipTM_list.append(row[f"ipTM_interface_{rec_chain}_{lig_chain}"])
+
+        ipTM_list.append(sum(local_ipTM_list)/sum_chain_length)
+
+
+    my_data.df.loc[:, "ipTM_interface_lig"] = ipTM_list
