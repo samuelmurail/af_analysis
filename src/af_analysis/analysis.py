@@ -825,14 +825,14 @@ def ipTM_d0(data, verbose=True):
     ):
 
         PAE_matrix = get_pae(data_file)
-        iptm_d0_matrix = compute_iptm_d0_matrix(
+        iptm_d0_values = compute_iptm_d0_values(
             pae_array=PAE_matrix,
             chain_ids=data.chains[query],
             chain_length=data.chain_length[query],
             chain_type=data.chain_type[query],
         )
 
-        iptm_d0_list.append(iptm_d0_matrix)
+        iptm_d0_list.append(iptm_d0_values)
 
     assert len(iptm_d0_list) == len(data.df["query"])
 
@@ -842,7 +842,7 @@ def ipTM_d0(data, verbose=True):
         data.df.loc[:, col] = iptm_d0_df.loc[:, col].to_numpy()
 
 
-def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length, chain_type):
+def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Parameters
@@ -859,7 +859,7 @@ def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length, chain_type):
     Returns
     -------
     list
-        ipTM_d0 score matrix
+        ipTM_d0 score
     """
 
     # Define the ptm and d0 functions
