@@ -562,3 +562,38 @@ def test_iptm_d0():
             for i in range(len(my_data.df))
         ]
     )
+
+
+def test_ipSAE():
+    """Test for ipSAE calculation from colabfold 1.5.5 data.
+
+    ``` python
+    python ~/Documents/Code/IPSAE/ipsae.py src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
+    ```
+
+    The output should be similar to the following:
+    ```
+    Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
+    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    ```
+
+    """
+
+    data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
+    my_data = af_analysis.Data(data_path)
+
+    analysis.ipSAE(my_data)
+
+    print([round(i, 4) for i in my_data.df["ipSAE_A_B"]])
+    expected_ipSAE_A_B = [0.0156, 0.0133, 0.0158, 0.0161, 0.2411, 0.0192, 0.0141, 0.0183, 0.0, 0.0314, 0.0147, 0.0138, 0.0133, 0.0289, 0.3092, 0.0162, 0.0125, 0.0137, 0.0169, 0.2949, 0.0153, 0.0137, 0.0141, 0.0224, 0.2559, 0.0154, 0.0127, 0.015, 0.0, 0.0236, 0.0153, 0.0132, 0.0144, 0.0231, 0.2902, 0.0145, 0.0135, 0.0141, 0.0183, 0.3137]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["ipSAE_A_B"]
+            == pytest.approx(expected_ipSAE_A_B[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )

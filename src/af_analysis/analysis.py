@@ -902,19 +902,18 @@ def compute_iptm_d0_matrix(pae_array, chain_ids, chain_length, chain_type):
                 type = "nucleic_acid" if (chain_type[i] != "protein" or chain_type[j] != "protein") else "protein"
 
                 d0 = calc_d0(do_chain, type)
-                iptm_d0_matrix = ptm_func_vec(pae_array, d0)
-
-                iptm_d0_mean = fun(
-                    iptm_d0_matrix[
-                        chain_len_sums[i] : chain_len_sums[i + 1],
-                        chain_len_sums[j] : chain_len_sums[j + 1],
-                    ]
+                iptm_d0_matrix = ptm_func_vec(
+                    pae_array[
+                            chain_len_sums[i] : chain_len_sums[i + 1],
+                            chain_len_sums[j] : chain_len_sums[j + 1],
+                    ],
+                    d0
                 )
+                iptm_d0_mean = fun(iptm_d0_matrix)
                 iptm_d0_dict[f"ipTM_d0_{chain_ids[i]}_{chain_ids[j]}"] = iptm_d0_mean
 
 
     return iptm_d0_dict
-
 
 
 def ipSAE(data, verbose=True, pae_cutoff = 10.0, dist_cutoff=10.0):
@@ -922,7 +921,7 @@ def ipSAE(data, verbose=True, pae_cutoff = 10.0, dist_cutoff=10.0):
 
     Implementation is based on the ipTM_d0 function from the IPSAE package
     https://github.com/DunbrackLab/IPSAE/blob/main/ipsae.py
-
+# apply cutoff
     Cite:
     .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
     ipTM score and how to fix it" bioRxiv (2025).
@@ -946,15 +945,14 @@ def ipSAE(data, verbose=True, pae_cutoff = 10.0, dist_cutoff=10.0):
 
     disable = False if verbose else True
 
-    for query, pdb, data_file in tqdm(
-        zip(data.df["query"], data.df["pdb"], data.df["data_file"]),
+    for query, data_file in tqdm(
+        zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
     ):
 
         PAE_matrix = get_pae(data_file)
         ipSAE_matrix = compute_ipSAE_matrix(
-            pdb=pdb,
             pae_array=PAE_matrix,
             pae_cutoff=pae_cutoff,
             dist_cutoff=dist_cutoff,
@@ -973,7 +971,7 @@ def ipSAE(data, verbose=True, pae_cutoff = 10.0, dist_cutoff=10.0):
         data.df.loc[:, col] = ipSAE_df.loc[:, col].to_numpy()
 
 
-def compute_ipSAE_matrix(pdb, pae_array, pae_cutoff, dist_cutoff, chain_ids, chain_length, chain_type):
+def compute_ipSAE_matrix(pae_array, pae_cutoff, dist_cutoff, chain_ids, chain_length, chain_type):
     """Compute the ipSAE score from the PAE matrix.
 
     Parameters
@@ -1004,51 +1002,68 @@ def compute_ipSAE_matrix(pdb, pae_array, pae_cutoff, dist_cutoff, chain_ids, cha
         return 1.0 / (1 + (x / d0) ** 2.0)
 
     ptm_func_vec = np.vectorize(ptm_func)  # vector version
-
-    # Define the d0 functions for numbers and arrays; minimum value = 1.0; from Yang and Skolnick, PROTEINS: Structure, Function, and Bioinformatics 57:702–710 (2004)
-    def calc_d0(L, pair_type):
-        L = float(L)
-        if L < 27:
-            L = 27
-        min_value = 1.0
-        if pair_type == "nucleic_acid":
-            min_value = 2.0
-        d0 = 1.24 * (L - 15) ** (1.0 / 3.0) - 1.8
-        return max(min_value, d0)
-
-    model = pdb_numpy.Coor(pdb)
-    model_cb = model.select_atoms("name CB C3 or (resname GLY and name CA)")
-    assert model_cb.len == sum(chain_length), "Number of CB atoms does not match the sum of chain lengths."
-    assert model_cb.len == pae_array.shape[0], "Number of CB atoms does not match the number of rows in the PAE matrix."
-    distance = distance_matrix(model_cb.xyz, model_cb.xyz)
     
-    fun = np.mean
+    def calc_d0_array(L, pair_type):
+        # Convert L to a NumPy array if it isn't already one (enables flexibility in input types)
+        L = np.array(L, dtype=float)
+        L = np.maximum(27,L)
+        min_value=1.0
+
+        if pair_type=='nucleic_acid': min_value=2.0
+
+        # Calculate d0 using the vectorized operation
+        return np.maximum(min_value, 1.24 * (L - 15) ** (1.0/3.0) - 1.8)
+    
+    def fun(matrix):
+        """Function to apply to the ipTM_d0 matrix."""
+        #return np.mean(x)
+
+        matrix_res = np.zeros(matrix.shape[0])
+
+        for i in range(matrix.shape[0]):
+            matrix_res[i] = np.mean(matrix[i, :])
+            #print("matrix_res[i]", matrix_res[i])
+        
+        max_index = np.argmax(matrix_res)
+        return matrix_res[max_index]
+
+    # model = pdb_numpy.Coor(pdb)
+    # model_cb = model.select_atoms("name CB C3 or (resname GLY and name CA)")
+    # assert model_cb.len == sum(chain_length), "Number of CB atoms does not match the sum of chain lengths."
+    # assert model_cb.len == pae_array.shape[0], "Number of CB atoms does not match the number of rows in the PAE matrix."
+    # distance = distance_matrix(model_cb.xyz, model_cb.xyz)
+    
+    #fun = np.mean
     chain_len_sums = np.cumsum([0] + chain_length)
     ipSAE_dict = {}
     for i in range(len(chain_length)):
         for j in range(len(chain_length)):
             if i != j:
-                do_chain = chain_length[i] + chain_length[j]
-                type = "nucleic_acid" if (chain_type[i] != "protein" or chain_type[j] != "protein") else "protein"
-
-                d0 = calc_d0(do_chain, type)
-
-                iptm_d0_matrix = ptm_func_vec(pae_array, d0)
-
-                mask = (pae_array <= pae_cutoff) & (distance <= dist_cutoff)
-                print(mask)
-        
-                # Apply the mask to the iptm_d0_matrix  
+                sub_pae_array = pae_array[
+                    chain_len_sums[i] : chain_len_sums[i + 1],
+                    chain_len_sums[j] : chain_len_sums[j + 1],
+                ]
                 
 
-                ipSAE_mean = fun(
-                    iptm_d0_matrix[
-                        chain_len_sums[i] : chain_len_sums[i + 1],
-                        chain_len_sums[j] : chain_len_sums[j + 1],
-                    ]
-                )
-                ipSAE_dict[f"ipSAE_{chain_ids[i]}_{chain_ids[j]}"] = ipSAE_mean
+                type = "nucleic_acid" if (chain_type[i] != "protein" or chain_type[j] != "protein") else "protein"
+                valid_pairs_matrix = sub_pae_array <= pae_cutoff
+                n0res_byres_all = np.sum(valid_pairs_matrix, axis=1)
+                d0_res = calc_d0_array(n0res_byres_all, type)
+                
+                ipsae_d0res_byres = np.zeros(chain_length[j])
+                # print("sub_pae_array:", sub_pae_array.shape, d0_res.shape)
+
+                for k in range(chain_length[j]):
+                    ptm_row_d0res = ptm_func_vec(sub_pae_array[k], d0_res[k])
+                    if valid_pairs_matrix[k].any():
+                        ipsae_d0res_byres[k] = ptm_row_d0res[valid_pairs_matrix[k]].mean()
+                    else:
+                        ipsae_d0res_byres[k] = 0.0
+
+                max_index = np.argmax(ipsae_d0res_byres)
+                ipSAE_dict[f"ipSAE_{chain_ids[i]}_{chain_ids[j]}"] = ipsae_d0res_byres[max_index]
+                print("ipsae_d0res_byres[max_index]", ipsae_d0res_byres[max_index])
+
 
 
     return ipSAE_dict
-
