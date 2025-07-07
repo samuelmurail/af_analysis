@@ -36,7 +36,7 @@ def get_pae(data_file):
         PAE matrix.
     """
 
-    if data_file is None:
+    if data_file is None or data_file == "" or pd.isna(data_file):
         return None
 
     if data_file.endswith(".json"):
@@ -703,6 +703,9 @@ def compute_ftdmp(
         logger.warning("Pytorch not found, ftdmp will not work")
         return
 
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+
     # ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
 
     cmd = [ftdmp_exe_path, "--workdir", out_path]
@@ -715,7 +718,7 @@ def compute_ftdmp(
         env=env,
     )
 
-    pdb_list = my_data.df["pdb"].tolist()
+    pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
     com_input = "\n".join(pdb_list)
     com_input += "\n"
 
@@ -913,6 +916,8 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
     chain_len_sums = np.cumsum([0] + chain_length)
 
     iptm_d0_dict = {}
+    iptm_do_sum = 0.0
+    iptm_size = 0.0
     for i in range(len(chain_length)):
         for j in range(len(chain_length)):
             if i != j:
@@ -933,7 +938,12 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
                 )
                 iptm_d0_mean = fun(iptm_d0_matrix)
                 iptm_d0_dict[f"ipTM_d0_{chain_ids[i]}_{chain_ids[j]}"] = iptm_d0_mean
+                iptm_do_sum += iptm_d0_mean * chain_length[i] * chain_length[j]
+                iptm_size += chain_length[i] * chain_length[j]
 
+    iptm_d0_dict[f"ipTM_d0"] = (
+        iptm_do_sum / iptm_size if iptm_size > 0 else None
+    )
     return iptm_d0_dict
 
 
