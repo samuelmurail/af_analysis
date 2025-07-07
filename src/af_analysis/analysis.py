@@ -763,7 +763,7 @@ def compute_ftdmp(
         if not keep_tmp:
             shutil.rmtree(out_path)
 
-    logger.info("Ftdmp scores computed.")
+    logger.info("Ftdmp scores computed. Merging data frames.")
 
     # print(df_list)
     ftdmp_df = pd.DataFrame()
@@ -774,11 +774,11 @@ def compute_ftdmp(
 
         # Add the ID column to the dataframe
         df["ID"] = df["ID"].astype(str)
-        ftmdp_df = pd.concat([ftmdp_df, df], ignore_index=True)
+        ftdmp_df = pd.concat([ftdmp_df, df], ignore_index=True)
 
     my_data.df["ID"] = [
         os.path.basename(file_path) if file_path is not None else None
-        for file_path in my_data.df["pdb"]]
+        for file_path in my_data.df["pdb"]]  
     my_data.df = my_data.df.merge(ftdmp_df, on="ID", how="inner")
 
 
