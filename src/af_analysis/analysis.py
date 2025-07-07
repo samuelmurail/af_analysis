@@ -321,7 +321,7 @@ def pdockq2(data, verbose=True):
 
     if "data_file" not in data.df.columns:
         raise ValueError(
-            "No \`data_file\` column found in the dataframe. pae scores are required to compute pdockq2."
+            "No \"data_file\" column found in the dataframe. pae scores are required to compute pdockq2."
         )
 
     for pdb, data_path in tqdm(
@@ -618,7 +618,7 @@ def read_ftdmp_raw_score(raw_path):
 
 
 def extract_ftdmp(
-    my_data, ftdmp_result_path, score_list=["raw_scoring_results_without_ranks.txt"]
+    ftdmp_result_path, score_list=["raw_scoring_results_without_ranks.txt"]
 ):
     """Read ftdmp output files
 
@@ -650,19 +650,19 @@ def extract_ftdmp(
                 local_score = os.path.join(ftdmp_result_path, "jobs", job_dir, file)
                 df_list.append(read_ftdmp_raw_score(local_score))
 
-    my_data.df["ID"] = [
-        os.path.basename(file_path) if file_path is not None else None
-        for file_path in my_data.df["pdb"]
-    ]
+    # my_data.df["ID"] = [
+    #     os.path.basename(file_path) if file_path is not None else None
+    #     for file_path in my_data.df["pdb"]
+    # ]
 
     # return df_list
 
-    for df in df_list:
-        if len(df) == 0:
-            continue
+    # for df in df_list:
+    #     if len(df) == 0:
+    #         continue
 
-        my_data.df = my_data.df.merge(df, on="ID", how="inner")
-
+    #     my_data.df = my_data.df.merge(df, on="ID", how="inner")
+    return df_list
 
 def compute_ftdmp(
     my_data,
@@ -706,31 +706,81 @@ def compute_ftdmp(
     if not os.path.exists(out_path):
         os.makedirs(out_path)
 
-    # ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
 
-    cmd = [ftdmp_exe_path, "--workdir", out_path]
+    # Check that all pdb files are in the same directory
+    if not all(
+        os.path.dirname(pdb) == os.path.dirname(my_data.df["pdb"].iloc[0])
+        for pdb in my_data.df["pdb"]
+    ):
 
-    proc = subprocess.Popen(
-        cmd,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-    )
+        pdb_run_list = []
+        pdb_dir_list = []
+        for pdb in my_data.df["pdb"].tolist():
+            pdb_dirname = os.path.dirname(pdb)
+            if pdb_dirname not in pdb_dir_list:
+                pdb_dir_list.append(pdb_dirname)
+                pdb_run_list.append([])
 
-    pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
-    com_input = "\n".join(pdb_list)
-    com_input += "\n"
+            # Add the pdb file to the corresponding directory
+            index = pdb_dir_list.index(pdb_dirname)
+            pdb_run_list[index].append(pdb)
 
-    (stdout_data, stderr_data) = proc.communicate(com_input.encode())
+        logger.info(f"For Ftdmp, all PDB files must be in the same directory. Ftdmp will be launched {len(pdb_run_list)} times.")
 
-    # print(stdout_data)
-    # print(stderr_data)
+    # If the pdb files are not in the same directory, we need to copy them to the out_path
+    
+    #pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
 
-    extract_ftdmp(my_data=my_data, ftdmp_result_path=out_path, score_list=score_list)
+    df_list = []
+    # print(pdb_run_list)
 
-    if not keep_tmp:
-        shutil.rmtree(out_path)
+    for i, pdb_list in enumerate(pdb_run_list):
+        logger.info(f"Running ftdmp on {len(pdb_list)} PDB files, step {i+1}/{len(pdb_run_list)}")
+
+        # ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
+
+        cmd = [ftdmp_exe_path, "--workdir", out_path]
+
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+
+        #pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
+        com_input = "\n".join(pdb_list)
+        com_input += "\n"
+
+        (stdout_data, stderr_data) = proc.communicate(com_input.encode())
+
+        # print(stdout_data)
+        # print(stderr_data)
+
+        df_list += extract_ftdmp(ftdmp_result_path=out_path, score_list=score_list)
+
+        if not keep_tmp:
+            shutil.rmtree(out_path)
+
+    logger.info("Ftdmp scores computed.")
+
+    # print(df_list)
+    ftdmp_df = pd.DataFrame()
+    
+    for df in df_list:
+        if len(df) == 0:
+            continue
+
+        # Add the ID column to the dataframe
+        df["ID"] = df["ID"].astype(str)
+        ftmdp_df = pd.concat([ftmdp_df, df], ignore_index=True)
+
+    my_data.df["ID"] = [
+        os.path.basename(file_path) if file_path is not None else None
+        for file_path in my_data.df["pdb"]]
+    my_data.df = my_data.df.merge(ftdmp_df, on="ID", how="inner")
+
 
     return
 

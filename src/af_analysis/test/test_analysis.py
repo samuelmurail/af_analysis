@@ -378,7 +378,14 @@ def test_cf_1_5_5_ftdmp():
 
     ftdmp_path = os.path.join(TEST_FILE_PATH, "ftdmp_beta_amyloid_dimer")
 
-    analysis.extract_ftdmp(my_data, ftdmp_path)
+    ftdmp_df_list = analysis.extract_ftdmp(ftdmp_path)
+    assert len(ftdmp_df_list) == 1
+
+    my_data.df["ID"] = [
+        os.path.basename(file_path) if file_path is not None else None
+        for file_path in my_data.df["pdb"]]
+    my_data.df = my_data.df.merge(ftdmp_df_list [0], on="ID", how="inner")
+
 
     print([round(i, 4) for i in my_data.df["raw_FGV_full_light_score"]])
     expected_FGV_full_light_score = [
