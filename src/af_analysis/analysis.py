@@ -726,6 +726,10 @@ def compute_ftdmp(
             pdb_run_list[index].append(pdb)
 
         logger.info(f"For Ftdmp, all PDB files must be in the same directory. Ftdmp will be launched {len(pdb_run_list)} times.")
+    else:
+        # If all pdb files are in the same directory, we can run ftdmp on all of them at once
+        pdb_run_list = [my_data.df["pdb"].tolist()]
+        logger.info("All PDB files are in the same directory. Ftdmp will be launched once.")
 
     # If the pdb files are not in the same directory, we need to copy them to the out_path
     
