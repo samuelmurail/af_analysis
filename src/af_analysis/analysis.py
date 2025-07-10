@@ -4,6 +4,7 @@ from tqdm.auto import tqdm
 import json
 import os
 import logging
+import itertools
 
 import pdb_numpy
 from pdb_numpy.geom import distance_matrix
@@ -789,7 +790,7 @@ def compute_ftdmp(
     return
 
 
-def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
+def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold = 0.3):
     """Compute the DockQ score from the PAE matrix.
 
     Parameters
@@ -802,6 +803,8 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
         print progress bar
     fun : function
         function to apply to the PAE scores
+    dockq_thresold : float
+        threshold with multiple chain to recompute DockQ score, default is 0.3
 
     Returns
     -------
@@ -839,13 +842,48 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average):
 
         if query != old_query:
             ref_coor = pdb_numpy.Coor(ref_dict[query])
+            native_seq = ref_coor.get_aa_seq()
             old_query = query
 
         model = pdb_numpy.Coor(pdb)
+        model_seq = model.get_aa_seq()
+        lig_chains = [
+            min(model_seq.items(), key=lambda x: len(x[1].replace("-", "")))[0]
+        ]
+        rec_chains = [chain for chain in model_seq if chain not in lig_chains]
+        native_lig_chains = [
+            min(native_seq.items(), key=lambda x: len(x[1].replace("-", "")))[0]
+        ]
+        native_rec_chains = [
+            chain for chain in native_seq if chain not in native_lig_chains
+        ]
+
         dockq_score = analysis.dockQ(
             model,
             ref_coor,
+            rec_chains=rec_chains,
+            lig_chains=lig_chains,
+            native_rec_chains=native_rec_chains,
+            native_lig_chains=native_lig_chains,
         )
+
+        if len(rec_chains) > 1 and dockq_score["DockQ"][0] < dockq_thresold:
+            # If the model has multiple chains and the DockQ score is below the threshold,
+            # recompute the DockQ score using different alignement modes
+            new_results = [dockq_score]
+            for chain_perm in list(itertools.permutations(rec_chains, len(rec_chains)))[1:]:
+                new_results.append(analysis.dockQ(
+                    model,
+                    ref_coor,
+                    rec_chains=list(chain_perm),
+                    lig_chains=lig_chains,
+                    native_rec_chains=native_rec_chains,
+                    native_lig_chains=native_lig_chains,
+                ))
+            # Select the best result
+            dockq_score = max(new_results, key=lambda x: x["DockQ"][0])
+
+
         #print(dockq_score)
         # print(f"dockq: {dockq_score['DockQ'][0]:.3f} Lrms:  {dockq_score['LRMS'][0]:.2f}")
         dockq_list.append(dockq_score["DockQ"][0])
