@@ -129,7 +129,7 @@ def add_pdb(log_pd, directory, verbose=True):
 
     for _, row in tqdm(log_pd.iterrows(), total=log_pd.shape[0], disable=disable):
         # reg = fr"{row['query']}_.*_{row['weight']}_model_{row['model']}_seed_{row['seed']:03d}\.r{row['recycle']}\.pdb"
-        reg = rf"{row['query']}.*_{row['weight']}_model_{row['model']}_seed_{row['seed']:03d}\.pdb"
+        reg = rf"{row['query']}_.*_{row['weight']}_model_{row['model']}_seed_{row['seed']:03d}\.pdb"
         r = re.compile(reg)
         res = list(filter(r.match, file_list))
 
