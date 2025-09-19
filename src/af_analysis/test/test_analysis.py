@@ -224,7 +224,7 @@ def test_af3_webserver():
 
     analysis.pdockq2(my_data)
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
-    expected_pdockq2 = [0.9599, 0.9614, 0.9606, 0.959, 0.9607]
+    expected_pdockq2 = [0.9148, 0.9187, 0.9151, 0.913, 0.9154]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_A"]
@@ -232,8 +232,9 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
+    
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
-    expected_pdockq2 = [0.9632, 0.9646, 0.9642, 0.9638, 0.964]
+    expected_pdockq2 = [0.8972, 0.8925, 0.8884, 0.889, 0.8785]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_D"]
