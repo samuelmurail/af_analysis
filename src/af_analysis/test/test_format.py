@@ -187,6 +187,49 @@ def test_af3_webserver():
     assert list(my_data.df["ipTM"]) == [0.93, 0.94, 0.93, 0.93, 0.93]
 
 
+def test_af3_local():
+    data_path = os.path.join(TEST_FILE_PATH, "af3_local_prot_pep_complex")
+
+    my_data = af_analysis.Data(data_path, format="AF3_local")
+
+    assert my_data.format == "AF3_local"
+    assert len(my_data.df) == 5
+    assert (
+        my_data.df.columns
+        == np.array(
+            [
+                "pdb",
+                "query",
+                "seed_sample",
+                "data_file",
+                "chain_iptm",
+                "chain_pair_iptm",
+                "chain_pair_pae_min",
+                "chain_ptm",
+                "fraction_disordered",
+                "has_clash",
+                "ipTM",
+                "pTM",
+                "ranking_confidence",
+                "format",
+            ]
+        )
+    ).all()
+
+    query = my_data.df.iloc[0]["query"]
+
+    assert my_data.chain_length[query] == [335, 18]
+    assert my_data.chains[query] == ["A", "B"]
+    assert my_data.chain_type[query] == ["protein", "protein"]
+
+    # There should be 0 relaxed structures
+
+    assert "relaxed_pdb" not in my_data.df.columns
+    print(my_data.df.iloc[:, :])
+
+    assert list(my_data.df["ipTM"]) == [0.41, 0.31, 0.34, 0.53, 0.5]
+
+
 def test_boltz1():
     data_path = os.path.join(TEST_FILE_PATH, "boltz_results_prot_dna_ligand")
 
