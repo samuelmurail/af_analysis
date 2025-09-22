@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from cmcrameri import cm
 from tqdm.auto import tqdm
 import json
+import pickle
 import logging
 import ipywidgets as widgets
 
@@ -570,6 +571,13 @@ class Data:
                 plddt_array = data_npz["plddt"]
             else:
                 return None
+        elif row["data_file"].endswith(".pkl"):
+            try:
+                data_pkl = np.load(row["data_file"], allow_pickle=True)
+            except pickle.UnpicklingError as e:
+                logger.error(f"Error loading pLDDT from {row['data_file']}: {e}")
+                return None
+            plddt_array = data_pkl["plddt"]
 
         return plddt_array
 

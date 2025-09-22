@@ -5,6 +5,7 @@ import json
 import os
 import logging
 import itertools
+import pickle
 
 import pdb_numpy
 from pdb_numpy.geom import distance_matrix
@@ -132,9 +133,14 @@ def extract_pae_pkl(pkl_file):
         PAE matrix.
     """
 
-    data_pkl = np.load(pkl_file, allow_pickle=True)
-    pae_array = data_pkl["predicted_aligned_error"]
 
+    try:
+        data_pkl = np.load(pkl_file, allow_pickle=True)
+    except pickle.UnpicklingError as e:
+        logger.error(f"Error loading PAE from {pkl_file}: {e}")
+        return None
+    
+    pae_array = data_pkl["predicted_aligned_error"]
     return pae_array
 
 
