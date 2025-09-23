@@ -20,6 +20,7 @@ from .format import (
     afpulldown,
     boltz1,
     chai1,
+    chai1_custom,
     massivefold,
     default,
     af3_local,
@@ -177,6 +178,10 @@ class Data:
             self.format = "boltz1"
             self.df = boltz1.read_dir(directory)
             self.df["format"] = "boltz1"
+        elif format == "chai1_custom":
+            self.format = "chai1_custom"
+            self.df = chai1_custom.read_dir(directory)
+            self.df["format"] = "chai1_custom"
         elif (
             format == "chai1"
             or os.path.isfile(os.path.join(directory, "msa_depth.pdf"))
@@ -547,6 +552,7 @@ class Data:
             "csv",
             "alphapulldown",
             "chai1",
+            "chai1_custom",
             "massivefold",
         ]:
             model = pdb_numpy.Coor(row["pdb"])
