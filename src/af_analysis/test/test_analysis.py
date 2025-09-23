@@ -280,6 +280,84 @@ def test_af3_webserver():
     )
 
 
+def test_af3_local():
+    data_path = os.path.join(TEST_FILE_PATH, "af3_local_prot_pep_complex")
+
+    my_data = af_analysis.Data(data_path, format="AF3_local")
+
+    assert my_data.format == "AF3_local"
+
+    analysis.pdockq(my_data)
+
+    expected_pdockq = [0.2685, 0.3013, 0.2481, 0.1923, 0.2029]
+
+    # print([round(i, 4) for i in my_data.df["pdockq"]])
+    precision = 0.001
+    assert np.all(
+        [
+            my_data.df.iloc[i]["pdockq"] == pytest.approx(expected_pdockq[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.mpdockq(my_data)
+    expected_mpdockq = [0.262, 0.262, 0.262, 0.262, 0.262]
+
+    # print([round(i, 6) for i in my_data.df["mpdockq"]])
+    precision = 0.001
+    assert np.all(
+        [
+            my_data.df.iloc[i]["mpdockq"]
+            == pytest.approx(expected_mpdockq[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.pdockq2(my_data)
+    # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
+    expected_pdockq2 = [0.0293, 0.0206, 0.0192, 0.2001, 0.1673]
+
+    assert np.allclose(
+    my_data.df["pdockq2_A"].values,
+    expected_pdockq2,
+    atol=precision)
+
+    
+    # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
+    expected_pdockq2 = [0.0124, 0.0105, 0.0108, 0.0575, 0.0494]
+    assert np.allclose(
+    my_data.df["pdockq2_B"].values,
+    expected_pdockq2,
+    atol=precision)
+
+    analysis.LIS_matrix(my_data)
+    expected_LIS_0 = [[0.69108653, 0.08731778], [0.05189394, 0.51754606]]
+
+    np.testing.assert_allclose(
+        np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
+    )
+
+    analysis.inter_chain_pae(my_data)
+
+    expected_PAE_A_B = [14.8537, 18.2035, 14.9247]
+    # print([round(i, 4) for i in my_data.df["PAE_A_B"]])
+    assert np.all(
+        [
+            my_data.df.iloc[i]["PAE_A_B"]
+            for i in my_data.df[~my_data.df["PAE_A_B"].isna()].index
+        ]
+    )
+
+    expected_PAE_A_U = [10.3946, 10.8287]
+    # print([round(i, 4) for i in my_data.df["PAE_A_E"]])
+    assert np.all(
+        [
+            my_data.df.iloc[i]["PAE_A_U"]
+            for i in my_data.df[~my_data.df["PAE_A_U"].isna()].index
+        ]
+    )
+
+
 def test_af3_boltz1():
     data_path = os.path.join(TEST_FILE_PATH, "boltz_results_prot_dna_ligand")
 
@@ -384,9 +462,9 @@ def test_cf_1_5_5_ftdmp():
 
     my_data.df["ID"] = [
         os.path.basename(file_path) if file_path is not None else None
-        for file_path in my_data.df["pdb"]]
-    my_data.df = my_data.df.merge(ftdmp_df_list [0], on="ID", how="inner")
-
+        for file_path in my_data.df["pdb"]
+    ]
+    my_data.df = my_data.df.merge(ftdmp_df_list[0], on="ID", how="inner")
 
     print([round(i, 4) for i in my_data.df["raw_FGV_full_light_score"]])
     expected_FGV_full_light_score = [
@@ -610,7 +688,7 @@ def test_ipSAE():
         0.0138,
         0.0133,
         0.0289,
-        0.3092, # The one tested previously
+        0.3092,  # The one tested previously
         0.0162,
         0.0125,
         0.0137,

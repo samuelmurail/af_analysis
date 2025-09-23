@@ -23,6 +23,7 @@ from .format import (
     chai1,
     massivefold,
     default,
+    af3_local,
 )
 from . import sequence, plot
 from .analysis import get_pae, extract_fields_file
@@ -155,6 +156,10 @@ class Data:
             self.df["format"] = "colabfold_1.5"
             self.add_pdb(verbose=verbose)
             self.add_json(verbose=verbose)
+        elif format == "AF3_local":
+            self.format = "AF3_local"
+            self.df = af3_local.read_dir(directory)
+            self.df["format"] = "AF3_local"
         elif format == "AF3_webserver" or os.path.isfile(
             os.path.join(directory, "terms_of_use.md")
         ):
@@ -394,8 +399,8 @@ class Data:
             self.df[field] = None
             new_col = pd.Series(values_list[i], index=self.df.index)
             self.df.loc[:, field] = new_col
-            #print(len(values_list[i]), len(self.df))
-            #self.df.loc[:, field] = values_list[i]
+            # print(len(values_list[i]), len(self.df))
+            # self.df.loc[:, field] = values_list[i]
 
     def add_pdb(self, verbose=True):
         """Add pdb files to the dataframe.
@@ -539,6 +544,7 @@ class Data:
 
         if row["format"] in [
             "AF3_webserver",
+            "AF3_local",
             "csv",
             "alphapulldown",
             "chai1",
