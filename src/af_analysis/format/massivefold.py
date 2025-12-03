@@ -110,7 +110,7 @@ def read_dir(directory):
             if "ranking_confidence" in np_score:
                 ranking_confidence = float(np_score["ranking_confidence"])
             elif confidence_score is not None:
-                ranking_confidence = json_data["ranking_score"]
+                ranking_confidence = json_data["ranking_score"] * 100
             else:
                 ranking_confidence = None
             
