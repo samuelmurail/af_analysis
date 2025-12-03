@@ -39,14 +39,19 @@ def read_dir(directory):
     for file in os.listdir(pred_dir):
         logger.info(f"Processing file: {file}")
         if file.endswith(".pdb") or file.endswith(".cif"):
+            # print(f"Processing file: {file}")
 
             confidence_score = None
 
             if not file.find("af3") != -1:
                 tokens = file[:-4].split("_")
                 model = int(tokens[4])
-                weight = tokens[5] + "_" + tokens[6]
+                pred_index = tokens.index("pred") if "pred" in tokens else len(tokens)
+                weight = "_".join(tokens[5:pred_index])
                 seed = int(tokens[-1])
+
+                # print(tokens)
+                # print(f"model: {model}, weight: {weight}, seed: {seed}")
 
                 pkl_score = os.path.join(
                     pred_dir,
@@ -64,6 +69,8 @@ def read_dir(directory):
                 seed = int(tokens[-3])
                 pred_num = int(tokens[-1])
                 rank = int(tokens[1])
+
+
 
                 pkl_score = os.path.join(
                     pred_dir,
@@ -134,6 +141,12 @@ def read_dir(directory):
             log_dict_list.append(info_dict)
 
     log_pd = pd.DataFrame(log_dict_list)
+
+    # Dirty fix of "ranking_confidence" between 0 and 1.
+    # Seems to be ok because ranking confidence is rarely below 1.
+    log_pd["ranking_confidence"] = log_pd["ranking_confidence"].apply(
+        lambda x: x * 100 if x < 1 else x
+    )
 
     # To ensure that tests are consistent across different systems
     # we sort the dataframe by pdb
