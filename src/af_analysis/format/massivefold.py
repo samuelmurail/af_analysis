@@ -162,7 +162,7 @@ def read_full_directory(directory):
     log_pd_list = []
 
     for folder in subfolders:
-        print(f"Reading {folder}")
+        # print(f"Reading {folder}")
         if not os.path.basename(folder).startswith("msa"):
             log_pd_list.append(read_dir(folder))
 
