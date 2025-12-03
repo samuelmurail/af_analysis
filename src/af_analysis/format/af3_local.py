@@ -47,14 +47,14 @@ def read_dir(directory):
 
         # Get the file ending by "_model.cif"
         cif_files = glob.glob(os.path.join(dir_path, "*model.cif"))
-        print("looking at :", os.path.join(dir_path, "*model.cif"))
+        # print("looking at :", os.path.join(dir_path, "*model.cif"))
         if not cif_files:
             logger.warning(f"No _model.cif file found in {dir_path}")
             continue  # or handle the missing case
         model_path = cif_files[0]
 
         seed_sample = dir_path.split("/")[-1]  # for instance seed-1_sample-3
-        query = dir_path.split("/")[-3]
+        query = dir_path.split("/")[-2]
 
 
         json_score = model_path.replace(
