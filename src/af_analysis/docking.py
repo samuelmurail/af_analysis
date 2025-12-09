@@ -372,7 +372,7 @@ def ipSAE_lig(my_data, weight_avg=False, verbose=True):
         object containing the data
     verbose : bool
         whether to print progress information
-lig_index = np.argmin(chain_length)
+
     Returns
     -------
     None
