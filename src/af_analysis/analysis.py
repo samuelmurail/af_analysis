@@ -133,13 +133,12 @@ def extract_pae_pkl(pkl_file):
         PAE matrix.
     """
 
-
     try:
         data_pkl = np.load(pkl_file, allow_pickle=True)
     except pickle.UnpicklingError as e:
         logger.error(f"Error loading PAE from {pkl_file}: {e}")
         return None
-    
+
     pae_array = data_pkl["predicted_aligned_error"]
     return pae_array
 
@@ -328,7 +327,7 @@ def pdockq2(data, verbose=True):
 
     if "data_file" not in data.df.columns:
         raise ValueError(
-            "No \"data_file\" column found in the dataframe. pae scores are required to compute pdockq2."
+            'No "data_file" column found in the dataframe. pae scores are required to compute pdockq2.'
         )
 
     for pdb, data_path in tqdm(
@@ -363,8 +362,6 @@ def pdockq2(data, verbose=True):
     # print(pdockq_list)
     for i in range(max_chain_num):
         data.df.loc[:, f"pdockq2_{max_chain_val[i]}"] = pdockq_list[i]
-
-
 
 
 def inter_chain_pae(data, fun=np.mean, verbose=True):
@@ -532,6 +529,7 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
     assert len(LIS_matrix_list) == len(data.df["query"])
     data.df.loc[:, "LIS"] = LIS_matrix_list
 
+
 def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
     """Compute the Local Interaction Area from the PAE matrix and pdb.
 
@@ -570,7 +568,9 @@ def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
-            ipSAE_list.append({f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None})
+            ipSAE_list.append(
+                {f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None}
+            )
             continue
         LIA_matrix = compute_LIA_matrix(
             pdb=pdb,
@@ -585,8 +585,8 @@ def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
 
     assert len(LIA_matrix_list) == len(data.df["query"])
 
-
     data.df.loc[:, "LIA"] = LIA_matrix_list
+
 
 def compute_LIA_matrix(
     pdb: str,
@@ -595,7 +595,7 @@ def compute_LIA_matrix(
     chain_length: dict,
     pae_cutoff: float = 12.0,
     dist_cutoff: float = 8.0,
-    ) -> np.ndarray:
+) -> np.ndarray:
     """Compute the LIA score from the PAE matrix.
 
     Parameters
@@ -622,19 +622,23 @@ def compute_LIA_matrix(
     chain_len_sums = np.cumsum([0] + chain_length)
 
     model = pdb_numpy.Coor(pdb)
-    model_cb = model.select_atoms("(name CB C3 C3\' or (resname GLY and name CA)) or (noh and not ((protein or resname DA DC DT DG A C U G T)))")
+    model_cb = model.select_atoms(
+        "(name CB C3 C3' or (resname GLY and name CA)) or (noh and not ((protein or resname DA DC DT DG A C U G T)))"
+    )
     distance = distance_matrix(model_cb.xyz, model_cb.xyz)
     contact_map = (distance < dist_cutoff).astype(int)
 
     # print(contact_map.shape, pae_array.shape)
     # print(contact_map)
-    assert len(np.unique(model_cb.chain)) == len(chain_ids), F"Number of chains in the PDB ({np.unique(model_cb.chain)}) does not match the number of chain IDs ({chain_ids})"
+    assert len(np.unique(model_cb.chain)) == len(
+        chain_ids
+    ), f"Number of chains in the PDB ({np.unique(model_cb.chain)}) does not match the number of chain IDs ({chain_ids})"
     trans_matrix = np.zeros_like(pae_array)
     mask = pae_array < pae_cutoff
     trans_matrix[mask] = 1 - pae_array[mask] / pae_cutoff
     trans_matrix[contact_map == 0] = 0
     LIA_list = []
-    
+
     for i in range(len(chain_length)):
         i_start = chain_len_sums[i]
         i_end = chain_len_sums[i + 1]
@@ -652,6 +656,7 @@ def compute_LIA_matrix(
         LIA_list.append(local_LIA_list)
 
     return LIA_list
+
 
 def PAE_matrix(data, verbose=True, fun=np.average):
     """
@@ -791,6 +796,7 @@ def extract_ftdmp(
     #     my_data.df = my_data.df.merge(df, on="ID", how="inner")
     return df_list
 
+
 def compute_ftdmp(
     my_data,
     ftdmp_path=None,
@@ -833,7 +839,6 @@ def compute_ftdmp(
     if not os.path.exists(out_path):
         os.makedirs(out_path)
 
-
     # Check that all pdb files are in the same directory
     if not all(
         os.path.dirname(pdb) == os.path.dirname(my_data.df["pdb"].iloc[0])
@@ -852,21 +857,27 @@ def compute_ftdmp(
             index = pdb_dir_list.index(pdb_dirname)
             pdb_run_list[index].append(pdb)
 
-        logger.info(f"For Ftdmp, all PDB files must be in the same directory. Ftdmp will be launched {len(pdb_run_list)} times.")
+        logger.info(
+            f"For Ftdmp, all PDB files must be in the same directory. Ftdmp will be launched {len(pdb_run_list)} times."
+        )
     else:
         # If all pdb files are in the same directory, we can run ftdmp on all of them at once
         pdb_run_list = [my_data.df["pdb"].tolist()]
-        logger.info("All PDB files are in the same directory. Ftdmp will be launched once.")
+        logger.info(
+            "All PDB files are in the same directory. Ftdmp will be launched once."
+        )
 
     # If the pdb files are not in the same directory, we need to copy them to the out_path
-    
-    #pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
+
+    # pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
 
     df_list = []
     # print(pdb_run_list)
 
     for i, pdb_list in enumerate(pdb_run_list):
-        logger.info(f"Running ftdmp on {len(pdb_list)} PDB files, step {i+1}/{len(pdb_run_list)}")
+        logger.info(
+            f"Running ftdmp on {len(pdb_list)} PDB files, step {i+1}/{len(pdb_run_list)}"
+        )
 
         # ls MY_AF_DIRECTORY/*.pdb | ~/Documents/Code/ftdmp/ftdmp-qa-all --workdir ftdmp_beta_amyloid_dimer
 
@@ -880,7 +891,7 @@ def compute_ftdmp(
             env=env,
         )
 
-        #pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
+        # pdb_list = [pdb for pdb in my_data.df["pdb"].tolist() if pdb is not None and not pd.isna(pdb)]
         com_input = "\n".join(pdb_list)
         com_input += "\n"
 
@@ -898,7 +909,7 @@ def compute_ftdmp(
 
     # print(df_list)
     ftdmp_df = pd.DataFrame()
-    
+
     for df in df_list:
         if len(df) == 0:
             continue
@@ -909,14 +920,14 @@ def compute_ftdmp(
 
     my_data.df["ID"] = [
         os.path.basename(file_path) if file_path is not None else None
-        for file_path in my_data.df["pdb"]]  
+        for file_path in my_data.df["pdb"]
+    ]
     my_data.df = my_data.df.merge(ftdmp_df, on="ID", how="inner")
-
 
     return
 
 
-def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold = 0.3):
+def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0.3):
     """Compute the DockQ score from the PAE matrix.
 
     Parameters
@@ -951,7 +962,8 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold =
         total=len(data.df["query"]),
         disable=disable,
     ):
-        if (query not in ref_dict
+        if (
+            query not in ref_dict
             or data.chain_length[query] is None
             or pdb is None
             or pdb is np.nan
@@ -997,20 +1009,23 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold =
             # If the model has multiple chains and the DockQ score is below the threshold,
             # recompute the DockQ score using different alignement modes
             new_results = [dockq_score]
-            for chain_perm in list(itertools.permutations(rec_chains, len(rec_chains)))[1:]:
-                new_results.append(analysis.dockQ(
-                    model,
-                    ref_coor,
-                    rec_chains=list(chain_perm),
-                    lig_chains=lig_chains,
-                    native_rec_chains=native_rec_chains,
-                    native_lig_chains=native_lig_chains,
-                ))
+            for chain_perm in list(itertools.permutations(rec_chains, len(rec_chains)))[
+                1:
+            ]:
+                new_results.append(
+                    analysis.dockQ(
+                        model,
+                        ref_coor,
+                        rec_chains=list(chain_perm),
+                        lig_chains=lig_chains,
+                        native_rec_chains=native_rec_chains,
+                        native_lig_chains=native_lig_chains,
+                    )
+                )
             # Select the best result
             dockq_score = max(new_results, key=lambda x: x["DockQ"][0])
 
-
-        #print(dockq_score)
+        # print(dockq_score)
         # print(f"dockq: {dockq_score['DockQ'][0]:.3f} Lrms:  {dockq_score['LRMS'][0]:.2f}")
         dockq_list.append(dockq_score["DockQ"][0])
         lrmsd_list.append(dockq_score["LRMS"][0])
@@ -1060,9 +1075,11 @@ def ipTM_d0(data, verbose=True):
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
-            iptm_d0_list.append({f"ipTM_d0_{data.chains[query][0]}_{data.chains[query][1]}":None})
+            iptm_d0_list.append(
+                {f"ipTM_d0_{data.chains[query][0]}_{data.chains[query][1]}": None}
+            )
             continue
-    
+
         # Check if the PAE matrix is square
         iptm_d0_values = compute_iptm_d0_values(
             pae_array=PAE_matrix,
@@ -1159,9 +1176,7 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
                 iptm_do_sum += iptm_d0_mean * chain_length[i] * chain_length[j]
                 iptm_size += chain_length[i] * chain_length[j]
 
-    iptm_d0_dict[f"ipTM_d0"] = (
-        iptm_do_sum / iptm_size if iptm_size > 0 else None
-    )
+    iptm_d0_dict[f"ipTM_d0"] = iptm_do_sum / iptm_size if iptm_size > 0 else None
     return iptm_d0_dict
 
 
@@ -1203,7 +1218,9 @@ def ipSAE(data, verbose=True, pae_cutoff=10.0, dist_cutoff=10.0):
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
-            ipSAE_list.append({f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None})
+            ipSAE_list.append(
+                {f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None}
+            )
             continue
         ipSAE_matrix = compute_ipSAE_matrix(
             pae_array=PAE_matrix,
@@ -1367,7 +1384,11 @@ def ipTM_d0_interface(data, verbose=True):
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
-            iptm_d0_list.append({f"ipTM_interface_{data.chains[query][0]}_{data.chains[query][1]}": None})
+            iptm_d0_list.append(
+                {
+                    f"ipTM_interface_{data.chains[query][0]}_{data.chains[query][1]}": None
+                }
+            )
             continue
         iptm_d0_values = compute_iptm_d0_interface_values(
             pdb=pdb,
@@ -1387,7 +1408,9 @@ def ipTM_d0_interface(data, verbose=True):
         data.df.loc[:, col] = iptm_d0_df.loc[:, col].to_numpy()
 
 
-def compute_iptm_d0_interface_values(pdb, pae_array, chain_ids, chain_length, chain_type):
+def compute_iptm_d0_interface_values(
+    pdb, pae_array, chain_ids, chain_length, chain_type
+):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Parameters
@@ -1432,7 +1455,7 @@ def compute_iptm_d0_interface_values(pdb, pae_array, chain_ids, chain_length, ch
         """
         if np.isnan(matrix).all():
             return 0.0
-        
+
         matrix_res = np.zeros(matrix.shape[0])
 
         for i in range(matrix.shape[0]):
@@ -1445,8 +1468,12 @@ def compute_iptm_d0_interface_values(pdb, pae_array, chain_ids, chain_length, ch
 
     model = pdb_numpy.Coor(pdb)
     model_cb = model.select_atoms("name CB C3 or (resname GLY and name CA)")
-    assert model_cb.len == sum(chain_length), "Number of CB atoms does not match the sum of chain lengths."
-    assert model_cb.len == pae_array.shape[0], "Number of CB atoms does not match the number of rows in the PAE matrix."
+    assert model_cb.len == sum(
+        chain_length
+    ), "Number of CB atoms does not match the sum of chain lengths."
+    assert (
+        model_cb.len == pae_array.shape[0]
+    ), "Number of CB atoms does not match the number of rows in the PAE matrix."
     distance = distance_matrix(model_cb.xyz, model_cb.xyz)
 
     iptm_d0_dict = {}
@@ -1476,7 +1503,9 @@ def compute_iptm_d0_interface_values(pdb, pae_array, chain_ids, chain_length, ch
                 # Apply distance cutoff
                 iptm_d0_matrix[sub_distance > 10.0] = np.nan
                 iptm_d0_mean = fun(iptm_d0_matrix)
-                iptm_d0_dict[f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}"] = iptm_d0_mean
+                iptm_d0_dict[f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}"] = (
+                    iptm_d0_mean
+                )
                 # print(f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}", iptm_d0_mean)
 
     return iptm_d0_dict

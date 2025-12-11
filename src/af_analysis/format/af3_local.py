@@ -56,7 +56,6 @@ def read_dir(directory):
         seed_sample = dir_path.split("/")[-1]  # for instance seed-1_sample-3
         query = dir_path.split("/")[-2]
 
-
         json_score = model_path.replace(
             "model.cif", "summary_confidences.json"
         )  # summary_confidences.json file

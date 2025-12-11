@@ -245,9 +245,11 @@ def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
     my_data : AF2Data
         object containing the data
     pae_cutoff : float
-        cutoff for native contacts, default is 8.0 A
+        cutoff for native contacts, default is 12.0 A
     fun : function
         function to apply to the LIS matrix
+    verbose : bool
+        whether to print progress information
 
     Returns
     -------
@@ -278,6 +280,55 @@ def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
 
     my_data.df.loc[:, "LIS_rec_pep"] = pep_LIS2_list
     my_data.df.loc[:, "LIS_pep_rec"] = pep_LIS_list
+
+
+def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True):
+    """Compute the cLIS score for the peptide-peptide interface.
+
+    Parameters
+    ----------
+    my_data : AF2Data
+        object containing the data
+    pae_cutoff : float
+        cutoff for native contacts, default is 12.0 A
+    dist_cutoff : float
+        cutoff for distance contacts, default is 8.0 A
+    fun : function
+        function to apply to the LIS matrix
+    verbose : bool
+        whether to print progress information
+
+    Returns
+    -------
+    None
+        The `log_pd` dataframe is modified in place.
+
+    """
+
+    analysis.LIA_matrix(
+        my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff, verbose=verbose
+    )
+
+    pep_LIA_list = []
+    pep_LIA2_list = []
+
+    for query, LIA in zip(my_data.df["query"], my_data.df["LIA"]):
+        if LIA is None:
+            pep_LIA_list.append(None)
+            pep_LIA2_list.append(None)
+            continue
+
+        chain_num = len(my_data.chains[query])
+        if chain_num < 2:
+            pep_LIA_list.append(None)
+            pep_LIA2_list.append(None)
+            continue
+        LIA_array = np.array(LIA)
+        pep_LIA_list.append(fun(LIA_array[0 : chain_num - 1, chain_num - 1]))
+        pep_LIA2_list.append(fun(LIA_array[chain_num - 1, 0 : chain_num - 1]))
+
+    my_data.df.loc[:, "cLIS_rec_lig"] = pep_LIA2_list
+    my_data.df.loc[:, "cLIS_lig_rec"] = pep_LIA_list
 
 
 def pdockq2_lig(my_data, verbose=True):
@@ -351,7 +402,9 @@ def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
             lig_index = np.argmin(chain_length)
             lig_chain = chains[lig_index]
             rec_chains = chains[:lig_index] + chains[lig_index + 1 :]
-            rec_chain_indexes = list(range(lig_index)) + list(range(lig_index + 1, len(chains)))
+            rec_chain_indexes = list(range(lig_index)) + list(
+                range(lig_index + 1, len(chains))
+            )
 
         local_ipTM_list = []
         local_ipTM_rec_lig_list = []
@@ -361,14 +414,26 @@ def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
             sum_chain_length = sum(my_data.chain_length[old_query])
         else:
             sum_chain_length = len(rec_chains)
-        
+
         for rec_chain, rec_index in zip(rec_chains, rec_chain_indexes):
             # Get the ipTM_d0 for the ligand chain
             if weight_avg:
-                local_ipTM_list.append(row[f"ipTM_d0_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
-                local_ipTM_list.append(row[f"ipTM_d0_{lig_chain}_{rec_chain}"] * my_data.chain_length[old_query][rec_index])
-                local_ipTM_rec_lig_list.append(row[f"ipTM_d0_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
-                local_ipTM_lig_rec_list.append(row[f"ipTM_d0_{lig_chain}_{rec_chain}"] * my_data.chain_length[old_query][rec_index])
+                local_ipTM_list.append(
+                    row[f"ipTM_d0_{rec_chain}_{lig_chain}"]
+                    * my_data.chain_length[old_query][rec_index]
+                )
+                local_ipTM_list.append(
+                    row[f"ipTM_d0_{lig_chain}_{rec_chain}"]
+                    * my_data.chain_length[old_query][rec_index]
+                )
+                local_ipTM_rec_lig_list.append(
+                    row[f"ipTM_d0_{rec_chain}_{lig_chain}"]
+                    * my_data.chain_length[old_query][rec_index]
+                )
+                local_ipTM_lig_rec_list.append(
+                    row[f"ipTM_d0_{lig_chain}_{rec_chain}"]
+                    * my_data.chain_length[old_query][rec_index]
+                )
             else:
                 local_ipTM_list.append(row[f"ipTM_d0_{rec_chain}_{lig_chain}"])
                 local_ipTM_list.append(row[f"ipTM_d0_{lig_chain}_{rec_chain}"])
@@ -380,10 +445,9 @@ def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
             ipTM_lig_rec_list.append(0)
             ipTM_rec_lig_list.append(0)
         else:
-            ipTM_list.append(sum(local_ipTM_list)/(2*sum_chain_length))
-            ipTM_rec_lig_list.append(sum(local_ipTM_rec_lig_list)/sum_chain_length)
-            ipTM_lig_rec_list.append(sum(local_ipTM_lig_rec_list)/sum_chain_length)
-
+            ipTM_list.append(sum(local_ipTM_list) / (2 * sum_chain_length))
+            ipTM_rec_lig_list.append(sum(local_ipTM_rec_lig_list) / sum_chain_length)
+            ipTM_lig_rec_list.append(sum(local_ipTM_lig_rec_list) / sum_chain_length)
 
     my_data.df.loc[:, "ipTM_d0_lig"] = ipTM_list
     my_data.df.loc[:, "ipTM_d0_rec_lig"] = ipTM_rec_lig_list
@@ -421,26 +485,30 @@ def ipSAE_lig(my_data, weight_avg=False, verbose=True):
             lig_index = np.argmin(chain_length)
             lig_chain = chains[lig_index]
             rec_chains = chains[:lig_index] + chains[lig_index + 1 :]
-            rec_chain_indexes = list(range(lig_index)) + list(range(lig_index + 1, len(chains)))
+            rec_chain_indexes = list(range(lig_index)) + list(
+                range(lig_index + 1, len(chains))
+            )
 
         local_ipTM_list = []
         if weight_avg:
             sum_chain_length = sum(my_data.chain_length[old_query])
         else:
             sum_chain_length = len(rec_chains)
-        
+
         for rec_chain, rec_index in zip(rec_chains, rec_chain_indexes):
             # Get the ipTM_d0 for the ligand chain
             if weight_avg:
-                local_ipTM_list.append(row[f"ipSAE_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
+                local_ipTM_list.append(
+                    row[f"ipSAE_{rec_chain}_{lig_chain}"]
+                    * my_data.chain_length[old_query][rec_index]
+                )
             else:
                 local_ipTM_list.append(row[f"ipSAE_{rec_chain}_{lig_chain}"])
 
         if sum_chain_length == 0:
             ipTM_list.append(0)
         else:
-            ipTM_list.append(sum(local_ipTM_list)/sum_chain_length)
-
+            ipTM_list.append(sum(local_ipTM_list) / sum_chain_length)
 
     my_data.df.loc[:, "ipSAE_lig"] = ipTM_list
 
@@ -478,7 +546,9 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
             lig_index = np.argmin(chain_length)
             lig_chain = chains[lig_index]
             rec_chains = chains[:lig_index] + chains[lig_index + 1 :]
-            rec_chain_indexes = list(range(lig_index)) + list(range(lig_index + 1, len(chains)))
+            rec_chain_indexes = list(range(lig_index)) + list(
+                range(lig_index + 1, len(chains))
+            )
 
         local_ipTM_list = []
 
@@ -486,18 +556,20 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
             sum_chain_length = sum(my_data.chain_length[old_query])
         else:
             sum_chain_length = len(rec_chains)
-        
+
         for rec_chain, rec_index in zip(rec_chains, rec_chain_indexes):
             # Get the ipTM_d0 for the ligand chain
             if weight_avg:
-                local_ipTM_list.append(row[f"ipTM_interface_{rec_chain}_{lig_chain}"] * my_data.chain_length[old_query][rec_index])
+                local_ipTM_list.append(
+                    row[f"ipTM_interface_{rec_chain}_{lig_chain}"]
+                    * my_data.chain_length[old_query][rec_index]
+                )
             else:
                 local_ipTM_list.append(row[f"ipTM_interface_{rec_chain}_{lig_chain}"])
 
         if sum_chain_length == 0:
             ipTM_list.append(0)
         else:
-            ipTM_list.append(sum(local_ipTM_list)/sum_chain_length)
-
+            ipTM_list.append(sum(local_ipTM_list) / sum_chain_length)
 
     my_data.df.loc[:, "ipTM_interface_lig"] = ipTM_list

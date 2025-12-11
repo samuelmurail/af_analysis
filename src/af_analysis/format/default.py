@@ -44,7 +44,9 @@ def read_dir(directory):
 
             if start_index == 0:
                 path_dir = pathlib.Path(directory)
-                name_token = path_dir.parent.name if not path_dir.is_dir() else path_dir.name
+                name_token = (
+                    path_dir.parent.name if not path_dir.is_dir() else path_dir.name
+                )
                 state = token[start_index]
                 rank = None
                 weight = "_".join(token[start_index + 3 : -2])
@@ -127,7 +129,9 @@ def add_json(log_pd, directory, verbose=True):
         r = re.compile(reg)
         res = list(filter(r.match, file_list))
 
-        reg_pkl = rf"result_model_{row['model']}_{row['weight']}_pred_{row['seed']}\.pkl"
+        reg_pkl = (
+            rf"result_model_{row['model']}_{row['weight']}_pred_{row['seed']}\.pkl"
+        )
         r_pkl = re.compile(reg_pkl)
         res_pkl = list(filter(r_pkl.match, file_list))
 

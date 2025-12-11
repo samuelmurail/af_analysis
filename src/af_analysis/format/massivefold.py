@@ -62,15 +62,13 @@ def read_dir(directory):
                         pred_dir,
                         f"light_pkl/result_model_{model}_{weight}_pred_{seed}.pkl",
                     )
-            else: # Special case for af3
+            else:  # Special case for af3
                 tokens = file[:-4].split("_")
-                model = int(tokens[4]) # In reality it is a the seed
+                model = int(tokens[4])  # In reality it is a the seed
                 weight = "af3"
                 seed = int(tokens[-3])
                 pred_num = int(tokens[-1])
                 rank = int(tokens[1])
-
-
 
                 pkl_score = os.path.join(
                     pred_dir,
@@ -99,28 +97,28 @@ def read_dir(directory):
                 plddt = np_score["plddt"].mean()
             else:
                 plddt = None
-            
+
             if "ptm" in np_score:
                 ptm = float(np_score["ptm"])
             elif confidence_score is not None:
                 ptm = json_data["ptm"]
             else:
                 ptm = None
-            
+
             if "iptm" in np_score:
                 iptm = float(np_score["iptm"])
             elif confidence_score is not None:
                 iptm = json_data["iptm"]
             else:
                 iptm = None
-                
+
             if "ranking_confidence" in np_score:
                 ranking_confidence = float(np_score["ranking_confidence"])
             elif confidence_score is not None:
                 ranking_confidence = json_data["ranking_score"]
             else:
                 ranking_confidence = None
-            
+
             if "num_recycles" not in np_score:
                 np_score["num_recycles"] = -1
 
@@ -150,7 +148,9 @@ def read_dir(directory):
 
     # In the case of higher ranking_confidence than 1 (Colabfold)
     # we normalize it to be between 0 and 1
-    if (log_pd["ranking_confidence"].max() > 1) and ('ranking_confidence' in log_pd.columns):
+    if (log_pd["ranking_confidence"].max() > 1) and (
+        "ranking_confidence" in log_pd.columns
+    ):
         log_pd["ranking_confidence"] = 0.8 * log_pd["ipTM"] + 0.2 * log_pd["pTM"]
 
     # To ensure that tests are consistent across different systems

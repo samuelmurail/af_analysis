@@ -223,7 +223,7 @@ def test_af3_webserver():
     )
 
     analysis.pdockq2(my_data)
-    #print([round(i, 4) for i in my_data.df["pdockq2_A"]])
+    # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
     expected_pdockq2 = [0.9148, 0.9187, 0.9151, 0.913, 0.9154]
     assert np.all(
         [
@@ -232,7 +232,7 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
-    
+
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
     expected_pdockq2 = [0.8972, 0.8925, 0.8884, 0.889, 0.8785]
     assert np.all(
@@ -272,7 +272,6 @@ def test_af3_webserver():
     np.testing.assert_allclose(
         np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
     )
-
 
     analysis.inter_chain_pae(my_data)
 
@@ -334,18 +333,11 @@ def test_af3_local():
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
     expected_pdockq2 = [0.0293, 0.0206, 0.0192, 0.2001, 0.1673]
 
-    assert np.allclose(
-    my_data.df["pdockq2_A"].values,
-    expected_pdockq2,
-    atol=precision)
+    assert np.allclose(my_data.df["pdockq2_A"].values, expected_pdockq2, atol=precision)
 
-    
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
     expected_pdockq2 = [0.0124, 0.0105, 0.0108, 0.0575, 0.0494]
-    assert np.allclose(
-    my_data.df["pdockq2_B"].values,
-    expected_pdockq2,
-    atol=precision)
+    assert np.allclose(my_data.df["pdockq2_B"].values, expected_pdockq2, atol=precision)
 
     analysis.LIS_matrix(my_data)
     expected_LIS_0 = [[0.69108653, 0.08731778], [0.05189394, 0.51754606]]
