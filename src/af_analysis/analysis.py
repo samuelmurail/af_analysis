@@ -532,6 +532,126 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
     assert len(LIS_matrix_list) == len(data.df["query"])
     data.df.loc[:, "LIS"] = LIS_matrix_list
 
+def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
+    """Compute the Local Interaction Area from the PAE matrix and pdb.
+
+        Implementation is based on the LIS/LIA from the IPSAE package
+        https://github.com/flyark/AFM-LIS
+    # apply cutoff
+        Cite:
+        .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
+        ipTM score and how to fix it" bioRxiv (2025).
+
+        Parameters
+        ----------
+        data : AFData
+            object containing the dipSAE(ata
+        ref_dict : dict
+            dictionary containing the reference PAE matrix for each query
+        verbose : bool
+            print progress bar
+
+        Returns
+        -------
+        None
+            The dataframe is modified in place.
+    """
+
+    LIA_matrix_list = []
+
+    disable = False if verbose else True
+
+    for query, data_file, pdb in tqdm(
+        zip(data.df["query"], data.df["data_file"], data.df["pdb"]),
+        total=len(data.df["query"]),
+        disable=disable,
+    ):
+
+        PAE_matrix = get_pae(data_file)
+        if PAE_matrix is None:
+            logger.warning(f"No PAE matrix found for query {query}.")
+            ipSAE_list.append({f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None})
+            continue
+        LIA_matrix = compute_LIA_matrix(
+            pdb=pdb,
+            pae_array=PAE_matrix,
+            pae_cutoff=pae_cutoff,
+            dist_cutoff=dist_cutoff,
+            chain_ids=data.chains[query],
+            chain_length=data.chain_length[query],
+        )
+
+        LIA_matrix_list.append(LIA_matrix)
+
+    assert len(LIA_matrix_list) == len(data.df["query"])
+
+
+    data.df.loc[:, "LIA"] = LIA_matrix_list
+
+def compute_LIA_matrix(
+    pdb: str,
+    pae_array: np.ndarray,
+    chain_ids: list,
+    chain_length: dict,
+    pae_cutoff: float = 12.0,
+    dist_cutoff: float = 8.0,
+    ) -> np.ndarray:
+    """Compute the LIA score from the PAE matrix.
+
+    Parameters
+    ----------
+    pdb : str
+        path to the pdb file
+    pae_array : np.array
+        array of predicted PAE
+    pae_cutoff : float
+        cutoff for PAE matrix values, default is 10.0 A
+    dist_cutoff : float
+        cutoff for distance between atoms, default is 10.0 A
+    chain_ids : list
+        list of chain IDs
+    chain_length : list
+        list of chain lengths
+
+    Returns
+    -------
+    list
+        LIA score matrix
+    """
+
+    chain_len_sums = np.cumsum([0] + chain_length)
+
+    model = pdb_numpy.Coor(pdb)
+    model_cb = model.select_atoms("(name CB C3 C3\' or (resname GLY and name CA)) or (noh and not ((protein or resname DA DC DT DG A C U G T)))")
+    distance = distance_matrix(model_cb.xyz, model_cb.xyz)
+    contact_map = (distance < dist_cutoff).astype(int)
+
+    # print(contact_map.shape, pae_array.shape)
+    # print(contact_map)
+    assert len(np.unique(model_cb.chain)) == len(chain_ids), F"Number of chains in the PDB ({np.unique(model_cb.chain)}) does not match the number of chain IDs ({chain_ids})"
+    trans_matrix = np.zeros_like(pae_array)
+    mask = pae_array < pae_cutoff
+    trans_matrix[mask] = 1 - pae_array[mask] / pae_cutoff
+    trans_matrix[contact_map == 0] = 0
+    LIA_list = []
+    
+    for i in range(len(chain_length)):
+        i_start = chain_len_sums[i]
+        i_end = chain_len_sums[i + 1]
+        local_LIA_list = []
+        for j in range(len(chain_length)):
+            j_start = chain_len_sums[j]
+            j_end = chain_len_sums[j + 1]
+
+            submatrix = trans_matrix[i_start:i_end, j_start:j_end]
+
+            if np.any(submatrix > 0):
+                local_LIA_list.append(submatrix[submatrix > 0].mean())
+            else:
+                local_LIA_list.append(0)
+        LIA_list.append(local_LIA_list)
+
+    return LIA_list
 
 def PAE_matrix(data, verbose=True, fun=np.average):
     """
@@ -1111,8 +1231,6 @@ def compute_ipSAE_matrix(
 
     Parameters
     ----------
-    pdb : str
-        path to the pdb file
     pae_array : np.array
         array of predicted PAE
     pae_cutoff : float

@@ -257,6 +257,23 @@ def test_af3_webserver():
         np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
     )
 
+    analysis.LIA_matrix(my_data)
+    expected_LIA_0 = [
+        [0.92397, 0.93017, 0.92159, 0.93483, 0.91703, 0.91519],
+        [0.92692, 0.93667, 0.0, 0.0, 0.0, 0.0],
+        [0.91424, 0.0, 0.93667, 0.0, 0.0, 0.0],
+        [0.92683, 0.0, 0.0, 0.93667, 0.0, 0.0],
+        [0.92359, 0.0, 0.0, 0.0, 0.92949, 0.0],
+        [0.89712, 0.0, 0.0, 0.0, 0.0, 0.92788],
+    ]
+
+    for list in my_data.df["LIA"][0]:
+        print([round(float(i), 5) for i in list])
+    np.testing.assert_allclose(
+        np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
+    )
+
+
     analysis.inter_chain_pae(my_data)
 
     expected_PAE_A_B = [2.8373, 2.6611, 2.8013, 2.8286, 2.7292]

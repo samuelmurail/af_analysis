@@ -169,8 +169,11 @@ def show_info(
 
     pattern = "<p style='display: inline-block; width:100px'> <strong>{score_name:15} : </strong> {score_value:7.2f} </p>"
 
+
     for score in score_list:
         if score in data_af.df.columns:
+            if data_af.df.iloc[model_widget.value - 1][score] is None:
+                continue
             out_score.value += pattern.format(
                 score_name=score,
                 score_value=data_af.df.iloc[model_widget.value - 1][score],

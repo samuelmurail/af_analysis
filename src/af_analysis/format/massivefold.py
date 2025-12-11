@@ -144,9 +144,14 @@ def read_dir(directory):
 
     # Dirty fix of "ranking_confidence" between 0 and 1.
     # Seems to be ok because ranking confidence is rarely below 1.
-    log_pd["ranking_confidence"] = log_pd["ranking_confidence"].apply(
-        lambda x: x * 100 if x < 1 else x
-    )
+    # log_pd["ranking_confidence"] = log_pd["ranking_confidence"].apply(
+    #     lambda x: x / 100 if x > 1 else x
+    # )
+
+    # In the case of higher ranking_confidence than 1 (Colabfold)
+    # we normalize it to be between 0 and 1
+    if (log_pd["ranking_confidence"].max() > 1) and ('ranking_confidence' in log_pd.columns):
+        log_pd["ranking_confidence"] = 0.8 * log_pd["ipTM"] + 0.2 * log_pd["pTM"]
 
     # To ensure that tests are consistent across different systems
     # we sort the dataframe by pdb
