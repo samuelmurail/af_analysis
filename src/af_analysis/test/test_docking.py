@@ -320,7 +320,7 @@ def test_cf_1_5_5_relax():
         0.23125,
         0.73853,
     ]
-    print([round(val, 5) for val in my_data.df["cLIS_lig_rec"]])
+    #print([round(val, 5) for val in my_data.df["cLIS_lig_rec"]])
 
     assert np.all(
         [
@@ -330,7 +330,7 @@ def test_cf_1_5_5_relax():
         ]
     )
 
-    print([round(val, 5) for val in my_data.df["cLIS_rec_lig"]])
+    #print([round(val, 5) for val in my_data.df["cLIS_rec_lig"]])
     expected_cLIS_rec_pep = [
         0.14294,
         0.08389,
