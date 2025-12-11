@@ -168,9 +168,15 @@ class Data:
             self.df["format"] = "AF3_webserver"
         elif (
             format == "alphapulldown"
-        ):  # or os.path.isfile(os.path.join(directory, "ranking_debug.json")
+        ):
             self.format = "alphapulldown"
             self.df = afpulldown.read_dir(directory)
+            self.df["format"] = "alphapulldown"
+        elif (
+            format == "alphapulldown_full"
+        ):
+            self.format = "alphapulldown"
+            self.df = afpulldown.read_full_dir(directory)
             self.df["format"] = "alphapulldown"
         elif format == "boltz1" or (
             os.path.isdir(os.path.join(directory, "predictions"))

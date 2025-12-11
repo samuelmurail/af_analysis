@@ -54,7 +54,7 @@ def read_dir(directory, query=None):
             query_local = os.path.basename(os.path.normpath(directory))
         else:
             query_local = query
-
+        # print(f"query_local: {query_local} {directory}")
         weight = "_".join(token[2:4])
         assert weight in weigths
 
@@ -88,3 +88,36 @@ def read_dir(directory, query=None):
 
     log_pd = pd.DataFrame(log_dict_list)
     return log_pd
+
+
+def read_full_dir(directory):
+    """Extract pdb list from a directory and return as a dictionary.
+
+    Parameters
+    ----------
+    directory : str
+        Path to the directory containing the pdb files.
+
+    Returns
+    -------
+    log_dict : dict
+        Dictionary containing the information extracted from the directory.
+
+    """
+
+    logger.info(f"Reading full AlphaPulldown {directory}")
+
+    subfolders = [f.path for f in os.scandir(directory) if f.is_dir()]
+    log_pd_list = []
+
+    for folder in subfolders:
+
+        # print(f"Reading {folder}")
+        log_pd = read_dir(folder)
+        # print(log_pd)
+        log_pd_list.append(log_pd)
+
+    log_dict = pd.concat(log_pd_list, ignore_index=True)
+
+
+    return log_dict
