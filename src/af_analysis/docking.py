@@ -330,6 +330,7 @@ def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
     my_data.df.loc[:, "cLIS_rec_lig"] = pep_LIA2_list
     my_data.df.loc[:, "cLIS_lig_rec"] = pep_LIA_list
 
+
 def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True):
     """Compute the cLIS score for the peptide-peptide interface.
 
@@ -352,13 +353,22 @@ def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
         The `log_pd` dataframe is modified in place.
 
     """
-    
+
     LIS_pep(my_data, pae_cutoff=pae_cutoff, fun=fun, verbose=verbose)
-    cLIS_lig(my_data, pae_cutoff=pae_cutoff, dict_cutoff=dict_cutoff, fun=fun, verbose=verbose)
+    cLIS_lig(
+        my_data,
+        pae_cutoff=pae_cutoff,
+        dict_cutoff=dict_cutoff,
+        fun=fun,
+        verbose=verbose,
+    )
 
-
-    my_data.df.loc[:, "iLIS_rec_lig"] = (my_data.df.loc[:, "LIS_rec_pep"] * my_data.df.loc[:, "cLIS_rec_lig"]) ** 0.5
-    my_data.df.loc[:, "iLIS_lig_rec"] = (my_data.df.loc[:, "LIS_pep_rec"] * my_data.df.loc[:, "cLIS_lig_rec"]) ** 0.5
+    my_data.df.loc[:, "iLIS_rec_lig"] = (
+        my_data.df.loc[:, "LIS_rec_pep"] * my_data.df.loc[:, "cLIS_rec_lig"]
+    ) ** 0.5
+    my_data.df.loc[:, "iLIS_lig_rec"] = (
+        my_data.df.loc[:, "LIS_pep_rec"] * my_data.df.loc[:, "cLIS_lig_rec"]
+    ) ** 0.5
 
 
 def pdockq2_lig(my_data, verbose=True):

@@ -166,15 +166,11 @@ class Data:
             self.format = "AF3_webserver"
             self.df = af3_webserver.read_dir(directory)
             self.df["format"] = "AF3_webserver"
-        elif (
-            format == "alphapulldown"
-        ):
+        elif format == "alphapulldown":
             self.format = "alphapulldown"
             self.df = afpulldown.read_dir(directory)
             self.df["format"] = "alphapulldown"
-        elif (
-            format == "alphapulldown_full"
-        ):
+        elif format == "alphapulldown_full":
             self.format = "alphapulldown"
             self.df = afpulldown.read_full_dir(directory)
             self.df["format"] = "alphapulldown"

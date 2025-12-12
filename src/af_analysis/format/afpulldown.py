@@ -119,5 +119,4 @@ def read_full_dir(directory):
 
     log_dict = pd.concat(log_pd_list, ignore_index=True)
 
-
     return log_dict
