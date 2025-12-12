@@ -178,13 +178,13 @@ git commit -m "Update of ..."
 git push origin main
 ```
 
-2. Update the version number in using [bump2version](https://pypi.org/project/bump2version/):
+2. Update the version number in using [bump-my-version](https://pypi.org/project/bump-my-version/):
 
 ```bash
-bump2version --current-version <version> <part>
+bump-my-version bump <part>
 ```
 
-where `<part>` is one of `major`, `minor`, or `patch` depending on the type of release, and `<version>` is the current version number (e.g., `0.1.4`).
+where `<part>` is one of `major`, `minor`, or `patch` depending on the type of release.
 
 3. Commit the changes and push to GitHub:
 
