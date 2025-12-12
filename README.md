@@ -166,7 +166,7 @@ to contribute code, please fork the repository and submit a pull request.
 
 See also the list of [contributors](https://github.com/samuelmurail/af_analysis/contributors) who participated in this project.
 
-## Release a new package version
+## Release a new package version - Only for maintainers
 
 To release a new version of the package, follow these steps:
 
@@ -194,7 +194,13 @@ git commit -m "Bump version to x.y.z"
 git push origin main
 ```
 
+4. Create the pypi package and upload it:
 
+```bash
+make release
+```
+
+Remember that a valid `.pypirc` file must be present in your home directory with the correct credentials.
 
 ## Citing this work
 
