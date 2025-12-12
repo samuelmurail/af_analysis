@@ -166,6 +166,36 @@ to contribute code, please fork the repository and submit a pull request.
 
 See also the list of [contributors](https://github.com/samuelmurail/af_analysis/contributors) who participated in this project.
 
+## Release a new package version
+
+To release a new version of the package, follow these steps:
+
+1. Commit the changes and push to GitHub:
+
+```bash
+git add .
+git commit -m "Update of ..."
+git push origin main
+```
+
+2. Update the version number in using [bump2version](https://pypi.org/project/bump2version/):
+
+```bash
+bump2version --current-version <version> <part>
+```
+
+where `<part>` is one of `major`, `minor`, or `patch` depending on the type of release, and `<version>` is the current version number (e.g., `0.1.4`).
+
+3. Commit the changes and push to GitHub:
+
+```bash
+git add .
+git commit -m "Bump version to x.y.z"
+git push origin main
+```
+
+
+
 ## Citing this work
 
 If you use the code of this package, please cite:
