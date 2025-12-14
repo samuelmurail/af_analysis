@@ -43,7 +43,8 @@ Existing tools often require separate scripts for calculating various quality me
 * Calculate and add additional structural quality metrics to the DataFrame, including:
   * pDockQ
   * pDockQ2
-  * LIS score
+  * LIS score (cLIS and iLIS scores)
+  * ipSAE (and the ipTM matrix derived from PAE)
 * Visualize predicted protein models.
 * Cluster generated models to identify diverse conformations.
 * Select the best models based on defined criteria.
@@ -71,6 +72,25 @@ cd af_analysis
 pip install .
 ```
 
+* For developers, you can install the package in editable mode:
+
+```bash
+git clone https://github.com/samuelmurail/af_analysis
+cd af_analysis
+pip install -e .
+```
+
+## Conda environment
+
+A conda environment file is provided to create an environment with all dependencies:
+
+```bash
+conda env create -f environment.yml
+conda activate af_analysis
+```
+
+
+
 ## Documentation
 
 The complete documentation is available at [ReadTheDocs](https://af-analysis.readthedocs.io/en/latest/).
@@ -92,11 +112,18 @@ import af_analysis
 my_data = af_analysis.Data('MY_AF_RESULTS_DIR')
 ```
 
+In most cases, the `Data` object will automatically detect the format of the results (AlphaFold 2, AlphaFold 3, ColabFold). If needed, you can specify the format using the `format` argument:
+
+```python
+my_data = af_analysis.Data('MY_AF_RESULTS_DIR', format='afpulldown')
+```
+
 Extracted data are available in the `df` attribute of the `Data` object. 
 
 ```python
 my_data.df
 ```
+
 
 ### Analysis
 
@@ -110,11 +137,12 @@ analysis.pdockq2(my_data)
 
 ### Docking Analysis
 
-* The `docking` package contains several function to add metrics like [LIS Score][LIS]:
+* The `docking` package contains several function to add metrics like [LIS Score][LIS] and [ipSAE][ipsae]:
 
 ```python
 from af_analysis import docking
 docking.LIS_pep(my_data)
+docking.ipSAE(my_data)
 ```
 
 ### Plots
@@ -245,6 +273,7 @@ This project is licensed under the GNU General Public License version 2 - see th
 * Wohlwend et al. bioRxiv (2024) doi: [10.1101/2024.11.19.624167][Boltz1]
 * Chai Discovery et al. bioRxiv (2024) doi:[10.1101/2024.10.10.615955v2][Chai1]
 * MassiveFold Raouraoua et al. Nat. Comput. Sci. (2024) doi:[10.1038/s43588-024-00714-4][MassiveFold]
+* Dunbrack. Biorxiv (2025) doi: [10.1101/2025.02.10.637595][ipsae]
 
 [AF2]: https://www.nature.com/articles/s41586-021-03819-2 "Jumper et al. Nature (2021) doi: 10.1038/s41586-021-03819-2"
 [AF3]: https://www.nature.com/articles/s41586-024-07487-w "Abramson et al. Nature (2024) doi: 10.1038/s41586-024-07487-w"
@@ -257,3 +286,4 @@ This project is licensed under the GNU General Public License version 2 - see th
 [Boltz1]: https://doi.org/10.1101/2024.11.19.624167 "Wohlwend et al. bioRxiv (2024) doi: 10.1101/2024.11.19.624167"
 [Chai1]: https://doi.org/10.1101/2024.10.10.615955v2 "Chai Discovery et al. bioRxiv (2024) doi: 10.1101/2024.10.10.615955v2"
 [MassiveFold]: https://doi.org/10.1038/s43588-024-00714-4 "Raouraoua et al. Nat Comput Sci (2024) doi: 10.1038/s43588-024-00714-4"
+[ipsae]: https://www.biorxiv.org/content/10.1101/2025.02.10.637595v1 "Dunbrack. Biorxiv (2025) doi: 10.1101/2025.02.10.637595"
