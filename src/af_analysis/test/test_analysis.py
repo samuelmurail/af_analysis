@@ -17,7 +17,7 @@ def test_cf_1_5_5_relax():
 
     assert my_data.format == "colabfold_1.5"
     assert len(my_data.df) == 40
-    print(my_data.df.columns)
+    # print(my_data.df.columns)
     assert (
         my_data.df.columns
         == np.array(
@@ -136,7 +136,7 @@ def test_cf_1_5_5_relax():
     ]
 
     analysis.pdockq(my_data)
-    print([round(i, 4) for i in my_data.df["pdockq"]])
+    # print([round(i, 4) for i in my_data.df["pdockq"]])
     expected_pdockq = [
         0.0332,
         0.0205,
@@ -184,6 +184,60 @@ def test_cf_1_5_5_relax():
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq"] == pytest.approx(expected_pdockq[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.iplddt(my_data)
+    # print([round(i, 4) for i in my_data.df['iplddt_A_B']])
+    expected_iplddt = [
+        37.822,
+        35.7528,
+        47.1651,
+        47.0704,
+        69.313,
+        42.9376,
+        36.7937,
+        53.7173,
+        34.5847,
+        55.2234,
+        37.5224,
+        37.6077,
+        45.481,
+        57.9459,
+        71.1941,
+        40.4077,
+        36.0074,
+        45.571,
+        52.9847,
+        70.4274,
+        36.9694,
+        36.3792,
+        45.9106,
+        57.9305,
+        69.4026,
+        36.6562,
+        35.8484,
+        45.8298,
+        34.168,
+        53.0548,
+        39.3165,
+        35.7693,
+        46.5012,
+        56.5967,
+        69.7829,
+        36.9226,
+        35.7692,
+        46.1028,
+        51.1524,
+        71.2828,
+    ]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["iplddt_A_B"]
+            == pytest.approx(expected_iplddt[i], precision)
             for i in range(len(my_data.df))
         ]
     )
@@ -267,8 +321,8 @@ def test_af3_webserver():
         [0.89712, 0.0, 0.0, 0.0, 0.0, 0.92788],
     ]
 
-    for list in my_data.df["LIA"][0]:
-        print([round(float(i), 5) for i in list])
+    # for list in my_data.df["LIA"][0]:
+    #     print([round(float(i), 5) for i in list])
     np.testing.assert_allclose(
         np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
     )
@@ -291,6 +345,45 @@ def test_af3_webserver():
         [
             my_data.df.iloc[i]["PAE_A_E"]
             == pytest.approx(expected_PAE_A_E[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    analysis.iplddt(my_data)
+    # print(my_data.df.columns)
+    # print([round(i, 4) for i in my_data.df['iplddt_A_B']])
+    expected_iplddt = [98.8157, 98.8157, 98.8186, 98.802, 98.8283]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["iplddt_A_B"]
+            == pytest.approx(expected_iplddt[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+    # print([round(i, 4) for i in my_data.df['iplddt_B_E']])
+
+    expected_iplddt = [96.235, 96.435, 95.995, 96.0, 96.095]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["iplddt_B_E"]
+            == pytest.approx(expected_iplddt[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    # print([round(i, 4) for i in my_data.df['iplddt_D_E']])
+
+    expected_iplddt = [98.96, 98.95, 98.96, 98.955, 98.96]
+
+    precision = 0.01
+    assert np.all(
+        [
+            my_data.df.iloc[i]["iplddt_D_E"]
+            == pytest.approx(expected_iplddt[i], precision)
             for i in range(len(my_data.df))
         ]
     )
@@ -347,8 +440,8 @@ def test_af3_local():
     )
 
     analysis.inter_chain_pae(my_data)
-    print(my_data.df.columns)
-    print(my_data.df)
+    # print(my_data.df.columns)
+    # print(my_data.df)
 
     expected_PAE_A_B = [14.8537, 18.2035, 14.9247]
     # print([round(i, 4) for i in my_data.df["PAE_A_B"]])
@@ -431,8 +524,8 @@ def test_af3_boltz1():
         [0.707814, 0.750932, 0.662734, 0.854446, 0.770577],
         [0.280363, 0.323815, 0.455396, 0.289744, 0.978317],
     ]
-    for j in range(len(my_data.df["LIS"][0])):
-        print([round(i, 6) for i in my_data.df["LIS"][0][j]])
+    # for j in range(len(my_data.df["LIS"][0])):
+    #     print([round(i, 6) for i in my_data.df["LIS"][0][j]])
 
     np.testing.assert_allclose(
         np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
@@ -477,7 +570,7 @@ def test_cf_1_5_5_ftdmp():
     ]
     my_data.df = my_data.df.merge(ftdmp_df_list[0], on="ID", how="inner")
 
-    print([round(i, 4) for i in my_data.df["raw_FGV_full_light_score"]])
+    # print([round(i, 4) for i in my_data.df["raw_FGV_full_light_score"]])
     expected_FGV_full_light_score = [
         0.0992,
         0.0838,
@@ -531,7 +624,7 @@ def test_cf_1_5_5_ftdmp():
     )
 
     # raw_FIGNN_average_gnn_score
-    print([round(i, 4) for i in my_data.df["raw_FIGNN_average_gnn_score"]])
+    # print([round(i, 4) for i in my_data.df["raw_FIGNN_average_gnn_score"]])
     expected_FIGNN_average_gnn_score = [
         -1.2378,
         -0.3711,
@@ -607,7 +700,7 @@ def test_iptm_d0():
 
     analysis.ipTM_d0(my_data)
 
-    print([round(i, 4) for i in my_data.df["ipTM_d0_A_B"]])
+    # print([round(i, 4) for i in my_data.df["ipTM_d0_A_B"]])
     expected_ipTM_d0_A_B = [
         0.0427,
         0.039,
@@ -683,7 +776,7 @@ def test_ipSAE():
 
     analysis.ipSAE(my_data)
 
-    print([round(i, 4) for i in my_data.df["ipSAE_A_B"]])
+    # print([round(i, 4) for i in my_data.df["ipSAE_A_B"]])
     expected_ipSAE_A_B = [
         0.0156,
         0.0133,

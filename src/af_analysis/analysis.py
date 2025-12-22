@@ -1509,3 +1509,78 @@ def compute_iptm_d0_interface_values(
                 # print(f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}", iptm_d0_mean)
 
     return iptm_d0_dict
+
+
+def iplddt(data, cutoff=10.0, verbose=True):
+    r"""Compute the iplddt from the pdb file.
+
+    Parameters
+    ----------
+    data : AFData
+        object containing the data
+    cutoff : float
+        distance cutoff to define interface residues, default is 10.0 A
+    verbose : bool
+        print progress bar
+
+
+    Implementation was inspired from https://github.com/piercelab/alphafold_v2.2_customize/blob/master/get_interface_plddt.pl
+    If contact number is zero, the iplddt score is set to 0.
+
+    Returns
+    -------
+    None
+        The `data.df` dataframe is modified in place.
+
+
+    References
+    ----------
+
+    """
+
+    iplddt_list = []
+
+    disable = False if verbose else True
+
+    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable):
+        if pdb is None or pdb is np.nan:
+            iplddt_list.append(None)
+            continue
+
+        model = pdb_numpy.Coor(pdb)
+        coor_CA_CB = model.select_atoms(
+            "(protein and (name CB or (resname GLY and name CA))) or (dna and name P) or (not protein and not dna and noh)"
+        )
+        model_chains = np.unique(coor_CA_CB.chain)
+        iplddt_local = {"pdb": pdb}
+
+        for i, chain in enumerate(model_chains):
+            chain_sel = coor_CA_CB.select_atoms(f"chain {chain}")
+
+            for j in range(i + 1, len(model_chains)):
+                other_chain = model_chains[j]
+                other_chain_sel = coor_CA_CB.select_atoms(f"chain {other_chain}")
+                distance = distance_matrix(
+                    chain_sel.xyz,
+                    other_chain_sel.xyz,
+                )
+                contact_num = np.sum(distance < cutoff)
+                if contact_num == 0:
+                    iplddt_local[f"iplddt_{chain}_{other_chain}"] = 0.0
+                    continue
+
+                chain_indices, other_chain_indices = np.where(distance < cutoff)
+                # chain_indices = np.unique(chain_indices)
+                # other_chain_indices = np.unique(other_chain_indices)
+                main_chain_beta = chain_sel.beta[chain_indices]
+                other_chain_beta = other_chain_sel.beta[other_chain_indices]
+                avg_iplddt = np.mean(
+                    np.concatenate([main_chain_beta, other_chain_beta])
+                )
+                iplddt_local[f"iplddt_{chain}_{other_chain}"] = avg_iplddt
+
+        iplddt_list.append(iplddt_local)
+
+    iplddt_df = pd.DataFrame(iplddt_list)
+
+    data.df = data.df.merge(iplddt_df, on="pdb", how="inner")
