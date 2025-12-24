@@ -134,7 +134,7 @@ def read_dir(directory):
                 ptm = ranking_scores[prediction]["ptm"]
             elif is_pkl and "ptm" in np_score:
                 ptm = float(np_score["ptm"])
-            elif is_pkl and confidence_score is not None:
+            elif confidence_score is not None:
                 ptm = json_data["ptm"]
             else:
                 ptm = None
@@ -143,7 +143,7 @@ def read_dir(directory):
                 iptm = ranking_scores[prediction]["iptm"]
             elif is_pkl and "iptm" in np_score:
                 iptm = float(np_score["iptm"])
-            elif is_pkl and confidence_score is not None:
+            elif confidence_score is not None:
                 iptm = json_data["iptm"]
             else:
                 iptm = None
@@ -152,7 +152,7 @@ def read_dir(directory):
                 ranking_confidence = ranking_scores[prediction]["ranking_confidence"]
             elif is_pkl and "ranking_confidence" in np_score:
                 ranking_confidence = float(np_score["ranking_confidence"])
-            elif is_pkl and confidence_score is not None:
+            elif confidence_score is not None:
                 ranking_confidence = json_data["ranking_score"]
             else:
                 ranking_confidence = None
@@ -175,12 +175,13 @@ def read_dir(directory):
                 "ranking_confidence": ranking_confidence,
                 "data_file": pkl_score,
             }
-
+            if ranking_confidence is not None:
+                af3_keys = ["chain_iptm", "chain_pair_iptm", "chain_ptm", "fraction_disordered", "has_clash"]
+                info_dict.update({key: json_data[key] for key in af3_keys})
+                #{"chain_pair_iptm": json_data["chain_pair_iptm"]})
             log_dict_list.append(info_dict)
 
-    if len(pkl_not_found) < 30:
-        logger.warning(f"Non-existing score files (.pkl) ({len(pkl_not_found)}):\n {', '.join(pkl_not_found)}.")
-    elif pkl_not_found:
+    if pkl_not_found:
         logger.warning(f"Detected {len(pkl_not_found)} non-existing score files (.pkl).")
 
     log_pd = pd.DataFrame(log_dict_list)
@@ -215,11 +216,16 @@ def read_full_directory(directory):
     logger.info(f"Reading full MassiveFold {directory}")
 
     subfolders = [f.path for f in os.scandir(directory) if f.is_dir()]
+    subfolders = [
+         folder for folder in subfolders
+         if len([ file for file in os.listdir(os.path.join(directory, folder)) if file.startswith('ranking_') and file.endswith('.json')]) >= 1
+    ]
     log_pd_list = []
 
     for folder in subfolders:
+        print(f"Extract MassiveFold run {os.path.basename(folder)}")
         # print(f"Reading {folder}")
-        if not os.path.basename(folder).startswith("msa"):
+        if not os.path.basename(folder).startswith("msa") and os.path.basename(folder) != "all_pdbs":
             log_pd_list.append(read_dir(folder))
 
     log_dict = pd.concat(log_pd_list, ignore_index=True)
