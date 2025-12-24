@@ -626,6 +626,8 @@ def ipTM_between_chains(my_data, chain_groups, verbose=True):
     verbose : bool
         print progress bar
     """
+    id_group1 = list(chain_groups[0])
+    id_group2 = list(chain_groups[1])
     colname = ','.join(id_group1) + "-" + ','.join(id_group2) + "_ipTM"
     try:
         my_data.df["chain_pair_iptm"]
@@ -633,8 +635,6 @@ def ipTM_between_chains(my_data, chain_groups, verbose=True):
         print("No 'chain_pair_iptm' key in the json data")
         my_data.df[colname] = -1
 
-    id_group1 = list(chain_groups[0])
-    id_group2 = list(chain_groups[1])
     # get chain index in chain_pair_iptm array from ids
     # /!\ this code assumes that the model's first chain id is A
     group1 = [ ord(chain_id) - ord('A') for chain_id in id_group1 ]
