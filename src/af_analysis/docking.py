@@ -613,3 +613,42 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
             ipTM_list.append(sum(local_ipTM_list) / sum_chain_length)
 
     my_data.df.loc[:, "ipTM_interface_lig"] = ipTM_list
+
+def ipTM_between_chains(my_data, chain_groups, verbose=True):
+    r"""
+    Extract ipTM from pair_chain_iptm's array between user-specified chain groups.
+
+    data : AF2Data
+        object containing the data
+    chains: list
+        list of length 2 for the chain groups in the form of concatenated
+        chain ids, between which the ipTM is extracted
+    verbose : bool
+        print progress bar
+    """
+    id_group1 = list(chain_groups[0])
+    id_group2 = list(chain_groups[1])
+    colname = ','.join(id_group1) + "-" + ','.join(id_group2) + "_ipTM"
+    try:
+        my_data.df["chain_pair_iptm"]
+    except KeyError:
+        print("No 'chain_pair_iptm' key in the json data")
+        my_data.df[colname] = -1
+
+    # get chain index in chain_pair_iptm array from ids
+    # /!\ this code assumes that the model's first chain id is A
+    group1 = [ ord(chain_id) - ord('A') for chain_id in id_group1 ]
+    group2 = [ ord(chain_id) - ord('A') for chain_id in id_group2 ]
+
+    chain_group_iptm = []
+    disable = False if verbose else True
+    for iptm_array in tqdm(my_data.df["chain_pair_iptm"], total=len(my_data.df["pdb"]), disable=disable):
+        to_avg = []
+        for chain1 in group1:
+            for chain2 in group2:
+                pair_iptm = iptm_array[chain1][chain2]
+                to_avg.append(pair_iptm)
+        chain_group_iptm.append(np.mean(to_avg))
+
+    # register the ipTM of the chain interface
+    my_data.df[colname] = chain_group_iptm
