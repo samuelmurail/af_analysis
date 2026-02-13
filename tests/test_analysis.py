@@ -666,15 +666,15 @@ def test_iptm_d0():
     """Test for ipTM and D0 calculation from colabfold 1.5.5 data.
 
     ``` python
-    python ~/Documents/Code/IPSAE/ipsae.py src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
+    python ~/Documents/Code/IPSAE/ipsae.py tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
     ```
 
     The output should be similar to the following:
     ```
     Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
-    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
     ```
 
     """
@@ -742,15 +742,15 @@ def test_ipSAE():
     """Test for ipSAE calculation from colabfold 1.5.5 data.
 
     ``` python
-    python ~/Documents/Code/IPSAE/ipsae.py src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
+    python ~/Documents/Code/IPSAE/ipsae.py tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
     ```
 
     The output should be similar to the following:
     ```
     Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
-    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
     ```
 
     """
