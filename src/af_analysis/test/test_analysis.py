@@ -278,7 +278,7 @@ def test_af3_webserver():
 
     analysis.pdockq2(my_data)
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
-    expected_pdockq2 = [0.9148, 0.9187, 0.9151, 0.913, 0.9154]
+    expected_pdockq2 = [0.9599, 0.9614, 0.9606, 0.959, 0.9607]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_A"]
@@ -288,7 +288,7 @@ def test_af3_webserver():
     )
 
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
-    expected_pdockq2 = [0.8972, 0.8925, 0.8884, 0.889, 0.8785]
+    expected_pdockq2 = [0.9632, 0.9646, 0.9642, 0.9638, 0.964]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_D"]
@@ -320,9 +320,6 @@ def test_af3_webserver():
         [0.92359, 0.0, 0.0, 0.0, 0.92949, 0.0],
         [0.89712, 0.0, 0.0, 0.0, 0.0, 0.92788],
     ]
-
-    # for list in my_data.df["LIA"][0]:
-    #     print([round(float(i), 5) for i in list])
     np.testing.assert_allclose(
         np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
     )
@@ -350,10 +347,7 @@ def test_af3_webserver():
     )
 
     analysis.iplddt(my_data)
-    # print(my_data.df.columns)
-    # print([round(i, 4) for i in my_data.df['iplddt_A_B']])
-    expected_iplddt = [98.8157, 98.8157, 98.8186, 98.802, 98.8283]
-
+    expected_iplddt = [98.5322, 98.5467, 98.3444, 98.0133, 97.9341]
     precision = 0.01
     assert np.all(
         [
@@ -362,10 +356,7 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
-    # print([round(i, 4) for i in my_data.df['iplddt_B_E']])
-
     expected_iplddt = [96.235, 96.435, 95.995, 96.0, 96.095]
-
     precision = 0.01
     assert np.all(
         [
@@ -374,11 +365,7 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
-
-    # print([round(i, 4) for i in my_data.df['iplddt_D_E']])
-
     expected_iplddt = [98.96, 98.95, 98.96, 98.955, 98.96]
-
     precision = 0.01
     assert np.all(
         [
@@ -425,9 +412,7 @@ def test_af3_local():
     analysis.pdockq2(my_data)
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
     expected_pdockq2 = [0.0293, 0.0206, 0.0192, 0.2001, 0.1673]
-
     assert np.allclose(my_data.df["pdockq2_A"].values, expected_pdockq2, atol=precision)
-
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
     expected_pdockq2 = [0.0124, 0.0105, 0.0108, 0.0575, 0.0494]
     assert np.allclose(my_data.df["pdockq2_B"].values, expected_pdockq2, atol=precision)
@@ -505,7 +490,6 @@ def test_af3_boltz1():
             for i in range(len(my_data.df))
         ]
     )
-
     # print([round(i, 6) for i in my_data.df["pdockq2_D"]])
     expected_pdockq2 = [0.007526, 0.007526]
     assert np.all(

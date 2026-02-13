@@ -1,5 +1,5 @@
 import numpy as np
-import pdb_numpy
+import pdb_cpp
 
 from tqdm.auto import tqdm
 from . import data, analysis
@@ -111,7 +111,7 @@ def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True, max_pae=30.9
 
         pae = data.get_pae(data_file)
 
-        model = pdb_numpy.Coor(pdb)
+        model = pdb_cpp.Coor(pdb)
         model_CA = model.select_atoms("name CA")
         contact_lig = model_CA.select_atoms(
             f"chain {chains[-1]} and within {cutoff} of chain {' '.join(chains[:-1])}"
@@ -214,7 +214,7 @@ def plddt_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True):
             rec_plddt_list.append(None)
             continue
 
-        model = pdb_numpy.Coor(pdb)
+        model = pdb_cpp.Coor(pdb)
         model_CA = model.select_atoms("name CA")
         contact_lig = model_CA.select_atoms(
             f"chain {chains[-1]} and within {cutoff} of chain {' '.join(chains[:-1])}"

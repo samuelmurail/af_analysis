@@ -8,7 +8,7 @@ import sklearn.decomposition
 from MDAnalysis.analysis import align, diffusionmap, pca
 from MDAnalysis.coordinates.memory import MemoryReader
 import pandas as pd
-import pdb_numpy
+import pdb_cpp
 import logging
 from collections import Counter
 
@@ -69,9 +69,9 @@ def read_numerous_pdb(pdb_files, batch_size=1000):
     all_frames = []
 
     if any([pdb.endswith("cif") for pdb in pdb_files]):
-        model = pdb_numpy.Coor(pdb_files[0])
+        model = pdb_cpp.Coor(pdb_files[0])
         for file in pdb_files[1:]:
-            local_model = pdb_numpy.Coor(file)
+            local_model = pdb_cpp.Coor(file)
             assert (
                 model.len == local_model.len
             ), "Different number of atoms between the pdb files"
