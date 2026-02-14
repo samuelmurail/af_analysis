@@ -155,7 +155,7 @@ def compute_distance_matrix(
     u = read_numerous_pdb(pdb_files)
     assert u.trajectory.n_frames == len(
         pdb_files
-    ), f"Number of frames {u.trajectory.n_frames} different from number of files {len(files)}"
+    ), f"Number of frames {u.trajectory.n_frames} different from number of files {len(pdb_files)}"
 
     logger.info("align structures")
     align.AlignTraj(u, u, select=align_selection, in_memory=True).run(verbose=True)
