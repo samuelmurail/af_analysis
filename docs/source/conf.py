@@ -73,5 +73,4 @@ man_pages = [
 
 #autodoc_mock_imports = ["numpy", "scipy", "pytest"]
 
-# Exclude unit pages (tests and data) from the documentation
-exclude_patterns = ['af_analysis.test.*']
+exclude_patterns = []

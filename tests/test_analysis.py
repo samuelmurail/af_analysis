@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import shutil
 import numpy as np
 import pytest
 
@@ -538,12 +539,14 @@ def test_af3_boltz1():
     )
 
 
-def test_cf_1_5_5_ftdmp():
+def test_cf_1_5_5_ftdmp(tmp_path):
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
 
     my_data = af_analysis.Data(data_path)
 
-    ftdmp_path = os.path.join(TEST_FILE_PATH, "ftdmp_beta_amyloid_dimer")
+    ftdmp_src_path = os.path.join(TEST_FILE_PATH, "ftdmp_beta_amyloid_dimer")
+    ftdmp_path = os.path.join(tmp_path, "ftdmp_beta_amyloid_dimer")
+    shutil.copytree(ftdmp_src_path, ftdmp_path)
 
     ftdmp_df_list = analysis.extract_ftdmp(ftdmp_path)
     assert len(ftdmp_df_list) == 1
