@@ -429,18 +429,18 @@ Custom Analysis functions
 =========================
 
 The user can define custom analysis functions to compute additional metrics or visualizations.
-In this example we use the ``pdb_numpy`` package to define the 
+In this example we use the ``pdb_cpp`` package to define the 
 ``contact_number()`` function which take a pdb file as input and
 compute the number of contacts between chains.
 
 .. code-block:: python
     
-    # Here we use the `pdb_numpy` package to deal with coordinates file
-    import pdb_numpy
+    # Here we use the `pdb_cpp` package to deal with coordinates file
+    import pdb_cpp
 
     def contact_number(pdb, cutoff=8.0):
         # Compute the number of contacts in the interface
-        coor = pdb_numpy.Coor(pdb)
+        coor = pdb_cpp.Coor(pdb)
         chains = np.unique(coor.chain)
         contact_num = 0
 

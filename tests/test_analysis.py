@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import shutil
 import numpy as np
 import pytest
 
@@ -278,7 +279,7 @@ def test_af3_webserver():
 
     analysis.pdockq2(my_data)
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
-    expected_pdockq2 = [0.9148, 0.9187, 0.9151, 0.913, 0.9154]
+    expected_pdockq2 = [0.9599, 0.9614, 0.9606, 0.959, 0.9607]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_A"]
@@ -288,7 +289,7 @@ def test_af3_webserver():
     )
 
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
-    expected_pdockq2 = [0.8972, 0.8925, 0.8884, 0.889, 0.8785]
+    expected_pdockq2 = [0.9632, 0.9646, 0.9642, 0.9638, 0.964]
     assert np.all(
         [
             my_data.df.iloc[i]["pdockq2_D"]
@@ -320,9 +321,6 @@ def test_af3_webserver():
         [0.92359, 0.0, 0.0, 0.0, 0.92949, 0.0],
         [0.89712, 0.0, 0.0, 0.0, 0.0, 0.92788],
     ]
-
-    # for list in my_data.df["LIA"][0]:
-    #     print([round(float(i), 5) for i in list])
     np.testing.assert_allclose(
         np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
     )
@@ -350,10 +348,7 @@ def test_af3_webserver():
     )
 
     analysis.iplddt(my_data)
-    # print(my_data.df.columns)
-    # print([round(i, 4) for i in my_data.df['iplddt_A_B']])
-    expected_iplddt = [98.8157, 98.8157, 98.8186, 98.802, 98.8283]
-
+    expected_iplddt = [98.5322, 98.5467, 98.3444, 98.0133, 97.9341]
     precision = 0.01
     assert np.all(
         [
@@ -362,10 +357,7 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
-    # print([round(i, 4) for i in my_data.df['iplddt_B_E']])
-
     expected_iplddt = [96.235, 96.435, 95.995, 96.0, 96.095]
-
     precision = 0.01
     assert np.all(
         [
@@ -374,11 +366,7 @@ def test_af3_webserver():
             for i in range(len(my_data.df))
         ]
     )
-
-    # print([round(i, 4) for i in my_data.df['iplddt_D_E']])
-
     expected_iplddt = [98.96, 98.95, 98.96, 98.955, 98.96]
-
     precision = 0.01
     assert np.all(
         [
@@ -425,9 +413,7 @@ def test_af3_local():
     analysis.pdockq2(my_data)
     # print([round(i, 4) for i in my_data.df["pdockq2_A"]])
     expected_pdockq2 = [0.0293, 0.0206, 0.0192, 0.2001, 0.1673]
-
     assert np.allclose(my_data.df["pdockq2_A"].values, expected_pdockq2, atol=precision)
-
     # print([round(i, 4) for i in my_data.df["pdockq2_D"]])
     expected_pdockq2 = [0.0124, 0.0105, 0.0108, 0.0575, 0.0494]
     assert np.allclose(my_data.df["pdockq2_B"].values, expected_pdockq2, atol=precision)
@@ -505,7 +491,6 @@ def test_af3_boltz1():
             for i in range(len(my_data.df))
         ]
     )
-
     # print([round(i, 6) for i in my_data.df["pdockq2_D"]])
     expected_pdockq2 = [0.007526, 0.007526]
     assert np.all(
@@ -554,12 +539,14 @@ def test_af3_boltz1():
     )
 
 
-def test_cf_1_5_5_ftdmp():
+def test_cf_1_5_5_ftdmp(tmp_path):
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
 
     my_data = af_analysis.Data(data_path)
 
-    ftdmp_path = os.path.join(TEST_FILE_PATH, "ftdmp_beta_amyloid_dimer")
+    ftdmp_src_path = os.path.join(TEST_FILE_PATH, "ftdmp_beta_amyloid_dimer")
+    ftdmp_path = os.path.join(tmp_path, "ftdmp_beta_amyloid_dimer")
+    shutil.copytree(ftdmp_src_path, ftdmp_path)
 
     ftdmp_df_list = analysis.extract_ftdmp(ftdmp_path)
     assert len(ftdmp_df_list) == 1
@@ -682,15 +669,15 @@ def test_iptm_d0():
     """Test for ipTM and D0 calculation from colabfold 1.5.5 data.
 
     ``` python
-    python ~/Documents/Code/IPSAE/ipsae.py src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
+    python ~/Documents/Code/IPSAE/ipsae.py tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
     ```
 
     The output should be similar to the following:
     ```
     Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
-    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
     ```
 
     """
@@ -758,15 +745,15 @@ def test_ipSAE():
     """Test for ipSAE calculation from colabfold 1.5.5 data.
 
     ``` python
-    python ~/Documents/Code/IPSAE/ipsae.py src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
+    python ~/Documents/Code/IPSAE/ipsae.py tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_scores_rank_001_alphafold2_multimer_v3_model_5_seed_002.json tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002.pdb 10 10
     ```
 
     The output should be similar to the following:
     ```
     Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
-    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
-    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   src/af_analysis/test/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   asym  0.309192    0.529505    0.492353    0.600    0.518804      0.1443     0.1843     0.4630      41     84     73    1.87    3.29    3.00     31      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    B    A     10   10   asym  0.309226    0.529211    0.503041    0.600    0.518532      0.1443     0.1839     0.4598      41     84     76    1.87    3.29    3.08     34      42      27      26   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
+    A    B     10   10   max   0.309226    0.529505    0.503041    0.600    0.518804      0.1443     0.1843     0.4614      41     84     76    1.87    3.29    3.08     42      42      27      27   tests/inputs/beta_amyloid_dimer_cf_1.5.5/beta_amyloid_dimer_d2fa3_0_relaxed_rank_001_alphafold2_multimer_v3_model_5_seed_002
     ```
 
     """

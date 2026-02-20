@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 import json
-import pdb_numpy
+import pdb_cpp
 import seaborn as sns
 import matplotlib.pyplot as plt
 from cmcrameri import cm
@@ -57,6 +57,17 @@ plddt_main_atom_list = [
     "CU",
     "CO",
 ]
+
+
+def _flatten_1d(array_like):
+    array = np.asarray(array_like)
+    if array.ndim > 1:
+        array = array.reshape(-1)
+    return array
+
+
+def _unique_preserve_order(values):
+    return list(dict.fromkeys(values))
 
 
 class Data:
@@ -254,28 +265,22 @@ class Data:
 
         for querie in self.df["query"].unique():
             # print(querie, self.df[self.df['query'] == querie])
-            first_model = pdb_numpy.Coor(
+            first_model = pdb_cpp.Coor(
                 self.df[self.df["query"] == querie].iloc[0]["pdb"]
             )
-            _, chain_indices = np.unique(first_model.models[0].chain, return_index=True)
-            self.chains[querie] = [first_model.models[0].chain[i] for i in sorted(chain_indices)]
-            # self.chains[querie] = list(np.unique(first_model.models[0].chain))
+            model = first_model.models[0]
+            chain_arr = np.asarray(model.chain_str)
+            uniq_resid = _flatten_1d(model.uniq_resid)
+            resname = np.asarray(model.resname_str)
+
+            self.chains[querie] = _unique_preserve_order(chain_arr.tolist())
             self.chain_length[querie] = [
-                len(
-                    np.unique(
-                        first_model.models[0].uniq_resid[
-                            first_model.models[0].chain == chain
-                        ]
-                    )
-                )
+                len(np.unique(uniq_resid[chain_arr == chain]))
                 for chain in self.chains[querie]
             ]
 
             self.chain_type[querie] = [
-                get_type(
-                    first_model.models[0].resname[first_model.models[0].chain == chain]
-                )
-                for chain in self.chains[querie]
+                get_type(resname[chain_arr == chain]) for chain in self.chains[querie]
             ]
 
     def export_csv(self, path):
@@ -554,10 +559,10 @@ class Data:
             "chai1",
             "massivefold",
         ]:
-            model = pdb_numpy.Coor(row["pdb"])
-            plddt_array = model.models[0].beta[
-                np.isin(model.models[0].name, plddt_main_atom_list)
-            ]
+            model = pdb_cpp.Coor(row["pdb"])
+            name_arr = np.asarray(model.models[0].name_str)
+            beta_arr = _flatten_1d(model.models[0].beta)
+            plddt_array = beta_arr[np.isin(name_arr, plddt_main_atom_list)]
             return plddt_array
 
         if row["format"] in ["boltz1"]:

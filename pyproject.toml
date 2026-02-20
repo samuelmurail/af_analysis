@@ -44,3 +44,6 @@ Homepage = "https://github.com/samuelmurail/af_analysis"
 [tool.setuptools.dynamic]
 # version = {attr = "af_analysis.VERSION"}
 dependencies = {file = ["requirements.txt"]}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

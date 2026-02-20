@@ -57,11 +57,11 @@ rootdir: /home/murail/Documents/Code/af_analysis
 plugins: anyio-4.0.0
 collected 9 items                                                            
 
-src/af_analysis/test/test_analysis.py ..                              [ 22%]
-src/af_analysis/test/test_clustering.py .                             [ 33%]
-src/af_analysis/test/test_data.py ...                                 [ 66%]
-src/af_analysis/test/test_docking.py .                                [ 77%]
-src/af_analysis/test/test_format.py ..                                [100%]
+tests/test_analysis.py ..                                              [ 22%]
+tests/test_clustering.py .                                             [ 33%]
+tests/test_data.py ...                                                 [ 66%]
+tests/test_docking.py .                                                [ 77%]
+tests/test_format.py ..                                                [100%]
 
 ============================== warnings summary ==============================
 ../../../miniforge3/envs/docking/lib/python3.10/site-packages/Bio/Application/__init__.py:40
@@ -75,10 +75,10 @@ src/af_analysis/test/test_format.py ..                                [100%]
   with the subprocess module.
     warnings.warn(
 
-src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
-src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
-src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
-src/af_analysis/test/test_clustering.py::test_cf_1_5_5_relax
+tests/test_clustering.py::test_cf_1_5_5_relax
+tests/test_clustering.py::test_cf_1_5_5_relax
+tests/test_clustering.py::test_cf_1_5_5_relax
+tests/test_clustering.py::test_cf_1_5_5_relax
   /home/murail/miniforge3/envs/docking/lib/python3.10/site-packages/MDAnalysis/coordinates/base.py:725: UserWarning: Reader has no dt information, set to 1.0 ps
     return self.ts.dt
 

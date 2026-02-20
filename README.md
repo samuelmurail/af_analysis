@@ -89,8 +89,6 @@ conda env create -f environment.yml
 conda activate af_analysis
 ```
 
-
-
 ## Documentation
 
 The complete documentation is available at [ReadTheDocs](https://af-analysis.readthedocs.io/en/latest/).
@@ -170,7 +168,7 @@ my_data.show_3d(my_data.df['ranking_confidence'].idxmax())
 
 `af_analysis` requires the following dependencies:
 
-* `pdb_numpy`
+* `pdb_cpp`
 * `pandas`
 * `numpy`
 * `tqdm`
@@ -287,3 +285,9 @@ This project is licensed under the GNU General Public License version 2 - see th
 [Chai1]: https://doi.org/10.1101/2024.10.10.615955v2 "Chai Discovery et al. bioRxiv (2024) doi: 10.1101/2024.10.10.615955v2"
 [MassiveFold]: https://doi.org/10.1038/s43588-024-00714-4 "Raouraoua et al. Nat Comput Sci (2024) doi: 10.1038/s43588-024-00714-4"
 [ipsae]: https://www.biorxiv.org/content/10.1101/2025.02.10.637595v1 "Dunbrack. Biorxiv (2025) doi: 10.1101/2025.02.10.637595"
+
+
+## TODO
+
+- check with the original implementation of pDockQ2 that the results are the same
+- Same for LIS/LIA

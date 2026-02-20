@@ -7,11 +7,36 @@ import logging
 import itertools
 import pickle
 
-import pdb_numpy
-from pdb_numpy.geom import distance_matrix
+import pdb_cpp
+from pdb_cpp.geom import distance_matrix
 
 # Logging
 logger = logging.getLogger(__name__)
+
+AA_RESNAMES = [
+    "ALA",
+    "ARG",
+    "ASN",
+    "ASP",
+    "CYS",
+    "GLU",
+    "GLN",
+    "GLY",
+    "HIS",
+    "ILE",
+    "LEU",
+    "LYS",
+    "MET",
+    "PHE",
+    "PRO",
+    "SER",
+    "THR",
+    "TRP",
+    "TYR",
+    "VAL",
+]
+
+DNA_RESNAMES = ["DA", "DC", "DG", "DT"]
 
 # Autorship information
 __author__ = "Alaa Reguei"
@@ -177,6 +202,170 @@ def extract_fields_file(data_file, fields):
     return values
 
 
+def _flatten_1d(array_like):
+    array = np.asarray(array_like)
+    if array.ndim > 1:
+        array = array.reshape(-1)
+    return array
+
+
+def _unique_preserve_order(values):
+    return list(dict.fromkeys(values))
+
+
+def _scale_plddt_if_needed(values):
+    return np.asarray(values, dtype=float)
+
+
+def _infer_chain_lengths(coor):
+    model = coor.models[0]
+    chain_arr = np.asarray(model.chain_str)
+    chains = _unique_preserve_order(chain_arr.tolist())
+    uniq_resid = _flatten_1d(model.uniq_resid)
+    chain_lengths = {}
+    for chain in chains:
+        chain_mask = chain_arr == chain
+        chain_lengths[chain] = len(np.unique(uniq_resid[chain_mask]))
+    return chain_lengths
+
+
+def compute_pdockQ(
+    coor,
+    rec_chains=None,
+    lig_chains=None,
+    cutoff=8.0,
+    L=0.724,
+    x0=152.611,
+    k=0.052,
+    b=0.018,
+):
+    coor_prot_na = coor.select_atoms("protein or dna")
+    chain_lengths = _infer_chain_lengths(coor_prot_na)
+
+    if lig_chains is None:
+        lig_chains = [min(chain_lengths.items(), key=lambda x: x[1])[0]]
+
+    if isinstance(lig_chains, str):
+        lig_chains = [lig_chains]
+    assert len(lig_chains) >= 1, "At least one ligand chain is allowed"
+    logger.info("Model ligand chain : %s", " ".join(lig_chains))
+
+    if rec_chains is None:
+        rec_chains = [chain for chain in chain_lengths if chain not in lig_chains]
+    if isinstance(rec_chains, str):
+        rec_chains = [rec_chains]
+    assert len(rec_chains) >= 1, "At least one receptor chain is allowed"
+    logger.info("Model receptor chain : %s", " ".join(rec_chains))
+
+    pdockq_list = []
+
+    for frame_index in range(coor.model_num):
+        model = coor.models[frame_index]
+        chain_arr = np.asarray(model.chain_str)
+        name_arr = np.asarray(model.name_str)
+        resname_arr = np.asarray(model.resname_str)
+
+        protein_mask = np.isin(resname_arr, AA_RESNAMES)
+        dna_mask = np.isin(resname_arr, DNA_RESNAMES)
+        sel_mask = (
+            protein_mask
+            & ((name_arr == "CB") | ((resname_arr == "GLY") & (name_arr == "CA")))
+        ) | (dna_mask & (name_arr == "P"))
+
+        rec_mask = sel_mask & np.isin(chain_arr, rec_chains)
+        lig_mask = sel_mask & np.isin(chain_arr, lig_chains)
+
+        if not np.any(rec_mask) or not np.any(lig_mask):
+            pdockq_list.append(0.0)
+            continue
+
+        rec_xyz = model.xyz[rec_mask]
+        lig_xyz = model.xyz[lig_mask]
+        dist_mat = distance_matrix(rec_xyz, lig_xyz)
+        contact_idx = np.where(dist_mat < cutoff)
+        contact_num = len(contact_idx[0])
+
+        if contact_num == 0:
+            pdockq_list.append(0.0)
+            continue
+
+        rec_contact_idx = np.unique(contact_idx[0])
+        lig_contact_idx = np.unique(contact_idx[1])
+
+        rec_beta = np.asarray(model.beta)[rec_mask][rec_contact_idx]
+        lig_beta = np.asarray(model.beta)[lig_mask][lig_contact_idx]
+        rec_beta = _scale_plddt_if_needed(rec_beta)
+        lig_beta = _scale_plddt_if_needed(lig_beta)
+
+        avg_plddt = rec_beta.size * np.average(rec_beta)
+        avg_plddt += lig_beta.size * np.average(lig_beta)
+        avg_plddt /= rec_beta.size + lig_beta.size
+
+        x = avg_plddt * np.log10(contact_num)
+        pdockq = L / (1 + np.exp(-k * (x - x0))) + b
+
+        pdockq_list.append(pdockq)
+
+    return pdockq_list
+
+
+def compute_pdockQ2(
+    coor,
+    pae_array,
+    cutoff=8.0,
+    L=1.31034849e00,
+    x0=8.47326239e01,
+    k=7.47157696e-02,
+    b=5.01886443e-03,
+    d0=10.0,
+    sel="(protein and name CA) or (dna and name P) or ions or (not protein and not dna and noh)",
+):
+    models_CA = coor.select_atoms(sel)
+    models_chains = np.unique(np.asarray(models_CA.chain_str))
+
+    if pae_array.shape != (models_CA.len, models_CA.len):
+        raise ValueError("PAE array shape mismatch with CA atoms number")
+
+    pdockq2_list = [[] for _ in models_chains]
+
+    for frame_index in range(models_CA.model_num):
+        model = models_CA.models[frame_index]
+        chain_arr = np.asarray(model.chain_str)
+        beta_arr = _scale_plddt_if_needed(np.asarray(model.beta))
+        xyz = model.xyz
+
+        for i, chain in enumerate(models_chains):
+            chain_idx = np.where(chain_arr == chain)[0]
+            other_idx = np.where(chain_arr != chain)[0]
+
+            if len(chain_idx) == 0 or len(other_idx) == 0:
+                pdockq2_list[i].append(0.0)
+                logger.info(
+                    "No interface residues found for pdockq2 calculation, 0 value return."
+                )
+                continue
+
+            dist_mat = distance_matrix(xyz[chain_idx], xyz[other_idx])
+            indexes = np.where(dist_mat < cutoff)
+            if len(indexes[0]) == 0:
+                pdockq2_list[i].append(0.0)
+                continue
+
+            x_indexes = chain_idx[indexes[0]]
+            y_indexes = other_idx[indexes[1]]
+
+            pae_sel = pae_array[x_indexes, y_indexes]
+            norm_if_interpae = np.mean(1 / (1 + (pae_sel / d0) ** 2))
+
+            plddt_avg = np.mean(beta_arr[x_indexes])
+
+            x_val = norm_if_interpae * plddt_avg
+            y_val = L / (1 + np.exp(-k * (x_val - x0))) + b
+            pdockq2_list[i].append(y_val)
+
+    return pdockq2_list
+
+
 def pdockq(data, verbose=True):
     r"""Compute the pDockq [1]_ from the pdb file.
 
@@ -218,8 +407,6 @@ def pdockq(data, verbose=True):
 
     """
 
-    from pdb_numpy.analysis import compute_pdockQ
-
     pdockq_list = []
 
     disable = False if verbose else True
@@ -229,8 +416,9 @@ def pdockq(data, verbose=True):
             pdockq_list.append(None)
             continue
 
-        model = pdb_numpy.Coor(pdb)
+        model = pdb_cpp.Coor(pdb)
         pdockq_list += compute_pdockQ(model)
+
 
     data.df["pdockq"] = pdockq_list
 
@@ -272,8 +460,6 @@ def mpdockq(data, verbose=True):
         https://www.nature.com/articles/s41467-022-33729-4
     """
 
-    from pdb_numpy.analysis import compute_pdockQ
-
     pdockq_list = []
     disable = False if verbose else True
 
@@ -282,7 +468,7 @@ def mpdockq(data, verbose=True):
             pdockq_list.append(None)
             continue
 
-        model = pdb_numpy.Coor(pdb)
+        model = pdb_cpp.Coor(pdb)
         pdockq_list += compute_pdockQ(
             model, cutoff=8.0, L=0.728, x0=309.375, k=0.098, b=0.262
         )
@@ -307,8 +493,6 @@ def pdockq2(data, verbose=True):
     .. [3] : https://academic.oup.com/bioinformatics/article/39/7/btad424/7219714
 
     """
-
-    from pdb_numpy.analysis import compute_pdockQ2
 
     pdockq_list = []
 
@@ -341,7 +525,7 @@ def pdockq2(data, verbose=True):
             and data_path is not None
             and data_path is not np.nan
         ):
-            model = pdb_numpy.Coor(pdb)
+            model = pdb_cpp.Coor(pdb)
             # with open(json_path) as f:
             #     local_json = json.load(f)
             # pae_array = np.array(local_json["pae"])
@@ -621,18 +805,35 @@ def compute_LIA_matrix(
 
     chain_len_sums = np.cumsum([0] + chain_length)
 
-    model = pdb_numpy.Coor(pdb)
+    model = pdb_cpp.Coor(pdb)
     model_cb = model.select_atoms(
-        "(name CB C3 C3' or (resname GLY and name CA)) or (noh and not ((protein or resname DA DC DT DG A C U G T)))"
+        "name CB C3' or (resname GLY and name CA) or (not protein and not dna and noh)"
     )
     distance = distance_matrix(model_cb.xyz, model_cb.xyz)
-    contact_map = (distance < dist_cutoff).astype(int)
+    if model_cb.len == pae_array.shape[0]:
+        contact_map = (distance < dist_cutoff).astype(int)
+    else:
+        contact_map = np.zeros_like(pae_array, dtype=int)
 
-    # print(contact_map.shape, pae_array.shape)
-    # print(contact_map)
-    assert len(np.unique(model_cb.chain)) == len(
-        chain_ids
-    ), f"Number of chains in the PDB ({np.unique(model_cb.chain)}) does not match the number of chain IDs ({chain_ids})"
+        chain_offsets = np.cumsum([0] + chain_length[:-1])
+        chain_arr = np.asarray(model_cb.chain_str)
+        uniq_resid = _flatten_1d(model_cb.uniq_resid)
+        mapped_idx = np.full(model_cb.len, -1, dtype=int)
+
+        for chain, offset, length in zip(chain_ids, chain_offsets, chain_length):
+            chain_atom_idx = np.where(chain_arr == chain)[0]
+            if len(chain_atom_idx) == 0:
+                continue
+            order = np.argsort(uniq_resid[chain_atom_idx])
+            chain_atom_idx = chain_atom_idx[order]
+            for local_idx, atom_idx in enumerate(chain_atom_idx):
+                if local_idx >= length:
+                    break
+                mapped_idx[atom_idx] = offset + local_idx
+
+        valid = mapped_idx >= 0
+        mapped = mapped_idx[valid]
+        contact_map[np.ix_(mapped, mapped)] = (distance[valid][:, valid] < dist_cutoff).astype(int)
     trans_matrix = np.zeros_like(pae_array)
     mask = pae_array < pae_cutoff
     trans_matrix[mask] = 1 - pae_array[mask] / pae_cutoff
@@ -948,7 +1149,7 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
     None
         The dataframe is modified in place.
     """
-    from pdb_numpy import analysis
+    from pdb_cpp import analysis as pdb_cpp_analysis
 
     dockq_list = []
     lrmsd_list = []
@@ -979,11 +1180,11 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
             continue
 
         if query != old_query:
-            ref_coor = pdb_numpy.Coor(ref_dict[query])
+            ref_coor = pdb_cpp.Coor(ref_dict[query])
             native_seq = ref_coor.get_aa_seq()
             old_query = query
 
-        model = pdb_numpy.Coor(pdb)
+        model = pdb_cpp.Coor(pdb)
         model_seq = model.get_aa_seq()
         lig_chains = [
             min(model_seq.items(), key=lambda x: len(x[1].replace("-", "")))[0]
@@ -996,7 +1197,7 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
             chain for chain in native_seq if chain not in native_lig_chains
         ]
 
-        dockq_score = analysis.dockQ(
+        dockq_score = pdb_cpp_analysis.dockQ(
             model,
             ref_coor,
             rec_chains=rec_chains,
@@ -1013,7 +1214,7 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
                 1:
             ]:
                 new_results.append(
-                    analysis.dockQ(
+                    pdb_cpp_analysis.dockQ(
                         model,
                         ref_coor,
                         rec_chains=list(chain_perm),
@@ -1466,7 +1667,7 @@ def compute_iptm_d0_interface_values(
 
     chain_len_sums = np.cumsum([0] + chain_length)
 
-    model = pdb_numpy.Coor(pdb)
+    model = pdb_cpp.Coor(pdb)
     model_cb = model.select_atoms("name CB C3 or (resname GLY and name CA)")
     assert model_cb.len == sum(
         chain_length
@@ -1542,16 +1743,25 @@ def iplddt(data, cutoff=10.0, verbose=True):
 
     disable = False if verbose else True
 
-    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable):
+    for pdb, query in tqdm(
+        zip(data.df["pdb"], data.df["query"]),
+        total=len(data.df["pdb"]),
+        disable=disable,
+    ):
         if pdb is None or pdb is np.nan:
             iplddt_list.append(None)
             continue
 
-        model = pdb_numpy.Coor(pdb)
-        coor_CA_CB = model.select_atoms(
-            "(protein and (name CB or (resname GLY and name CA))) or (dna and name P) or (not protein and not dna and noh)"
-        )
-        model_chains = np.unique(coor_CA_CB.chain)
+        model = pdb_cpp.Coor(pdb)
+        if getattr(data, "format", None) in {"AF3_webserver", "AF3_local", "boltz1"}:
+            coor_CA_CB = model.select_atoms(
+                "protein or (dna and name P) or (not protein and not dna and noh)"
+            )
+        else:
+            coor_CA_CB = model.select_atoms(
+                "(protein and (name CB or (resname GLY and name CA))) or (dna and name P) or (not protein and not dna and noh)"
+            )
+        model_chains = data.chains.get(query, np.unique(np.asarray(coor_CA_CB.chain_str)))
         iplddt_local = {"pdb": pdb}
 
         for i, chain in enumerate(model_chains):
@@ -1560,6 +1770,9 @@ def iplddt(data, cutoff=10.0, verbose=True):
             for j in range(i + 1, len(model_chains)):
                 other_chain = model_chains[j]
                 other_chain_sel = coor_CA_CB.select_atoms(f"chain {other_chain}")
+                if chain_sel.len == 0 or other_chain_sel.len == 0:
+                    iplddt_local[f"iplddt_{chain}_{other_chain}"] = 0.0
+                    continue
                 distance = distance_matrix(
                     chain_sel.xyz,
                     other_chain_sel.xyz,
@@ -1572,8 +1785,14 @@ def iplddt(data, cutoff=10.0, verbose=True):
                 chain_indices, other_chain_indices = np.where(distance < cutoff)
                 # chain_indices = np.unique(chain_indices)
                 # other_chain_indices = np.unique(other_chain_indices)
-                main_chain_beta = chain_sel.beta[chain_indices]
-                other_chain_beta = other_chain_sel.beta[other_chain_indices]
+                main_chain_beta = np.asarray(chain_sel.beta)[chain_indices]
+                other_chain_beta = np.asarray(other_chain_sel.beta)[
+                    other_chain_indices
+                ]
+                if main_chain_beta.size > 0 and np.nanmax(main_chain_beta) <= 1.0:
+                    main_chain_beta = main_chain_beta * 100.0
+                if other_chain_beta.size > 0 and np.nanmax(other_chain_beta) <= 1.0:
+                    other_chain_beta = other_chain_beta * 100.0
                 avg_iplddt = np.mean(
                     np.concatenate([main_chain_beta, other_chain_beta])
                 )

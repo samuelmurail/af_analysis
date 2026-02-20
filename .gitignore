@@ -1,5 +1,6 @@
 # Tmp files
 tmp*
+external/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
