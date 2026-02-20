@@ -257,7 +257,9 @@ class Data:
             first_model = pdb_numpy.Coor(
                 self.df[self.df["query"] == querie].iloc[0]["pdb"]
             )
-            self.chains[querie] = list(np.unique(first_model.models[0].chain))
+            _, chain_indices = np.unique(first_model.models[0].chain, return_index=True)
+            self.chains[querie] = [first_model.models[0].chain for i in sorted(chain_indices)]
+            # self.chains[querie] = list(np.unique(first_model.models[0].chain))
             self.chain_length[querie] = [
                 len(
                     np.unique(
