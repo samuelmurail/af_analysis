@@ -324,7 +324,7 @@ def compute_pdockQ2(
     models_chains = np.unique(np.asarray(models_CA.chain_str))
 
     if pae_array.shape != (models_CA.len, models_CA.len):
-        raise ValueError("PAE array shape mismatch with CA atoms number")
+        logger.warning(f"PAE array shape {pae_array.shape} mismatch with CA atoms number {models_CA.len}")
 
     pdockq2_list = [[] for _ in models_chains]
 
