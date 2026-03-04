@@ -643,6 +643,9 @@ def ipTM_between_chains(my_data, chain_groups, verbose=True):
     chain_group_iptm = []
     disable = False if verbose else True
     for iptm_array in tqdm(my_data.df["chain_pair_iptm"], total=len(my_data.df["pdb"]), disable=disable):
+        if isinstance(iptm_array, float) and np.isnan(iptm_array):
+            chain_group_iptm.append(np.nan)
+            continue
         to_avg = []
         for chain1 in group1:
             for chain2 in group2:
