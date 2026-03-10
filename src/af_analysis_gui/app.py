@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import traceback
 from pathlib import Path
 
@@ -22,6 +23,74 @@ def _init_state() -> None:
         st.session_state.results_directory = ""
 
 
+def _browse_directory() -> None:
+    """Open a native directory picker with modern Linux dialog support."""
+
+    initialdir = st.session_state.results_directory or str(Path.cwd())
+
+    # Prefer modern desktop-native dialogs on Linux.
+    try:
+        result = subprocess.run(
+            [
+                "zenity",
+                "--file-selection",
+                "--directory",
+                "--title=Select AlphaFold results directory",
+                f"--filename={Path(initialdir).as_posix().rstrip('/')}/",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            st.session_state.results_directory = result.stdout.strip()
+            return
+    except FileNotFoundError:
+        pass
+    except Exception:
+        st.session_state.last_error = traceback.format_exc()
+
+    try:
+        result = subprocess.run(
+            [
+                "kdialog",
+                "--getexistingdirectory",
+                str(Path(initialdir).expanduser().resolve()),
+                "Select AlphaFold results directory",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            st.session_state.results_directory = result.stdout.strip()
+            return
+    except FileNotFoundError:
+        pass
+    except Exception:
+        st.session_state.last_error = traceback.format_exc()
+
+    # Fallback for environments without desktop dialog tools.
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected = filedialog.askdirectory(
+            title="Select AlphaFold results directory",
+            initialdir=initialdir,
+        )
+        root.destroy()
+
+        if selected:
+            st.session_state.results_directory = selected
+    except Exception:
+        st.session_state.last_error = traceback.format_exc()
+        st.warning("Directory picker is unavailable in this environment. Enter the path manually.")
+
+
 def _load_data(directory: str, format_name: str) -> None:
     format_arg = None if format_name == "auto" else format_name
     st.session_state.af_data = af_analysis.Data(
@@ -32,6 +101,43 @@ def _load_data(directory: str, format_name: str) -> None:
     st.session_state.last_error = ""
 
 
+def _normalize_for_json(value):
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): _normalize_for_json(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_normalize_for_json(item) for item in value]
+    if hasattr(value, "tolist"):
+        try:
+            return _normalize_for_json(value.tolist())
+        except Exception:
+            return str(value)
+    return value
+
+
+def _format_cell_for_display(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+
+    normalized = _normalize_for_json(value)
+    if normalized is value:
+        return str(value)
+
+    try:
+        return json.dumps(normalized, ensure_ascii=False)
+    except Exception:
+        return str(value)
+
+
+def _prepare_dataframe_for_display(df):
+    display_df = df.copy()
+    for column in display_df.columns:
+        if str(display_df[column].dtype) == "object":
+            display_df[column] = display_df[column].map(_format_cell_for_display)
+    return display_df
+
+
 def _safe_metric_call(label: str, fn) -> None:
     with st.spinner(f"Running {label}..."):
         try:
@@ -40,29 +146,6 @@ def _safe_metric_call(label: str, fn) -> None:
         except Exception:  # pragma: no cover
             st.session_state.last_error = traceback.format_exc()
             st.error(f"{label} failed")
-
-
-def _browse_directory() -> None:
-    """Open a native directory picker when available."""
-
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
-
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        selected = filedialog.askdirectory(
-            title="Select AlphaFold results directory",
-            initialdir=st.session_state.results_directory or ".",
-        )
-        root.destroy()
-
-        if selected:
-            st.session_state.results_directory = selected
-    except Exception:
-        st.session_state.last_error = traceback.format_exc()
-        st.warning("Directory picker is unavailable in this environment. Enter the path manually.")
 
 
 def _render_load_panel() -> None:
@@ -116,7 +199,7 @@ def _render_dataset_panel() -> None:
 
     st.subheader("Dataset")
     st.write(f"Rows: {len(data.df)}")
-    st.dataframe(data.df)
+    st.dataframe(_prepare_dataframe_for_display(data.df))
 
     csv_bytes = data.df.to_csv(index=False).encode("utf-8")
     st.download_button(
@@ -144,7 +227,7 @@ def _render_metrics_panel() -> None:
         _safe_metric_call("LIS_pep", lambda: docking.LIS_pep(data, verbose=False))
 
     st.write("Updated columns")
-    st.dataframe(data.df.tail(min(20, len(data.df))))
+    st.dataframe(_prepare_dataframe_for_display(data.df.tail(min(20, len(data.df)))))
 
 
 def _render_model_panel() -> None:
@@ -208,6 +291,8 @@ def _render_molstar_panel() -> None:
         horizontal=True,
         key="molstar_color_mode",
     )
+    if color_mode == "pLDDT":
+        st.caption("AF3 confidence colors: >90 dark blue, 70-90 cyan, 50-70 yellow, <50 orange")
     height = st.slider("Viewer height", min_value=450, max_value=1000, value=700)
 
     row = data.df.iloc[int(index)]
@@ -240,7 +325,8 @@ def _render_molstar_panel() -> None:
     # JSON encoding safely escapes file content for JavaScript injection.
     structure_payload = json.dumps(structure_text)
     structure_format_payload = json.dumps(structure_format)
-    color_theme = "uncertainty" if color_mode == "pLDDT" else "chain-id"
+    color_theme = "plddt-confidence" if color_mode == "pLDDT" else "chain-id"
+    color_theme_fallback = "uncertainty"
     html = f"""
 <div id=\"molstar-viewer\" style=\"width: 100%; height: {height}px; position: relative;\"></div>
 <link rel=\"stylesheet\" href=\"https://unpkg.com/molstar/build/viewer/molstar.css\" />
@@ -254,6 +340,7 @@ def _render_molstar_panel() -> None:
     const structureText = {structure_payload};
     const structureFormat = {structure_format_payload};
     const colorTheme = {json.dumps(color_theme)};
+    const fallbackColorTheme = {json.dumps(color_theme_fallback)};
 
   try {{
     const viewer = await molstar.Viewer.create('molstar-viewer', {{
@@ -282,10 +369,17 @@ def _render_molstar_panel() -> None:
         const polymer = await viewer.plugin.builders.structure.tryCreateComponentStatic(structure, 'polymer');
 
         if (polymer) {{
-            await viewer.plugin.builders.structure.representation.addRepresentation(polymer, {{
-                type: 'cartoon',
-                color: colorTheme
-            }});
+            try {{
+                await viewer.plugin.builders.structure.representation.addRepresentation(polymer, {{
+                    type: 'cartoon',
+                    color: colorTheme
+                }});
+            }} catch (_colorErr) {{
+                await viewer.plugin.builders.structure.representation.addRepresentation(polymer, {{
+                    type: 'cartoon',
+                    color: fallbackColorTheme
+                }});
+            }}
             viewer.plugin.managers.camera.reset();
         }}
   }} catch (err) {{
