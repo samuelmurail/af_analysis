@@ -6,6 +6,7 @@ import json
 import subprocess
 import traceback
 from pathlib import Path
+from typing import Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -21,6 +22,8 @@ def _init_state() -> None:
         st.session_state.last_error = ""
     if "results_directory" not in st.session_state:
         st.session_state.results_directory = ""
+    if "selected_model_index" not in st.session_state:
+        st.session_state.selected_model_index = 0
 
 
 def _browse_directory() -> None:
@@ -99,6 +102,7 @@ def _load_data(directory: str, format_name: str) -> None:
         verbose=False,
     )
     st.session_state.last_error = ""
+    st.session_state.selected_model_index = 0
 
 
 def _normalize_for_json(value):
@@ -210,6 +214,71 @@ def _render_dataset_panel() -> None:
     )
 
 
+def _get_table_columns(df):
+    preferred = [
+        "query",
+        "model",
+        "name",
+        "rank",
+        "ranking_score",
+        "ptm",
+        "iptm",
+        "mean_plddt",
+        "pdockq",
+        "pdockq2",
+        "LIS_pep",
+    ]
+    selected = [column for column in preferred if column in df.columns]
+    if len(selected) >= 3:
+        return selected[:8]
+
+    fallback = list(df.columns[:8])
+    if not fallback:
+        return []
+    return fallback
+
+
+def _render_table_selector(data) -> int:
+    st.subheader("Dataset")
+    st.caption("Click a row to update plots and 3D")
+
+    display_df = _prepare_dataframe_for_display(data.df).reset_index(drop=True)
+    table_columns = _get_table_columns(display_df)
+    table_df = display_df[table_columns] if table_columns else display_df
+    table_df = table_df.copy()
+    table_df.insert(0, "row", table_df.index)
+
+    selected_index = int(st.session_state.selected_model_index)
+    try:
+        event = st.dataframe(
+            table_df,
+            use_container_width=True,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="dataset_table_selector",
+        )
+        rows = event.selection.rows if event is not None else []
+        if rows:
+            selected_index = int(rows[0])
+            st.session_state.selected_model_index = selected_index
+    except TypeError:
+        st.dataframe(table_df, use_container_width=True, hide_index=True)
+        selected_index = int(
+            st.number_input(
+                "Selected row",
+                min_value=0,
+                max_value=max(0, len(data.df) - 1),
+                value=selected_index,
+                step=1,
+                key="dataset_table_selector_fallback_index",
+            )
+        )
+        st.session_state.selected_model_index = selected_index
+
+    return selected_index
+
+
 def _render_metrics_panel() -> None:
     data = st.session_state.af_data
     if data is None:
@@ -230,7 +299,7 @@ def _render_metrics_panel() -> None:
     st.dataframe(_prepare_dataframe_for_display(data.df.tail(min(20, len(data.df)))))
 
 
-def _render_model_panel() -> None:
+def _render_model_panel(selected_index: Optional[int] = None) -> None:
     data = st.session_state.af_data
     if data is None:
         st.info("Load a dataset first")
@@ -241,16 +310,22 @@ def _render_model_panel() -> None:
         st.warning("Dataset is empty")
         return
 
-    index = st.number_input(
-        "Model index",
-        min_value=0,
-        max_value=max(0, len(data.df) - 1),
-        value=0,
-        step=1,
-    )
+    if selected_index is None:
+        index = int(
+            st.number_input(
+                "Model index",
+                min_value=0,
+                max_value=max(0, len(data.df) - 1),
+                value=int(st.session_state.selected_model_index),
+                step=1,
+            )
+        )
+    else:
+        index = int(selected_index)
+        st.caption(f"Selected row: {index}")
 
     try:
-        fig_plddt, _ = data.plot_plddt([int(index)])
+        fig_plddt, _ = data.plot_plddt([index])
         st.pyplot(fig_plddt)
     except Exception:
         st.warning("Could not render pLDDT for this model")
@@ -266,7 +341,7 @@ def _render_model_panel() -> None:
         st.warning("Could not render PAE for this model")
 
 
-def _render_molstar_panel() -> None:
+def _render_molstar_panel(selected_index: Optional[int] = None) -> None:
     data = st.session_state.af_data
     if data is None:
         st.info("Load a dataset first")
@@ -277,14 +352,20 @@ def _render_molstar_panel() -> None:
         st.warning("Dataset is empty")
         return
 
-    index = st.number_input(
-        "Model index for 3D",
-        min_value=0,
-        max_value=max(0, len(data.df) - 1),
-        value=0,
-        step=1,
-        key="molstar_model_index",
-    )
+    if selected_index is None:
+        index = int(
+            st.number_input(
+                "Model index for 3D",
+                min_value=0,
+                max_value=max(0, len(data.df) - 1),
+                value=int(st.session_state.selected_model_index),
+                step=1,
+                key="molstar_model_index",
+            )
+        )
+    else:
+        index = int(selected_index)
+        st.caption(f"Selected row: {index}")
     color_mode = st.radio(
         "Color",
         options=["pLDDT", "Chain"],
@@ -295,7 +376,7 @@ def _render_molstar_panel() -> None:
         st.caption("AF3 confidence colors: >90 dark blue, 70-90 cyan, 50-70 yellow, <50 orange")
     height = st.slider("Viewer height", min_value=450, max_value=1000, value=700)
 
-    row = data.df.iloc[int(index)]
+    row = data.df.iloc[index]
     pdb_path = row.get("pdb")
     if not pdb_path:
         st.info("No PDB file available for this model")
@@ -392,24 +473,54 @@ def _render_molstar_panel() -> None:
     components.html(html, height=height + 20)
 
 
+def _render_explorer_panel() -> None:
+    data = st.session_state.af_data
+    if data is None:
+        st.info("Load a dataset first")
+        return
+    if len(data.df) == 0:
+        st.warning("Dataset is empty")
+        return
+
+    col_left, col_right = st.columns([3, 2], gap="large")
+    with col_right:
+        selected_index = _render_table_selector(data)
+    with col_left:
+        tabs = st.tabs(["pLDDT / PAE", "3D structure"])
+        with tabs[0]:
+            _render_model_panel(selected_index=selected_index)
+        with tabs[1]:
+            _render_molstar_panel(selected_index=selected_index)
+
+
 def main() -> None:
     st.set_page_config(page_title="af_analysis GUI", layout="wide")
     _init_state()
 
-    st.title("af_analysis GUI")
-    st.caption("Interactive analysis for AlphaFold outputs")
+    st.markdown(
+        """
+<style>
+div.block-container {
+    padding-top: 0.4rem;
+    padding-bottom: 0.6rem;
+}
+h1 {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+    st.caption("af_analysis GUI")
 
-    tabs = st.tabs(["Load", "Dataset", "Metrics", "Model", "3D"])
+    tabs = st.tabs(["Load", "Metrics", "Explore"])
     with tabs[0]:
         _render_load_panel()
     with tabs[1]:
-        _render_dataset_panel()
-    with tabs[2]:
         _render_metrics_panel()
-    with tabs[3]:
-        _render_model_panel()
-    with tabs[4]:
-        _render_molstar_panel()
+    with tabs[2]:
+        _render_explorer_panel()
 
     if st.session_state.last_error:
         with st.expander("Last error", expanded=False):
