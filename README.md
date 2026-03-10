@@ -72,6 +72,17 @@ cd af_analysis
 pip install .
 ```
 
+### Optional GUI (Streamlit)
+
+You can install and launch the GUI with:
+
+```bash
+pip install "af-analysis[gui]"
+af_analysis_gui
+```
+
+The GUI allows loading result folders, running common metrics, viewing tables, and plotting pLDDT/PAE.
+
 * For developers, you can install the package in editable mode:
 
 ```bash
