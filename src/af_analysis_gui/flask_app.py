@@ -160,6 +160,53 @@ def api_plddt():
     )
 
 
+@app.get("/api/pae")
+def api_pae():
+    from af_analysis.analysis import get_pae
+
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    index = request.args.get("index", default=0, type=int)
+    if index < 0 or index >= len(data.df):
+        return jsonify({"error": "Model index out of range"}), 400
+
+    row = data.df.iloc[index]
+    data_file = row.get("data_file")
+    if not data_file or (hasattr(data_file, "__class__") and str(data_file) in ("", "nan")):
+        return jsonify({"error": "No data file for this model"}), 404
+
+    pae_matrix = get_pae(str(data_file))
+    if pae_matrix is None:
+        return jsonify({"error": "No PAE data for this model"}), 404
+
+    pae_matrix = np.asarray(pae_matrix)
+    n = pae_matrix.shape[0]
+    residues = list(range(1, n + 1))
+
+    query = row.get("query")
+    chain_ids = [str(c) for c in data.chains.get(query, [])]
+    chain_lengths = [int(x) for x in data.chain_length.get(query, [])]
+
+    boundaries = []
+    running = 0
+    for length in chain_lengths[:-1]:
+        running += int(length)
+        boundaries.append(running)
+
+    return jsonify(
+        {
+            "pae": pae_matrix.tolist(),
+            "residues": residues,
+            "chain_ids": chain_ids,
+            "chain_lengths": chain_lengths,
+            "chain_boundaries": boundaries,
+        }
+    )
+
+
 @app.get("/api/structure")
 def api_structure():
     try:

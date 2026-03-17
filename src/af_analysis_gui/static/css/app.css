@@ -14,7 +14,8 @@ body {
     padding: 14px;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     box-sizing: border-box;
 }
 
@@ -96,14 +97,14 @@ tr.active {
 
 #plddt-plot {
     width: 100%;
-    height: 330px;
+    flex: 1;
+    min-height: 280px;
 }
 
 #molstar-viewer {
     width: 100%;
     flex: 1;
     min-height: 0;
-    position: relative;
     position: relative;
 }
 

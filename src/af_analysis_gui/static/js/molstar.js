@@ -160,6 +160,49 @@ export function highlightResidue(globalResidue) {
   return highlightResidues([globalResidue]);
 }
 
+// Highlight two groups with distinct visual styles:
+//   xResidues → persistent selection (Mol* selection colour, typically orange)
+//   yResidues → hover-style highlight (Mol* highlight colour, typically green)
+export function highlightTwoGroups(xResidues, yResidues) {
+  if (!state.plugin) return;
+
+  function buildTargets(globals) {
+    const targets = [];
+    for (const g of globals) {
+      const { chainId, localResidue } = mapGlobalResidue(g);
+      targets.push(chainId && localResidue != null
+        ? { chainId, seqId: localResidue }
+        : { chainId: null, seqId: Number(g) });
+    }
+    return targets;
+  }
+
+  const xTargets = buildTargets(xResidues);
+  const yTargets = buildTargets(yResidues);
+
+  const xLoci = xTargets.length ? buildMultiResidueLoci(state.plugin, xTargets) : null;
+  const yLoci = yTargets.length ? buildMultiResidueLoci(state.plugin, yTargets) : null;
+
+  if (xLoci) {
+    state.plugin.managers.interactivity.lociSelects.selectOnly({ loci: xLoci });
+    if (document.getElementById('auto-focus')?.checked) {
+      state.plugin.managers.camera.focusLoci(xLoci, { extraRadius: 2 });
+    }
+  } else {
+    state.plugin.managers.interactivity.lociSelects.deselectAll();
+  }
+
+  if (yLoci) {
+    state.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci: yLoci });
+  } else {
+    state.plugin.managers.interactivity.lociHighlights.clearHighlights();
+  }
+
+  setMolstarNote(
+    `Scored: ${xResidues.length} residue(s) | Aligned: ${yResidues.length} residue(s)`
+  );
+}
+
 // AlphaFold 3 pLDDT color scheme — reads B-factor (= pLDDT) from each atom.
 // Colors match the AF3 confidence legend: dark-blue / cyan / yellow / orange.
 function registerAfPlddt(plugin) {
@@ -262,6 +305,6 @@ export async function loadStructure(index) {
   debugStructureResidues(state.plugin);
 
   if (state.selectedResidues.length > 0) {
-    highlightResidue(state.selectedResidues[0]);
+    highlightResidues(state.selectedResidues);
   }
 }
