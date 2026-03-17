@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>af_analysis Flask GUI</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/molstar/build/viewer/molstar.css" />
+  <script src="https://unpkg.com/molstar/build/viewer/molstar.js"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; background: #f5f7fb; color: #182033; }
+    .page { padding: 14px; }
+    .card { background: #fff; border: 1px solid #d7dceb; border-radius: 10px; padding: 12px; }
+    .toolbar { display: grid; grid-template-columns: 1fr 180px 130px; gap: 10px; align-items: end; }
+    .toolbar input, .toolbar select, .toolbar button { padding: 8px; border: 1px solid #bfc7dc; border-radius: 8px; }
+    .toolbar button { background: #1843bf; color: #fff; cursor: pointer; }
+    .status { margin-top: 8px; font-size: 13px; }
+    .layout { margin-top: 12px; display: grid; grid-template-columns: 360px 1fr 1fr; gap: 12px; }
+    .table-wrap { max-height: 70vh; overflow: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border-bottom: 1px solid #e8ebf4; padding: 6px; text-align: left; }
+    tr:hover { background: #eef3ff; cursor: pointer; }
+    tr.active { background: #dce7ff; }
+    #plddt-plot { width: 100%; height: 330px; }
+    #molstar-viewer { width: 100%; height: 620px; position: relative; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h2>af_analysis Flask GUI</h2>
+
+    <div class="card">
+      <div class="toolbar">
+        <div>
+          <label for="directory">Results directory</label>
+          <input id="directory" type="text" value="" placeholder="/path/to/results" style="width: 100%;" />
+        </div>
+        <div>
+          <label for="format">Format</label>
+          <select id="format" style="width: 100%;">
+            <option value="auto">auto</option>
+            <option value="default">default</option>
+            <option value="colabfold_1.5">colabfold_1.5</option>
+            <option value="AF3_local">AF3_local</option>
+            <option value="AF3_webserver">AF3_webserver</option>
+            <option value="alphapulldown">alphapulldown</option>
+            <option value="alphapulldown_full">alphapulldown_full</option>
+            <option value="boltz1">boltz1</option>
+            <option value="chai1">chai1</option>
+            <option value="massivefold">massivefold</option>
+            <option value="full_massivefold">full_massivefold</option>
+          </select>
+        </div>
+        <button id="load-btn" type="button">Load dataset</button>
+      </div>
+      <div class="status" id="status">Load a dataset to begin.</div>
+    </div>
+
+    <div class="layout">
+      <div class="card table-wrap">
+        <div><strong>Dataset</strong></div>
+        <table id="dataset-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div><strong>pLDDT</strong></div>
+        <div id="plddt-plot"></div>
+        <div id="selected-residues" class="mono"></div>
+      </div>
+
+      <div class="card">
+        <div><strong>Mol*</strong></div>
+        <div id="molstar-viewer"></div>
+        <div id="molstar-note" class="status mono"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      selectedModel: 0,
+      selectedResidues: [],
+      chainIds: [],
+      chainLengths: [],
+      viewer: null,
+      plugin: null,
+      tableRows: []
+    };
+
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.style.color = isError ? '#a11927' : '#2d3a57';
+    }
+
+    function setMolstarNote(msg) {
+      document.getElementById('molstar-note').textContent = msg || '';
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, options);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    function renderSelectedResidues() {
+      const text = state.selectedResidues.length
+        ? 'Selected residues: ' + state.selectedResidues.join(', ')
+        : 'Selected residues: []';
+      document.getElementById('selected-residues').textContent = text;
+    }
+
+    function mapGlobalResidue(globalResidue) {
+      let r = Number(globalResidue);
+      for (let i = 0; i < state.chainLengths.length; i += 1) {
+        const len = Number(state.chainLengths[i] || 0);
+        if (r <= len) {
+          return { chainId: String(state.chainIds[i] || ''), chainResidue: r };
+        }
+        r -= len;
+      }
+      return { chainId: null, chainResidue: null };
+    }
+
+    function getMolstarNS() {
+      return window.molstar || {};
+    }
+
+    function buildResidueSelection(plugin, residueNumber, useAuthSeq, chainId, useAuthChain) {
+      const ns = getMolstarNS();
+      const MS = ns.molScript?.MolScriptBuilder || ns.MolScriptBuilder;
+      const Script = ns.script?.Script || ns.Script;
+      const StructureSelection = ns.structure?.StructureSelection || ns.StructureSelection;
+      const data = plugin.managers.structure.hierarchy.current.structures[0]?.cell?.obj?.data;
+      if (!MS || !Script || !StructureSelection || !data) return null;
+
+      const seqProp = useAuthSeq
+        ? MS.struct.atomProperty.macromolecular.auth_seq_id()
+        : MS.struct.atomProperty.macromolecular.label_seq_id();
+
+      const atomGroups = {
+        'residue-test': MS.core.set.has([MS.set(residueNumber), seqProp]),
+        'group-by': MS.struct.atomProperty.macromolecular.residueKey()
+      };
+
+      if (chainId) {
+        const chainProp = useAuthChain
+          ? MS.struct.atomProperty.macromolecular.auth_asym_id()
+          : MS.struct.atomProperty.macromolecular.label_asym_id();
+        atomGroups['chain-test'] = MS.core.rel.eq([chainProp, chainId]);
+      }
+
+      const query = MS.struct.generator.atomGroups(atomGroups);
+      const selection = Script.getStructureSelection(query, data);
+      return StructureSelection.toLociWithSourceUnits(selection);
+    }
+
+    function highlightResidue(globalResidue) {
+      if (!state.plugin || !Number.isInteger(globalResidue)) return false;
+      const mapping = mapGlobalResidue(globalResidue);
+
+      const attempts = [];
+      if (mapping.chainId && Number.isInteger(mapping.chainResidue)) {
+        attempts.push([mapping.chainResidue, true, mapping.chainId, false]);
+        attempts.push([mapping.chainResidue, true, mapping.chainId, true]);
+        attempts.push([mapping.chainResidue, false, mapping.chainId, false]);
+        attempts.push([mapping.chainResidue, false, mapping.chainId, true]);
+      }
+      attempts.push([globalResidue, true, null, false]);
+      attempts.push([globalResidue, false, null, false]);
+
+      for (const [rid, useAuthSeq, cid, useAuthChain] of attempts) {
+        const loci = buildResidueSelection(state.plugin, rid, useAuthSeq, cid, useAuthChain);
+        if (loci && loci.elements && loci.elements.length > 0) {
+          state.plugin.managers.interactivity.lociSelects.select({ loci });
+          state.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
+          state.plugin.managers.camera.focusLoci(loci);
+          setMolstarNote(`Highlighted global ${globalResidue} -> chain ${mapping.chainId || '?'} residue ${mapping.chainResidue || '?'}`);
+          console.log('[Flask Mol*] highlight', { globalResidue, mapping, attempt: { rid, useAuthSeq, cid, useAuthChain } });
+          return true;
+        }
+      }
+
+      setMolstarNote(`Residue highlight not found for index ${globalResidue}`);
+      return false;
+    }
+
+    async function ensureViewer() {
+      if (state.viewer) return;
+      state.viewer = await molstar.Viewer.create('molstar-viewer', {
+        layoutIsExpanded: false,
+        layoutShowControls: false,
+        layoutShowSequence: false,
+        layoutShowLog: false,
+        layoutShowLeftPanel: false,
+        viewportShowExpand: false,
+        viewportShowSelectionMode: false,
+        viewportShowAnimation: false,
+        pdbProvider: 'pdbe',
+        emdbProvider: 'pdbe'
+      });
+      state.plugin = state.viewer.plugin;
+    }
+
+    async function loadStructure(index) {
+      const payload = await api(`/api/structure?index=${index}`);
+      await ensureViewer();
+
+      try {
+        await state.plugin.clear();
+      } catch (_) {}
+
+      const data = await state.plugin.builders.data.rawData({ data: payload.structure_text, label: 'model' });
+      let trajectory = null;
+      try {
+        trajectory = await state.plugin.builders.structure.parseTrajectory(data, payload.structure_format);
+      } catch (_) {
+        trajectory = await state.plugin.builders.structure.parseTrajectory(
+          data,
+          payload.structure_format === 'pdb' ? 'mmcif' : 'pdb'
+        );
+      }
+
+      const model = await state.plugin.builders.structure.createModel(trajectory);
+      const structure = await state.plugin.builders.structure.createStructure(model);
+      const polymer = await state.plugin.builders.structure.tryCreateComponentStatic(structure, 'polymer');
+      if (polymer) {
+        await state.plugin.builders.structure.representation.addRepresentation(polymer, {
+          type: 'cartoon',
+          color: 'chain-id'
+        });
+        state.plugin.managers.camera.reset();
+      }
+
+      if (state.selectedResidues.length > 0) {
+        highlightResidue(state.selectedResidues[0]);
+      }
+    }
+
+    function renderTable(columns, rows) {
+      const head = document.getElementById('table-head');
+      const body = document.getElementById('table-body');
+      head.innerHTML = '<tr>' + columns.map((c) => `<th>${c}</th>`).join('') + '</tr>';
+      body.innerHTML = '';
+
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        if (Number(row.row) === Number(state.selectedModel)) tr.classList.add('active');
+        tr.innerHTML = columns.map((c) => `<td>${row[c] ?? ''}</td>`).join('');
+        tr.addEventListener('click', async () => {
+          state.selectedModel = Number(row.row);
+          renderTable(columns, rows);
+          await refreshModelPanels();
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function renderPlot(plddtPayload) {
+      const trace = {
+        x: plddtPayload.residues,
+        y: plddtPayload.plddt,
+        type: 'scatter',
+        mode: 'lines+markers',
+        marker: { size: 5 },
+        line: { width: 2 },
+        name: 'pLDDT'
+      };
+
+      const shapes = (plddtPayload.chain_boundaries || []).map((x) => ({
+        type: 'line',
+        x0: x,
+        x1: x,
+        y0: 0,
+        y1: 100,
+        line: { color: '#333', width: 1 }
+      }));
+
+      const layout = {
+        margin: { l: 40, r: 10, t: 10, b: 40 },
+        xaxis: { title: 'Residue' },
+        yaxis: { title: 'predicted LDDT', range: [0, 100] },
+        clickmode: 'event+select',
+        dragmode: 'pan',
+        shapes
+      };
+
+      Plotly.newPlot('plddt-plot', [trace], layout, { responsive: true });
+
+      const plotDiv = document.getElementById('plddt-plot');
+      plotDiv.on('plotly_click', (ev) => {
+        if (!ev?.points?.length) return;
+        const residue = Number(ev.points[0].x);
+        if (!Number.isInteger(residue)) return;
+        state.selectedResidues = [residue];
+        renderSelectedResidues();
+        highlightResidue(residue);
+      });
+
+      plotDiv.on('plotly_selected', (ev) => {
+        const pts = ev?.points || [];
+        const residues = Array.from(new Set(pts.map((p) => Number(p.x)).filter((x) => Number.isInteger(x)))).sort((a, b) => a - b);
+        state.selectedResidues = residues;
+        renderSelectedResidues();
+        if (residues.length > 0) highlightResidue(residues[0]);
+      });
+    }
+
+    async function refreshModelPanels() {
+      const plddtPayload = await api(`/api/plddt?index=${state.selectedModel}`);
+      state.chainIds = plddtPayload.chain_ids || [];
+      state.chainLengths = plddtPayload.chain_lengths || [];
+      renderPlot(plddtPayload);
+      renderSelectedResidues();
+      await loadStructure(state.selectedModel);
+    }
+
+    async function refreshTableAndPanels() {
+      const table = await api('/api/table');
+      state.tableRows = table.rows;
+      state.selectedModel = 0;
+      renderTable(table.columns, table.rows);
+      await refreshModelPanels();
+    }
+
+    document.getElementById('load-btn').addEventListener('click', async () => {
+      const directory = document.getElementById('directory').value.trim();
+      const format = document.getElementById('format').value;
+      if (!directory) {
+        setStatus('Please provide a directory path', true);
+        return;
+      }
+
+      setStatus('Loading dataset...');
+      try {
+        const payload = await api('/api/load', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ directory, format })
+        });
+        setStatus(`Dataset loaded (${payload.rows} rows)`);
+        await refreshTableAndPanels();
+      } catch (err) {
+        setStatus(String(err), true);
+      }
+    });
+
+    renderSelectedResidues();
+  </script>
+</body>
+</html>
