@@ -1,0 +1,112 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    background: #f5f7fb;
+    color: #182033;
+}
+
+.page {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #d7dceb;
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.toolbar {
+    display: grid;
+    grid-template-columns: 1fr 180px 130px;
+    gap: 10px;
+    align-items: end;
+}
+
+.toolbar input, .toolbar select, .toolbar button {
+    padding: 8px;
+    border: 1px solid #bfc7dc;
+    border-radius: 8px;
+}
+
+.toolbar button {
+    background: #1843bf;
+    color: #fff;
+    cursor: pointer;
+}
+
+.status {
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.layout {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) 8px 1fr 8px 1fr;
+    gap: 0;
+    flex: 1;
+    align-items: stretch;
+    min-height: 0;
+}
+
+.splitter {
+    width: 8px;
+    cursor: col-resize;
+    background: rgba(0,0,0,0.08);
+}
+
+.table-wrap {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+}
+
+th, td {
+    border-bottom: 1px solid #e8ebf4;
+    padding: 6px;
+    text-align: left;
+}
+
+tr:hover {
+    background: #eef3ff;
+    cursor: pointer;
+}
+
+tr.active {
+    background: #dce7ff;
+}
+
+#plddt-plot {
+    width: 100%;
+    height: 330px;
+}
+
+#molstar-viewer {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    position: relative;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
