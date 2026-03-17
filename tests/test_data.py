@@ -372,6 +372,32 @@ def test_get_plddt_dna_ions():
     assert plddt_array == pytest.approx(expected_plddt, precision)
 
 
+def test_get_plddt_rna_ions():
+    data_path = os.path.join(TEST_FILE_PATH, "fold_test_protein_arn_atp_mn")
+    my_data = af_analysis.Data(data_path)
+
+    plddt_array = my_data.get_plddt(0)
+
+    assert len(plddt_array) == 446
+
+    expected_values = {
+        0: 91.58999633789062,
+        1: 98.12000274658203,
+        2: 98.4000015258789,
+        50: 98.55000305175781,
+        100: 97.16000366210938,
+        200: 98.58999633789062,
+        300: 97.8499984741211,
+        400: 98.91999816894531,
+        440: 97.0199966430664,
+        445: 96.12999725341797,
+    }
+
+    precision = 0.001
+    for index, expected_value in expected_values.items():
+        assert plddt_array[index] == pytest.approx(expected_value, precision)
+
+
 def test_concat():
     data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
     my_data = af_analysis.Data(data_path)

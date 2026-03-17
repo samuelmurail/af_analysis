@@ -187,6 +187,55 @@ def test_af3_webserver():
     assert list(my_data.df["ipTM"]) == [0.93, 0.94, 0.93, 0.93, 0.93]
 
 
+def test_af3_webserver_protein_rna_ligand_ion():
+    data_path = os.path.join(TEST_FILE_PATH, "fold_test_protein_arn_atp_mn")
+
+    my_data = af_analysis.Data(data_path)
+
+    assert my_data.format == "AF3_webserver"
+    assert len(my_data.df) == 5
+    assert (
+        my_data.df.columns
+        == np.array(
+            [
+                "pdb",
+                "query",
+                "model",
+                "data_file",
+                "chain_iptm",
+                "chain_pair_iptm",
+                "chain_pair_pae_min",
+                "chain_ptm",
+                "fraction_disordered",
+                "has_clash",
+                "ipTM",
+                "num_recycles",
+                "pTM",
+                "ranking_confidence",
+                "format",
+            ]
+        )
+    ).all()
+
+    query = my_data.df.iloc[0]["query"]
+
+    assert my_data.chain_length[query] == [440, 1, 1, 5]
+    assert my_data.chains[query] == ["A", "B", "C", "D"]
+    assert my_data.chain_type[query] == [
+        "protein",
+        "ligand",
+        "ligand",
+        "nucleic_acid",
+    ]
+
+    # There should be 0 relaxed structures
+
+    assert "relaxed_pdb" not in my_data.df.columns
+    assert list(my_data.df["num_recycles"]) == [10] * 5
+    assert list(my_data.df["ipTM"]) == [0.97, 0.95, 0.95, 0.95, 0.95]
+    assert list(my_data.df["ranking_confidence"]) == [0.97, 0.96, 0.95, 0.95, 0.95]
+
+
 def test_af3_local():
     data_path = os.path.join(TEST_FILE_PATH, "af3_local_prot_pep_complex")
 

@@ -377,6 +377,38 @@ def test_af3_webserver():
     )
 
 
+def test_af3_webserver_lis_lia_protein_rna_ligand_ion():
+    data_path = os.path.join(TEST_FILE_PATH, "fold_test_protein_arn_atp_mn")
+
+    my_data = af_analysis.Data(data_path)
+
+    precision = 0.001
+
+    analysis.LIS_matrix(my_data)
+    expected_LIS_0 = [
+        [0.8074678, 0.82104167, 0.80263258, 0.80154545],
+        [0.53301136, 0.93333333, 0.93333333, 0.905],
+        [0.47589015, 0.93333333, 0.93333333, 0.89333333],
+        [0.39528946, 0.9, 0.88166667, 0.894],
+    ]
+
+    np.testing.assert_allclose(
+        np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
+    )
+
+    analysis.LIA_matrix(my_data)
+    expected_LIA_0 = [
+        [0.92604251, 0.92777778, 0.88888889, 0.80706522],
+        [0.85555556, 0.93333333, 0.93333333, 0.0],
+        [0.79305556, 0.93333333, 0.93333333, 0.0],
+        [0.27192982, 0.0, 0.0, 0.894],
+    ]
+
+    np.testing.assert_allclose(
+        np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
+    )
+
+
 def test_af3_local():
     data_path = os.path.join(TEST_FILE_PATH, "af3_local_prot_pep_complex")
 
@@ -812,6 +844,58 @@ def test_ipSAE():
         [
             my_data.df.iloc[i]["ipSAE_A_B"]
             == pytest.approx(expected_ipSAE_A_B[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+
+def test_ipSAE_af3_webserver_protein_rna_ligand_ion():
+    data_path = os.path.join(TEST_FILE_PATH, "fold_test_protein_arn_atp_mn")
+    my_data = af_analysis.Data(data_path)
+
+    analysis.ipSAE(my_data)
+
+    expected_cols = [
+        "ipSAE_A_B",
+        "ipSAE_A_C",
+        "ipSAE_A_D",
+        "ipSAE_B_A",
+        "ipSAE_B_C",
+        "ipSAE_B_D",
+        "ipSAE_C_A",
+        "ipSAE_C_B",
+        "ipSAE_C_D",
+        "ipSAE_D_A",
+        "ipSAE_D_B",
+        "ipSAE_D_C",
+    ]
+    assert all(col in my_data.df.columns for col in expected_cols)
+
+    precision = 0.01
+
+    expected_ipSAE_A_B = [0.8621, 0.8621, 0.8621, 0.8621, 0.8621]
+    assert np.all(
+        [
+            my_data.df.iloc[i]["ipSAE_A_B"]
+            == pytest.approx(expected_ipSAE_A_B[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    expected_ipSAE_A_D = [0.7801, 0.7611, 0.7675, 0.7482, 0.7611]
+    assert np.all(
+        [
+            my_data.df.iloc[i]["ipSAE_A_D"]
+            == pytest.approx(expected_ipSAE_A_D[i], precision)
+            for i in range(len(my_data.df))
+        ]
+    )
+
+    expected_ipSAE_D_A = [0.6303, 0.6119, 0.5917, 0.5439, 0.543]
+    assert np.all(
+        [
+            my_data.df.iloc[i]["ipSAE_D_A"]
+            == pytest.approx(expected_ipSAE_D_A[i], precision)
             for i in range(len(my_data.df))
         ]
     )
