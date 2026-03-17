@@ -1264,6 +1264,7 @@ def ipTM_d0(data, verbose=True):
     """
 
     iptm_d0_list = []
+    iptm_d0_matrix_list = []
 
     disable = False if verbose else True
 
@@ -1279,6 +1280,7 @@ def ipTM_d0(data, verbose=True):
             iptm_d0_list.append(
                 {f"ipTM_d0_{data.chains[query][0]}_{data.chains[query][1]}": None}
             )
+            iptm_d0_matrix_list.append(None)
             continue
 
         # Check if the PAE matrix is square
@@ -1291,12 +1293,25 @@ def ipTM_d0(data, verbose=True):
 
         iptm_d0_list.append(iptm_d0_values)
 
+        # Build NxN matrix from per-pair values
+        chain_ids = data.chains[query]
+        matrix = [
+            [
+                iptm_d0_values.get(f"ipTM_d0_{chain_ids[i]}_{chain_ids[j]}", 0.0)
+                for j in range(len(chain_ids))
+            ]
+            for i in range(len(chain_ids))
+        ]
+        iptm_d0_matrix_list.append(matrix)
+
     assert len(iptm_d0_list) == len(data.df["query"])
 
     iptm_d0_df = pd.DataFrame(iptm_d0_list)
 
     for col in iptm_d0_df.columns:
         data.df.loc[:, col] = iptm_d0_df.loc[:, col].to_numpy()
+
+    data.df.loc[:, "ipTM_d0_matrix"] = iptm_d0_matrix_list
 
 
 def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):

@@ -1,6 +1,6 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
-import { renderPlot, renderPaePlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay } from './plot.js';
+import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay } from './plot.js';
 import { loadStructure, highlightResidue, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
@@ -29,6 +29,30 @@ async function refreshModelPanels() {
         const el = document.getElementById("selected-residues");
         if (el) el.textContent = `Scored: [${xResidues.join(", ")}] | Aligned: [${yResidues.join(", ")}]`;
       }
+    } catch (e) {
+      renderPlot(plddtPayload, makePlddtHandlers());
+      document.getElementById('plot-type').value = 'plddt';
+    }
+  } else if (plotType === 'lis') {
+    try {
+      const lisPayload = await api(`/api/lis?index=${state.selectedModel}`);
+      renderLisPlot(lisPayload, makeLisHandlers());
+    } catch (e) {
+      renderPlot(plddtPayload, makePlddtHandlers());
+      document.getElementById('plot-type').value = 'plddt';
+    }
+  } else if (plotType === 'lia') {
+    try {
+      const liaPayload = await api(`/api/lia?index=${state.selectedModel}`);
+      renderLisPlot(liaPayload, makeLisHandlers());
+    } catch (e) {
+      renderPlot(plddtPayload, makePlddtHandlers());
+      document.getElementById('plot-type').value = 'plddt';
+    }
+  } else if (plotType === 'iptm_d0_matrix') {
+    try {
+      const iptmPayload = await api(`/api/iptm_d0?index=${state.selectedModel}`);
+      renderLisPlot(iptmPayload, makeLisHandlers());
     } catch (e) {
       renderPlot(plddtPayload, makePlddtHandlers());
       document.getElementById('plot-type').value = 'plddt';
@@ -78,6 +102,42 @@ function makePaeHandlers() {
   };
 }
 
+function _chainIdsToResidues(chainIds) {
+  const ids = state.chainIds || [];
+  const lengths = state.chainLengths || [];
+  const starts = [];
+  let offset = 1;
+  for (const len of lengths) {
+    starts.push(offset);
+    offset += len;
+  }
+  const residues = [];
+  for (const chainId of chainIds) {
+    const idx = ids.indexOf(chainId);
+    if (idx < 0) continue;
+    const start = starts[idx];
+    const len = lengths[idx];
+    for (let r = start; r < start + len; r++) residues.push(r);
+  }
+  return residues;
+}
+
+function makeLisHandlers() {
+  return {
+    onClick: ({ xChainId, yChainId }) => {
+      const residues = _chainIdsToResidues([...new Set([xChainId, yChainId])]);
+      state.selectedResidues = residues;
+      renderSelectedResidues();
+      if (residues.length) highlightResidues(residues);
+    },
+    onHover: ({ xChainId, yChainId }) => {
+      const residues = _chainIdsToResidues([...new Set([xChainId, yChainId])]);
+      if (residues.length) hoverResidues(residues);
+    },
+    onUnhover: () => { unhoverResidues(); },
+  };
+}
+
 function makePlddtHandlers() {
   return {
     onClick: (residue) => {
@@ -99,10 +159,26 @@ function makePlddtHandlers() {
   };
 }
 
+function _updateLisOption(hasLis, hasLia, hasIptmD0) {
+  const optLis = document.getElementById('opt-lis');
+  const optLia = document.getElementById('opt-lia');
+  const optIptm = document.getElementById('opt-iptm-d0');
+  const plotType = document.getElementById('plot-type');
+  if (optLis) optLis.style.display = hasLis ? '' : 'none';
+  if (optLia) optLia.style.display = hasLia ? '' : 'none';
+  if (optIptm) optIptm.style.display = hasIptmD0 ? '' : 'none';
+  if (plotType) {
+    if (!hasLis && plotType.value === 'lis') plotType.value = 'plddt';
+    if (!hasLia && plotType.value === 'lia') plotType.value = 'plddt';
+    if (!hasIptmD0 && plotType.value === 'iptm_d0_matrix') plotType.value = 'plddt';
+  }
+}
+
 async function refreshTableAndPanels() {
   const table = await api('/api/table');
   state.tableRows = table.rows;
   state.selectedModel = 0;
+  _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix);
   renderCurrentTable(table.columns, table.rows);
   await refreshModelPanels();
 }
@@ -152,6 +228,33 @@ function initEvents() {
     clearPlotSelection();
     clearPaeColors();
     clearMolstarSelection();
+  });
+
+  document.getElementById('compute-btn')?.addEventListener('click', async () => {
+    const scores = ['pdockq2', 'LIS', 'LIA', 'iptm_d0'].filter(
+      id => document.getElementById(`compute-${id}`)?.checked
+    );
+    if (!scores.length) return;
+    const statusEl = document.getElementById('compute-status');
+    if (statusEl) { statusEl.textContent = 'Computing…'; statusEl.style.color = '#2d3a57'; }
+    try {
+      const added = [];
+      for (const score of scores) {
+        const res = await api('/api/compute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ score }),
+        });
+        added.push(...(res.columns_added || []));
+      }
+      if (statusEl) statusEl.textContent = added.length
+        ? `Done. New columns: ${added.join(', ')}`
+        : 'Done (no new columns added).';
+      // Refresh the table so new numeric columns appear.
+      await refreshTableAndPanels();
+    } catch (err) {
+      if (statusEl) { statusEl.textContent = String(err); statusEl.style.color = '#a11927'; }
+    }
   });
 }
 

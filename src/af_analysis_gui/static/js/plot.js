@@ -264,6 +264,70 @@ export function renderPaePlot(paePayload, handlers) {
   });
 }
 
+export function renderLisPlot(lisPayload, handlers) {
+  const chainIds = lisPayload.chain_ids || [];
+  const lis = lisPayload.lis || [];
+  const label = lisPayload.label || "LIS";
+
+  const textMatrix = lis.map(row =>
+    row.map(v => (typeof v === "number" && Number.isFinite(v)) ? v.toFixed(2) : "N/A")
+  );
+
+  const trace = {
+    z: lis,
+    x: chainIds,
+    y: chainIds,
+    type: "heatmap",
+    colorscale: [
+      [0.000, "#7E1A00"],
+      [0.125, "#AE4A1A"],
+      [0.250, "#D4896A"],
+      [0.375, "#EED8C0"],
+      [0.500, "#FAFAF8"],
+      [0.625, "#C0CEDF"],
+      [0.750, "#6898C8"],
+      [0.875, "#2860A0"],
+      [1.000, "#001880"],
+    ],
+    zmin: 0,
+    zmax: 1,
+    colorbar: { title: label, thickness: 14, len: 0.8 },
+    text: textMatrix,
+    texttemplate: "%{text}",
+    textfont: { color: "black", size: 12 },
+    hovertemplate: "Chain %{y} → Chain %{x}<br>" + label + ": %{text}<extra></extra>",
+    hoverongaps: false,
+  };
+
+  const layout = {
+    margin: { l: 50, r: 10, t: 38, b: 50 },
+    xaxis: { title: "Chain j" },
+    yaxis: { title: "Chain i", autorange: "reversed" },
+  };
+
+  Plotly.newPlot("plddt-plot", [trace], layout, { responsive: true });
+  document.getElementById("plddt-plot")?.classList.remove("pae-active");
+
+  const plotDiv = document.getElementById("plddt-plot");
+  plotDiv.on("plotly_click", (ev) => {
+    if (!ev?.points?.length) return;
+    const xChainId = String(ev.points[0].x);
+    const yChainId = String(ev.points[0].y);
+    if (handlers?.onClick) handlers.onClick({ xChainId, yChainId });
+  });
+
+  plotDiv.on("plotly_hover", (ev) => {
+    if (!ev?.points?.length) return;
+    const xChainId = String(ev.points[0].x);
+    const yChainId = String(ev.points[0].y);
+    if (handlers?.onHover) handlers.onHover({ xChainId, yChainId });
+  });
+
+  plotDiv.on("plotly_unhover", () => {
+    if (handlers?.onUnhover) handlers.onUnhover();
+  });
+}
+
 export function resizePlot() {
   const plotDiv = document.getElementById("plddt-plot");
   if (plotDiv && typeof Plotly !== "undefined" && Plotly.Plots?.resize) {

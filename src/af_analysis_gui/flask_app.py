@@ -129,7 +129,10 @@ def api_table():
             item[column] = _normalize_for_json(row[column])
         rows.append(item)
 
-    return jsonify({"columns": ["row", *columns], "rows": rows, "total": int(len(df))})
+    has_lis = "LIS" in df.columns and bool(df["LIS"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
+    has_lia = "LIA" in df.columns and bool(df["LIA"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
+    has_iptm_d0_matrix = "ipTM_d0_matrix" in df.columns and bool(df["ipTM_d0_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
+    return jsonify({"columns": ["row", *columns], "rows": rows, "total": int(len(df)), "has_lis": has_lis, "has_lia": has_lia, "has_iptm_d0_matrix": has_iptm_d0_matrix})
 
 
 @app.get("/api/plddt")
@@ -219,6 +222,69 @@ def api_pae():
     )
 
 
+@app.get("/api/lis")
+def api_lis():
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    index = request.args.get("index", default=0, type=int)
+    if index < 0 or index >= len(data.df):
+        return jsonify({"error": "Model index out of range"}), 400
+
+    row = data.df.iloc[index]
+    lis = row.get("LIS")
+    if not isinstance(lis, (list, np.ndarray)):
+        return jsonify({"error": "No LIS data for this model"}), 404
+
+    query = row.get("query")
+    chain_ids = [str(c) for c in data.chains.get(query, [])]
+    return jsonify({"lis": _normalize_for_json(lis), "chain_ids": chain_ids, "label": "LIS"})
+
+
+@app.get("/api/lia")
+def api_lia():
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    index = request.args.get("index", default=0, type=int)
+    if index < 0 or index >= len(data.df):
+        return jsonify({"error": "Model index out of range"}), 400
+
+    row = data.df.iloc[index]
+    lia = row.get("LIA")
+    if not isinstance(lia, (list, np.ndarray)):
+        return jsonify({"error": "No LIA data for this model"}), 404
+
+    query = row.get("query")
+    chain_ids = [str(c) for c in data.chains.get(query, [])]
+    return jsonify({"lis": _normalize_for_json(lia), "chain_ids": chain_ids, "label": "cLIS (LIA)"})
+
+
+@app.get("/api/iptm_d0")
+def api_iptm_d0():
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    index = request.args.get("index", default=0, type=int)
+    if index < 0 or index >= len(data.df):
+        return jsonify({"error": "Model index out of range"}), 400
+
+    row = data.df.iloc[index]
+    matrix = row.get("ipTM_d0_matrix")
+    if not isinstance(matrix, (list, np.ndarray)):
+        return jsonify({"error": "No ipTM_d0 matrix data for this model"}), 404
+
+    query = row.get("query")
+    chain_ids = [str(c) for c in data.chains.get(query, [])]
+    return jsonify({"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipTM d0"})
+
+
 @app.get("/api/structure")
 def api_structure():
     try:
@@ -260,6 +326,42 @@ def api_health():
     loaded = STATE.af_data is not None
     rows = int(len(STATE.af_data.df)) if loaded else 0
     return jsonify({"loaded": loaded, "rows": rows})
+
+
+@app.post("/api/compute")
+def api_compute():
+    """Run one of the supported scoring functions on the loaded dataset.
+
+    Body JSON: { "score": "pdockq2" | "LIS" | "iptm_d0" }
+    Returns:   { "ok": true, "columns_added": [...] }
+    """
+    from af_analysis import analysis as ana
+
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    payload = request.get_json(silent=True) or {}
+    score = str(payload.get("score", "")).strip()
+
+    cols_before = set(data.df.columns)
+    try:
+        if score == "pdockq2":
+            ana.pdockq2(data, verbose=False)
+        elif score == "LIS":
+            ana.LIS_matrix(data, verbose=False)
+        elif score == "LIA":
+            ana.LIA_matrix(data, verbose=False)
+        elif score == "iptm_d0":
+            ana.ipTM_d0(data, verbose=False)
+        else:
+            return jsonify({"error": f"Unknown score '{score}'"}), 400
+    except Exception:
+        return jsonify({"error": "Computation failed", "details": traceback.format_exc()}), 500
+
+    cols_added = [c for c in data.df.columns if c not in cols_before]
+    return jsonify({"ok": True, "columns_added": cols_added})
 
 
 def main() -> int:
