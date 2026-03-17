@@ -1371,7 +1371,7 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
     iptm_size = 0.0
     for i in range(len(chain_length)):
         for j in range(len(chain_length)):
-            if i != j:
+            # if i != j:
                 do_chain = chain_length[i] + chain_length[j]
                 type = (
                     "nucleic_acid"

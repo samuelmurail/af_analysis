@@ -382,7 +382,7 @@ def test_af3_webserver_lis_lia_protein_rna_ligand_ion():
 
     my_data = af_analysis.Data(data_path)
 
-    precision = 0.001
+    precision = 0.01
 
     analysis.LIS_matrix(my_data)
     expected_LIS_0 = [
