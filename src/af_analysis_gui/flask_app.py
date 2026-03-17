@@ -55,23 +55,15 @@ def _require_data() -> af_analysis.Data:
 
 
 def _preferred_table_columns(df) -> list[str]:
-    preferred = [
-        "query",
-        "model",
-        "name",
-        "rank",
-        "ranking_score",
-        "ptm",
-        "iptm",
-        "mean_plddt",
-        "pdockq",
-        "pdockq2",
-        "LIS_pep",
-    ]
-    selected = [column for column in preferred if column in df.columns]
-    if len(selected) >= 3:
-        return selected[:8]
-    return list(df.columns[:8])
+    # Always keep these identifier columns when present.
+    id_cols = ["query", "model", "seed"]
+    # Add every column whose dtype is numeric (int or float).
+    numeric_cols = list(df.select_dtypes(include="number").columns)
+    # Preserve id_cols first (in order), then numeric cols not already included.
+    seen = set(id_cols)
+    columns = [c for c in id_cols if c in df.columns]
+    columns += [c for c in numeric_cols if c not in seen]
+    return columns
 
 
 @app.get("/")

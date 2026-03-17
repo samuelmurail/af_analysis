@@ -6,7 +6,9 @@ export const state = {
   chainLengths: [],
   viewer: null,
   plugin: null,
-  tableRows: []
+  tableRows: [],
+  sortCol: null,  // column name currently sorted, or null
+  sortDir: 1,     // 1 = ascending, -1 = descending
 };
 
 export function renderSelectedResidues() {
@@ -22,10 +24,41 @@ export function renderTable(columns, rows, onRowClick) {
   const body = document.getElementById("table-body");
   if (!head || !body) return;
 
-  head.innerHTML = `<tr>${columns.map((c) => `<th>${c}</th>`).join("")}</tr>`;
-  body.innerHTML = "";
+  // Build sortable headers.
+  const headerCells = columns.map((c) => {
+    const isActive = c === state.sortCol;
+    const arrow = isActive ? (state.sortDir === 1 ? ' ▲' : ' ▼') : '';
+    return `<th class="sortable${isActive ? ' sort-active' : ''}" data-col="${c}">${c}${arrow}</th>`;
+  }).join("");
+  head.innerHTML = `<tr>${headerCells}</tr>`;
 
-  rows.forEach((row) => {
+  // Attach click handlers to each <th>.
+  head.querySelectorAll('th.sortable').forEach((th) => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (state.sortCol === col) {
+        state.sortDir *= -1;
+      } else {
+        state.sortCol = col;
+        state.sortDir = 1;
+      }
+      renderTable(columns, rows, onRowClick);
+    });
+  });
+
+  // Sort a shallow copy of rows so the original order is preserved.
+  const sorted = state.sortCol
+    ? [...rows].sort((a, b) => {
+        const av = a[state.sortCol];
+        const bv = b[state.sortCol];
+        const an = Number(av), bn = Number(bv);
+        if (!isNaN(an) && !isNaN(bn)) return (an - bn) * state.sortDir;
+        return String(av ?? '').localeCompare(String(bv ?? '')) * state.sortDir;
+      })
+    : rows;
+
+  body.innerHTML = "";
+  sorted.forEach((row) => {
     const tr = document.createElement("tr");
     if (Number(row.row) === Number(state.selectedModel)) tr.classList.add("active");
     tr.innerHTML = columns.map((c) => `<td>${row[c] ?? ""}</td>`).join("");

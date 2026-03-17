@@ -90,6 +90,20 @@ th, td {
     text-align: left;
 }
 
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+th.sortable:hover {
+    background: #eef3ff;
+}
+
+th.sort-active {
+    color: #1843bf;
+}
+
 tr:hover {
     background: #eef3ff;
     cursor: pointer;
