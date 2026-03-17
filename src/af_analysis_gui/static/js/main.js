@@ -1,7 +1,7 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
-import { renderPlot, renderPaePlot } from './plot.js';
-import { loadStructure, highlightResidue, highlightResidues, highlightTwoGroups } from './molstar.js';
+import { renderPlot, renderPaePlot, highlightPlotResidues } from './plot.js';
+import { loadStructure, highlightResidue, highlightResidues, applyPaeColors, clearPaeColors, subscribeToMolstarHover } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
 function renderCurrentTable(columns, rows) {
@@ -33,6 +33,9 @@ async function refreshModelPanels() {
 
   renderSelectedResidues();
   await loadStructure(state.selectedModel);
+  subscribeToMolstarHover((globalResidues) => {
+    highlightPlotResidues(globalResidues);
+  });
 }
 
 function makePaeHandlers() {
@@ -40,14 +43,17 @@ function makePaeHandlers() {
     onClick: (residue) => {
       const el = document.getElementById("selected-residues");
       if (el) el.textContent = `Scored: [${residue}] | Aligned: []`;
-      highlightResidue(residue);
+      applyPaeColors([residue], []);
     },
     onPaeSelect: ({ xResidues, yResidues }) => {
       const el = document.getElementById("selected-residues");
       if (el) el.textContent = `Scored: [${xResidues.join(", ")}] | Aligned: [${yResidues.join(", ")}]`;
       if (xResidues.length > 0 || yResidues.length > 0) {
-        highlightTwoGroups(xResidues, yResidues);
+        applyPaeColors(xResidues, yResidues);
       }
+    },
+    onDeselect: () => {
+      clearPaeColors();
     },
   };
 }
@@ -114,9 +120,67 @@ function initEvents() {
   });
 }
 
+// ── Directory browser ────────────────────────────────────────────────────────
+
+let _browseCurrent = null;
+
+async function _browseLoad(path) {
+  const data = await api(`/api/browse?path=${encodeURIComponent(path)}`);
+  _browseCurrent = data.path;
+  document.getElementById('browse-path').textContent = data.path;
+  document.getElementById('browse-up').disabled = !data.parent;
+  const list = document.getElementById('browse-list');
+  list.innerHTML = '';
+  for (const dir of data.dirs) {
+    const li = document.createElement('li');
+    li.textContent = '📁 ' + dir;
+    li.style.cssText = 'padding:7px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f0f2f7;';
+    li.addEventListener('mouseover', () => li.style.background = '#f0f4ff');
+    li.addEventListener('mouseout',  () => li.style.background = '');
+    li.addEventListener('click', () => _browseLoad(data.path + '/' + dir));
+    list.appendChild(li);
+  }
+  if (!data.dirs.length) {
+    const li = document.createElement('li');
+    li.textContent = '(no subdirectories)';
+    li.style.cssText = 'padding:10px 12px; color:#888; font-size:13px;';
+    list.appendChild(li);
+  }
+}
+
+function initBrowser() {
+  const modal = document.getElementById('browse-modal');
+  const close = () => { modal.style.display = 'none'; };
+
+  document.getElementById('browse-btn').addEventListener('click', async () => {
+    modal.style.display = 'flex';
+    const current = document.getElementById('directory').value.trim() || '~';
+    await _browseLoad(current);
+  });
+
+  document.getElementById('browse-up').addEventListener('click', async () => {
+    const pathEl = document.getElementById('browse-path').textContent;
+    if (!pathEl) return;
+    const parent = pathEl.split('/').slice(0, -1).join('/') || '/';
+    await _browseLoad(parent);
+  });
+
+  document.getElementById('browse-select').addEventListener('click', () => {
+    if (_browseCurrent) document.getElementById('directory').value = _browseCurrent;
+    close();
+  });
+
+  document.getElementById('browse-cancel').addEventListener('click', close);
+  document.getElementById('browse-cancel2').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
 async function main() {
   initResizableLayout();
   initEvents();
+  initBrowser();
   renderSelectedResidues();
 }
 

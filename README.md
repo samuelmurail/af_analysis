@@ -72,7 +72,7 @@ cd af_analysis
 pip install .
 ```
 
-### Optional GUI (Streamlit)
+### Optional GUI (Flask)
 
 You can install and launch the GUI with:
 
@@ -81,7 +81,7 @@ pip install "af-analysis[gui]"
 af_analysis_gui
 ```
 
-The GUI allows loading result folders, running common metrics, viewing tables, and plotting pLDDT/PAE.
+Then open `http://127.0.0.1:5000` in your browser. The GUI allows loading result folders, viewing tables, selecting models, and plotting pLDDT/PAE.
 
 * For developers, you can install the package in editable mode:
 

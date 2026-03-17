@@ -101,6 +101,26 @@ def api_load_dataset():
         return jsonify({"error": "Failed to load dataset", "details": STATE.last_error}), 500
 
 
+@app.get("/api/browse")
+def api_browse():
+    import os
+    raw = request.args.get("path", "~")
+    try:
+        p = Path(raw).expanduser().resolve()
+        if not p.is_dir():
+            p = p.parent
+        entries = sorted(
+            [e.name for e in p.iterdir() if e.is_dir() and not e.name.startswith(".")]
+        )
+        return jsonify({
+            "path": str(p),
+            "parent": str(p.parent) if p != p.parent else None,
+            "dirs": entries,
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.get("/api/table")
 def api_table():
     try:

@@ -1,17 +1,13 @@
 
 
-To run test.py:
+To run the Flask GUI:
 
 ```bash
-streamlit run test.py
+pip install "af-analysis[gui]"
+af_analysis_gui
 ```
 
-```
-pip install streamlit
-pip install plotly
-```
-
-To run the Flask GUI:
+Or directly:
 
 ```bash
 python -m af_analysis_gui.flask_app
