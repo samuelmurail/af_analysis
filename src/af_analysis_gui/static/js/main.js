@@ -1,7 +1,7 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
-import { renderPlot, renderPaePlot, highlightPlotResidues } from './plot.js';
-import { loadStructure, highlightResidue, highlightResidues, applyPaeColors, clearPaeColors, subscribeToMolstarHover } from './molstar.js';
+import { renderPlot, renderPaePlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay } from './plot.js';
+import { loadStructure, highlightResidue, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
 function renderCurrentTable(columns, rows) {
@@ -23,6 +23,12 @@ async function refreshModelPanels() {
     try {
       const paePayload = await api(`/api/pae?index=${state.selectedModel}`);
       renderPaePlot(paePayload, makePaeHandlers());
+      if (state.paeSelection) {
+        const { xResidues, yResidues } = state.paeSelection;
+        reapplyPaePlotOverlay(xResidues, yResidues);
+        const el = document.getElementById("selected-residues");
+        if (el) el.textContent = `Scored: [${xResidues.join(", ")}] | Aligned: [${yResidues.join(", ")}]`;
+      }
     } catch (e) {
       renderPlot(plddtPayload, makePlddtHandlers());
       document.getElementById('plot-type').value = 'plddt';
@@ -33,6 +39,9 @@ async function refreshModelPanels() {
 
   renderSelectedResidues();
   await loadStructure(state.selectedModel);
+  if (plotType === 'pae' && state.paeSelection) {
+    await applyPaeColors(state.paeSelection.xResidues, state.paeSelection.yResidues);
+  }
   subscribeToMolstarHover((globalResidues) => {
     highlightPlotResidues(globalResidues);
   });
@@ -41,11 +50,14 @@ async function refreshModelPanels() {
 function makePaeHandlers() {
   return {
     onClick: (residue) => {
+      state.paeSelection = { xResidues: [residue], yResidues: [] };
       const el = document.getElementById("selected-residues");
       if (el) el.textContent = `Scored: [${residue}] | Aligned: []`;
       applyPaeColors([residue], []);
     },
     onPaeSelect: ({ xResidues, yResidues }) => {
+      state.paeSelection = (xResidues.length > 0 || yResidues.length > 0)
+        ? { xResidues, yResidues } : null;
       const el = document.getElementById("selected-residues");
       if (el) el.textContent = `Scored: [${xResidues.join(", ")}] | Aligned: [${yResidues.join(", ")}]`;
       if (xResidues.length > 0 || yResidues.length > 0) {
@@ -53,7 +65,15 @@ function makePaeHandlers() {
       }
     },
     onDeselect: () => {
+      state.paeSelection = null;
       clearPaeColors();
+    },
+    onHover: ({ xResidue, yResidue }) => {
+      const residues = [...new Set([xResidue, yResidue].filter(Number.isInteger))];
+      hoverResidues(residues);
+    },
+    onUnhover: () => {
+      unhoverResidues();
     },
   };
 }
@@ -69,6 +89,12 @@ function makePlddtHandlers() {
       state.selectedResidues = residues;
       renderSelectedResidues();
       if (residues.length > 0) highlightResidues(residues);
+    },
+    onHover: (residues) => {
+      hoverResidues(residues);
+    },
+    onUnhover: () => {
+      unhoverResidues();
     },
   };
 }
@@ -117,6 +143,15 @@ function initEvents() {
     if (state.selectedModel != null) {
       await loadStructure(state.selectedModel);
     }
+  });
+
+  document.getElementById('clear-selection-btn')?.addEventListener('click', () => {
+    state.selectedResidues = [];
+    state.paeSelection = null;
+    renderSelectedResidues();
+    clearPlotSelection();
+    clearPaeColors();
+    clearMolstarSelection();
   });
 }
 

@@ -4,6 +4,12 @@ import { state } from "./table.js";
 // PAE selection color state — read by the 'pae-selection' color theme per-atom.
 let _paeSelection = null; // { scored: Set<"chainId:seqId">, aligned: Set<"chainId:seqId"> } | null
 
+// Guard flag: true while hoverResidues/unhoverResidues are in progress.
+// Prevents the programmatic lociHighlights call from re-entering the
+// subscribeToMolstarHover subscription (feedback loop via Plotly.relayout
+// or Plotly.Fx.hover re-firing plotly_hover → hoverResidues → lociHighlights).
+let _programmaticHighlight = false;
+
 // The CDN viewer bundle exposes structure exports under window.molstar.lib.structure.
 // Script.getStructureSelection is NOT exported by the CDN build, so we build loci
 // manually by iterating structure units using StructureElement + StructureProperties.
@@ -168,43 +174,75 @@ export function subscribeToMolstarHover(callback) {
     return;
   }
   console.debug('[molstar] subscribeToMolstarHover: subscribing to hover events');
-  // plugin.behaviors.interaction.hover is a BehaviorSubject that emits on every cursor move.
-  // Its value has a `current` property containing the hovered loci.
+  // Follows the pp-editor useMolstarSelection pattern:
+  //   1. Dismiss immediately on empty-loci (cursor left the structure).
+  //   2. For element-loci: use StructureElement.Loci.getFirstLocation() to extract
+  //      chain + seqId efficiently; fall back to manual iteration on CDN builds
+  //      that may not export getFirstLocation.
+  //   3. For bond-loci (ligand sticks): read aUnit/aIndex from the first bond entry
+  //      and construct a minimal location object, as pp-editor does.
+  //   4. Look up the pre-built reverse map (built once in loadStructure) instead of
+  //      rebuilding it on every hover event.
   _hoverSubscription = hoverBehavior.subscribe((hoverState) => {
+    // Ignore events fired as a side-effect of our own programmatic highlights.
+    if (_programmaticHighlight) return;
     try {
       const sl = getStructLib();
       const StructureElement = sl.StructureElement;
       const StructureProperties = sl.StructureProperties;
-      if (!StructureElement || !StructureProperties || !state.residueMap) { callback([]); return; }
 
       const loci = hoverState?.current?.loci;
-      if (!loci || loci.kind !== 'element-loci' || !loci.elements?.length) { callback([]); return; }
 
-      // Build reverse map: "chainId:seqId" → globalIndex (1-based)
-      const reverseMap = new Map();
-      state.residueMap.forEach((e, i) => reverseMap.set(`${e.chainId}:${e.seqId}`, i + 1));
+      // pp-editor pattern: clear hover immediately on empty loci.
+      if (!loci || loci.kind === 'empty-loci') { callback([]); return; }
+      if (!StructureElement || !StructureProperties || !state._reverseResidueMap) { callback([]); return; }
 
-      const data = state.plugin.managers.structure.hierarchy.current.structures[0]?.cell?.obj?.data;
-      if (!data) { callback([]); return; }
+      let chainId, seqId;
 
-      const loc = StructureElement.Location.create(data);
-      const seen = new Set();
-      for (const { unit, indices } of loci.elements) {
-        loc.unit = unit;
-        for (let i = 0; i < indices.length; i++) {
-          loc.element = unit.elements[indices[i]];
-          const chain = StructureProperties.chain.label_asym_id(loc);
-          const seq   = StructureProperties.residue.label_seq_id(loc);
-          const g     = reverseMap.get(`${chain}:${seq}`);
-          if (g != null) seen.add(g);
-        }
+      if (loci.kind === 'element-loci') {
+        // Try pp-editor's preferred path: getFirstLocation (may not exist in CDN build).
+        const loc = StructureElement.Loci?.getFirstLocation?.(loci)
+          ?? _manualFirstLocation(StructureElement, loci);
+        if (!loc) { callback([]); return; }
+        chainId = StructureProperties.chain.label_asym_id(loc);
+        seqId   = StructureProperties.residue.label_seq_id(loc);
+
+      } else if (loci.kind === 'bond-loci' && loci.bonds?.length) {
+        // pp-editor pattern for bond/stick atoms (covers ligand ball-and-stick rep).
+        const bondLoc = loci.bonds[0];
+        const aUnit   = bondLoc.aUnit;
+        const aIndex  = bondLoc.aIndex;
+        const aElem   = aUnit?.elements?.[aIndex];
+        const loc = { structure: loci.structure, unit: aUnit, element: aElem ?? aIndex };
+        chainId = StructureProperties.chain.label_asym_id(loc);
+        seqId   = StructureProperties.residue.label_seq_id(loc);
+
+      } else {
+        callback([]);
+        return;
       }
-      callback([...seen].sort((a, b) => a - b));
+
+      const g = state._reverseResidueMap.get(`${chainId}:${seqId}`);
+      callback(g != null ? [g] : []);
     } catch (e) {
       // Hover fires very frequently — only warn on the first failure.
       console.warn('[molstar] subscribeToMolstarHover handler failed:', e);
     }
   });
+}
+
+// Fallback for CDN builds where StructureElement.Loci.getFirstLocation is not exported.
+// Returns a minimal Location from the first atom of the first element group.
+function _manualFirstLocation(StructureElement, loci) {
+  if (!loci.elements?.length) return null;
+  const { unit, indices } = loci.elements[0];
+  if (!indices?.length) return null;
+  const data = state.plugin.managers.structure.hierarchy.current.structures[0]?.cell?.obj?.data;
+  if (!data) return null;
+  const loc = StructureElement.Location.create(data);
+  loc.unit = unit;
+  loc.element = unit.elements[indices[0]];
+  return loc;
 }
 
 // Highlight a list of global residue indices in Mol*.
@@ -259,9 +297,54 @@ export function highlightResidue(globalResidue) {
   return highlightResidues([globalResidue]);
 }
 
+// Transiently highlight (glow) residues on pointer-hover from an external source
+// (e.g. Plotly). Uses lociHighlights only — no selection state change, no camera move.
+export function hoverResidues(globalResidues) {
+  if (!state.plugin) return;
+  _programmaticHighlight = true;
+  try {
+    if (!globalResidues?.length) {
+      try { state.plugin.managers.interactivity.lociHighlights.clearHighlights(); } catch {}
+      return;
+    }
+    const targets = globalResidues.map(g => {
+      const { chainId, localResidue } = mapGlobalResidue(g);
+      return (chainId && localResidue != null)
+        ? { chainId, seqId: localResidue }
+        : { chainId: null, seqId: Number(g) };
+    });
+    const loci = buildMultiResidueLoci(state.plugin, targets);
+    if (loci) {
+      state.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
+    }
+  } finally {
+    // Clear after a short delay to cover both synchronous and rAF-deferred
+    // behaviors.interaction.hover emissions triggered by lociHighlights.
+    setTimeout(() => { _programmaticHighlight = false; }, 50);
+  }
+}
+
+export function unhoverResidues() {
+  if (!state.plugin) return;
+  _programmaticHighlight = true;
+  try {
+    state.plugin.managers.interactivity.lociHighlights.clearHighlights();
+  } catch {}
+  setTimeout(() => { _programmaticHighlight = false; }, 50);
+}
+
+// Clear all Mol* loci selections and highlights.
+export function clearMolstarSelection() {
+  if (!state.plugin) return;
+  state.plugin.managers.interactivity.lociSelects.deselectAll();
+  state.plugin.managers.interactivity.lociHighlights?.clearHighlights?.();
+  setMolstarNote('');
+}
+
 // ── PAE-selection colour theme helpers ──────────────────────────────────────
 
-// Rebuild the cartoon (polymer) and spacefill (ion) representations using the given color theme name.
+// Rebuild the cartoon (polymer), spacefill (ion) and ball-and-stick (ligand)
+// representations using the given color theme name.
 async function _recolorRepr(colorName) {
   if (!state.plugin) return;
   try {
@@ -289,6 +372,19 @@ async function _recolorRepr(colorName) {
     }
   } catch (e) {
     console.warn('[molstar] _recolorRepr (ion) failed:', e);
+  }
+  try {
+    if (state.ligandReprCell) {
+      await state.plugin.state.data.build().delete(state.ligandReprCell).commit();
+      state.ligandReprCell = null;
+    }
+    if (state.ligandCell) {
+      state.ligandReprCell = await state.plugin.builders.structure.representation.addRepresentation(
+        state.ligandCell, { type: 'ball-and-stick', color: colorName }
+      );
+    }
+  } catch (e) {
+    console.warn('[molstar] _recolorRepr (ligand) failed:', e);
   }
 }
 
@@ -459,10 +555,13 @@ export async function loadStructure(index) {
 
   _paeSelection = null;
   state.residueMap = null;
+  state._reverseResidueMap = null;
   state.polymerCell = null;
   state.reprCell = null;
   state.ionCell = null;
   state.ionReprCell = null;
+  state.ligandCell = null;
+  state.ligandReprCell = null;
   try {
     await state.plugin.clear();
   } catch (_err) {
@@ -503,8 +602,24 @@ export async function loadStructure(index) {
     });
   }
 
+  const ligand = await state.plugin.builders.structure.tryCreateComponentStatic(structure, "ligand");
+  if (ligand) {
+    const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
+    state.ligandCell = ligand;
+    state.ligandReprCell = await state.plugin.builders.structure.representation.addRepresentation(ligand, {
+      type: "ball-and-stick",
+      color: colorScheme,
+    });
+  }
+
   debugStructureResidues(state.plugin);
   state.residueMap = buildResidueMapFromStructure(state.plugin);
+
+  // Pre-build the reverse map (chainId:seqId → 1-based global index) once here
+  // so it is ready at hover time without being rebuilt on every cursor move.
+  const rm = new Map();
+  state.residueMap.forEach((e, i) => rm.set(`${e.chainId}:${e.seqId}`, i + 1));
+  state._reverseResidueMap = rm;
 
   if (state.selectedResidues.length > 0) {
     highlightResidues(state.selectedResidues);

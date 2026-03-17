@@ -1,4 +1,6 @@
 export function renderPlot(plddtPayload, handlers) {
+  const plotlyConfig = { responsive: true };
+
   const trace = {
     x: plddtPayload.residues,
     y: plddtPayload.plddt,
@@ -19,7 +21,7 @@ export function renderPlot(plddtPayload, handlers) {
   }));
 
   const layout = {
-    margin: { l: 40, r: 10, t: 10, b: 40 },
+    margin: { l: 40, r: 10, t: 38, b: 40 },
     xaxis: { title: "Residue" },
     yaxis: { title: "pLDDT", range: [0, 100] },
     clickmode: "event+select",
@@ -34,14 +36,26 @@ export function renderPlot(plddtPayload, handlers) {
   // lines to them without needing to read custom properties back from Plotly.
   _plddtChainShapes = shapes;
 
-  Plotly.newPlot("plddt-plot", [trace], layout, { responsive: true });
+  Plotly.newPlot("plddt-plot", [trace], layout, plotlyConfig);
+  document.getElementById('plddt-plot')?.classList.remove('pae-active');
 
   const plotDiv = document.getElementById("plddt-plot");
+
   plotDiv.on("plotly_click", (ev) => {
-    if (!ev?.points?.length) return;
     const residue = Number(ev.points[0].x);
     if (!Number.isInteger(residue)) return;
     if (handlers?.onClick) handlers.onClick(residue);
+  });
+
+  plotDiv.on("plotly_hover", (ev) => {
+    if (!ev?.points?.length) return;
+    const residue = Number(ev.points[0].x);
+    if (!Number.isInteger(residue)) return;
+    if (handlers?.onHover) handlers.onHover([residue]);
+  });
+
+  plotDiv.on("plotly_unhover", () => {
+    if (handlers?.onUnhover) handlers.onUnhover();
   });
 
   plotDiv.on("plotly_selected", (ev) => {
@@ -65,6 +79,8 @@ let _hoverHighlightTimer = null;
 // closing over the stale `paePayload` after a re-render.
 let _paeState = null;
 let _paeOverlayActive = false; // guard against recursive plotly_deselect
+let _paeActiveBaseShapes = []; // chain-boundary lines (or chain + selection overlay shapes) currently rendered
+let _paeHoverLines = [];       // transient vertical+horizontal crosshair added on top of base shapes
 
 const PAE_GREEN  = "#22c55e";  // scored residues  (x-axis strip, y = 0)
 const PAE_ORANGE = "#f97316";  // aligned residues (y-axis strip, x = 0)
@@ -115,6 +131,8 @@ function _applyPaeOverlay(xResidues, yResidues) {
     yaxis: { ...layout.yaxis, range: [n + 0.5, -2], autorange: false },
   };
 
+  _paeActiveBaseShapes = [...(layout.shapes || []), ...selectionShapes];
+  _paeHoverLines = [];
   _paeOverlayActive = true;
   Plotly.react("plddt-plot", [trace], overlayLayout);
   _paeOverlayActive = false;
@@ -123,10 +141,33 @@ function _applyPaeOverlay(xResidues, yResidues) {
 function _clearPaeOverlay() {
   if (!_paeState || _paeOverlayActive) return;
   const { trace, layout } = _paeState;
+  _paeActiveBaseShapes = layout.shapes || [];
+  _paeHoverLines = [];
   Plotly.react("plddt-plot", [trace], layout);
 }
 
 export function renderPaePlot(paePayload, handlers) {
+  // Heatmap traces filter out the built-in "select2d" string from
+  // modeBarButtonsToAdd, so we must supply a full custom-button object.
+  const plotlyConfig = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToAdd: [
+      {
+        name: "Box Select",
+        title: "Box Select",
+        icon: Plotly.Icons.selectbox,
+        click(gd) { Plotly.relayout(gd, { dragmode: "select" }); },
+      },
+      {
+        name: "Pan",
+        title: "Pan",
+        icon: Plotly.Icons.pan,
+        click(gd) { Plotly.relayout(gd, { dragmode: "pan" }); },
+      },
+    ],
+  };
+
   const n = paePayload.residues.length;
   const boundaries = paePayload.chain_boundaries || [];
 
@@ -160,7 +201,7 @@ export function renderPaePlot(paePayload, handlers) {
   }
 
   const layout = {
-    margin: { l: 50, r: 10, t: 10, b: 50 },
+    margin: { l: 50, r: 10, t: 38, b: 50 },
     xaxis: { title: "Scored residue", scaleanchor: "y", scaleratio: 1, constrain: "domain" },
     yaxis: { title: "Aligned residue", autorange: "reversed", constrain: "domain" },
     clickmode: "event+select",
@@ -172,11 +213,14 @@ export function renderPaePlot(paePayload, handlers) {
   // Save state so overlay helpers can access payload/trace/layout later.
   _paeState = { payload: paePayload, trace, layout };
   _paeOverlayActive = false;
+  _paeActiveBaseShapes = shapes;
+  _paeHoverLines = [];
 
   const selEl = document.getElementById("selected-residues");
   if (selEl) selEl.style.display = "";
 
-  Plotly.newPlot("plddt-plot", [trace], layout, { responsive: true });
+  Plotly.newPlot("plddt-plot", [trace], layout, plotlyConfig);
+  document.getElementById('plddt-plot')?.classList.add('pae-active');
 
   const plotDiv = document.getElementById("plddt-plot");
 
@@ -186,6 +230,17 @@ export function renderPaePlot(paePayload, handlers) {
     const residue = Number(ev.points[0].x);
     if (!Number.isInteger(residue)) return;
     if (handlers?.onClick) handlers.onClick(residue);
+  });
+
+  plotDiv.on("plotly_hover", (ev) => {
+    if (!ev?.points?.length) return;
+    const xResidue = Number(ev.points[0].x);
+    const yResidue = Number(ev.points[0].y);
+    if (handlers?.onHover) handlers.onHover({ xResidue, yResidue });
+  });
+
+  plotDiv.on("plotly_unhover", () => {
+    if (handlers?.onUnhover) handlers.onUnhover();
   });
 
   // Heatmap traces don't populate ev.points on plotly_selected.
@@ -213,6 +268,24 @@ export function resizePlot() {
   const plotDiv = document.getElementById("plddt-plot");
   if (plotDiv && typeof Plotly !== "undefined" && Plotly.Plots?.resize) {
     Plotly.Plots.resize(plotDiv);
+  }
+}
+
+// Re-apply the PAE overlay after a plot re-render (e.g. model switch).
+export function reapplyPaePlotOverlay(xResidues, yResidues) {
+  _applyPaeOverlay(xResidues, yResidues);
+}
+
+// Clear any active Plotly selection (box-select on scatter, or PAE overlay on heatmap).
+export function clearPlotSelection() {
+  const plotDiv = document.getElementById("plddt-plot");
+  if (!plotDiv?._fullLayout) return;
+  const traceType = plotDiv._fullData?.[0]?.type;
+  if (traceType === 'scatter') {
+    Plotly.restyle('plddt-plot', { selectedpoints: [[]] }, [0]);
+    Plotly.relayout('plddt-plot', { shapes: _plddtChainShapes });
+  } else if (traceType === 'heatmap') {
+    _clearPaeOverlay();
   }
 }
 
@@ -253,19 +326,25 @@ function _doHighlightPlotResidues(globalResidues) {
     }));
     Plotly.relayout('plddt-plot', { shapes: [..._plddtChainShapes, ...hoverShapes] });
   } else if (traceType === 'heatmap') {
-    // For the PAE heatmap use Plotly's lightweight native hover to show the
-    // crosshair + tooltip without touching the SVG-shape overlay.
+    if (!_paeState) return;
+    const residues = _paeState.payload.residues || [];
+    if (!residues.length) return;
+    const r0 = residues[0] - 0.5;
+    const r1 = residues[residues.length - 1] + 0.5;
+
     if (!globalResidues?.length) {
-      Plotly.Fx.unhover('plddt-plot');
+      _paeHoverLines = [];
+      if (_paeActiveBaseShapes.length) {
+        Plotly.relayout('plddt-plot', { shapes: _paeActiveBaseShapes });
+      }
       return;
     }
-    const r = globalResidues[0];
-    const xs = plotDiv._fullData[0]?.x || [];
-    const ys = plotDiv._fullData[0]?.y || [];
-    const xi = xs.indexOf(r);
-    const yi = ys.indexOf(r);
-    if (xi !== -1 && yi !== -1) {
-      Plotly.Fx.hover('plddt-plot', [{ curveNumber: 0, pointNumber: xi + yi * xs.length }]);
-    }
+    _paeHoverLines = globalResidues.flatMap(r => [
+      { type: 'line', x0: r, x1: r, y0: r0, y1: r1,
+        line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' },
+      { type: 'line', x0: r0, x1: r1, y0: r, y1: r,
+        line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' },
+    ]);
+    Plotly.relayout('plddt-plot', { shapes: [..._paeActiveBaseShapes, ..._paeHoverLines] });
   }
 }

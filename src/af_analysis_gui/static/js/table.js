@@ -1,6 +1,7 @@
 export const state = {
   selectedModel: 0,
   selectedResidues: [],
+  paeSelection: null,   // { xResidues, yResidues } | null
   chainIds: [],
   chainLengths: [],
   viewer: null,
