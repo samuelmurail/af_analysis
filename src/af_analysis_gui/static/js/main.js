@@ -235,24 +235,60 @@ function initEvents() {
       id => document.getElementById(`compute-${id}`)?.checked
     );
     if (!scores.length) return;
-    const statusEl = document.getElementById('compute-status');
+    const statusEl  = document.getElementById('compute-status');
+    const progressEl = document.getElementById('compute-progress');
+    const barEl     = document.getElementById('progress-bar');
+    const labelEl   = document.getElementById('progress-label');
+
+    const showProgress = (desc, n, total) => {
+      if (!progressEl) return;
+      progressEl.style.display = '';
+      const pct = total > 0 ? Math.round(100 * n / total) : 0;
+      if (barEl)  barEl.style.width = `${pct}%`;
+      if (labelEl) labelEl.textContent = total > 0
+        ? `${desc}: ${n} / ${total} (${pct}%)`
+        : `${desc}…`;
+    };
+    const hideProgress = () => { if (progressEl) progressEl.style.display = 'none'; };
+
     if (statusEl) { statusEl.textContent = 'Computing…'; statusEl.style.color = '#2d3a57'; }
+    hideProgress();
+
     try {
       const added = [];
       for (const score of scores) {
+        // Open SSE stream first, then fire the compute request.
+        let sseResolve;
+        const sseDone = new Promise(r => { sseResolve = r; });
+        const es = new EventSource('/api/progress/stream');
+        es.onmessage = (ev) => {
+          try {
+            const d = JSON.parse(ev.data);
+            if (d.desc === '__end__') {
+              es.close();
+              sseResolve();
+            } else {
+              showProgress(d.desc, d.n, d.total);
+            }
+          } catch {}
+        };
+        es.onerror = () => { es.close(); sseResolve(); };
+
         const res = await api('/api/compute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ score }),
         });
+        await sseDone;  // wait for last SSE event before moving on
         added.push(...(res.columns_added || []));
       }
+      hideProgress();
       if (statusEl) statusEl.textContent = added.length
         ? `Done. New columns: ${added.join(', ')}`
         : 'Done (no new columns added).';
-      // Refresh the table so new numeric columns appear.
       await refreshTableAndPanels();
     } catch (err) {
+      hideProgress();
       if (statusEl) { statusEl.textContent = String(err); statusEl.style.color = '#a11927'; }
     }
   });

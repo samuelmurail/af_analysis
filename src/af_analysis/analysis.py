@@ -366,7 +366,7 @@ def compute_pdockQ2(
     return pdockq2_list
 
 
-def pdockq(data, verbose=True):
+def pdockq(data):
     r"""Compute the pDockq [1]_ from the pdb file.
 
     .. math::
@@ -388,8 +388,6 @@ def pdockq(data, verbose=True):
     ----------
     data : AFData
         object containing the data
-    verbose : bool
-        print progress bar
 
     Returns
     -------
@@ -409,9 +407,9 @@ def pdockq(data, verbose=True):
 
     pdockq_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
-    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable):
+    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable, desc="pdockq"):
         if pdb is None or pdb is np.nan:
             pdockq_list.append(None)
             continue
@@ -423,7 +421,7 @@ def pdockq(data, verbose=True):
     data.df["pdockq"] = pdockq_list
 
 
-def mpdockq(data, verbose=True):
+def mpdockq(data):
     r"""Compute the mpDockq [2]_ from the pdb file.
 
     .. math::
@@ -442,8 +440,6 @@ def mpdockq(data, verbose=True):
     ----------
     data : AFData
         object containing the data
-    verbose : bool
-        print progress bar
 
     Returns
     -------
@@ -461,9 +457,9 @@ def mpdockq(data, verbose=True):
     """
 
     pdockq_list = []
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
-    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable):
+    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable, desc="mpdockq"):
         if pdb is None or pdb is np.nan:
             pdockq_list.append(None)
             continue
@@ -476,7 +472,7 @@ def mpdockq(data, verbose=True):
     data.df.loc[:, "mpdockq"] = pdockq_list
 
 
-def pdockq2(data, verbose=True):
+def pdockq2(data):
     r"""
     Compute pdockq2 from the pdb file [3]_.
 
@@ -507,7 +503,7 @@ def pdockq2(data, verbose=True):
     for i in range(max_chain_num):
         pdockq_list.append([])
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     if "data_file" not in data.df.columns:
         raise ValueError(
@@ -518,6 +514,7 @@ def pdockq2(data, verbose=True):
         zip(data.df["pdb"], data.df["data_file"]),
         total=len(data.df["pdb"]),
         disable=disable,
+        desc="pdockq2",
     ):
         if (
             pdb is not None
@@ -548,7 +545,7 @@ def pdockq2(data, verbose=True):
         data.df.loc[:, f"pdockq2_{max_chain_val[i]}"] = pdockq_list[i]
 
 
-def inter_chain_pae(data, fun=np.mean, verbose=True):
+def inter_chain_pae(data, fun=np.mean):
     """Read the PAE matrix and extract the average inter chain PAE.
 
     Parameters
@@ -557,8 +554,6 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
         object containing the data
     fun : function
         function to apply to the PAE scores
-    verbose : bool
-        print progress bar
 
     Returns
     -------
@@ -566,7 +561,7 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
     """
     pae_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     if "data_file" not in data.df.columns:
         raise ValueError(
@@ -577,6 +572,7 @@ def inter_chain_pae(data, fun=np.mean, verbose=True):
         zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["data_file"]),
         disable=disable,
+        desc="inter_chain_pae",
     ):
         if data_path is not None and data_path is not np.nan:
             pae_array = get_pae(data_path)
@@ -671,7 +667,7 @@ def compute_LIS_matrix(
     return LIS_list
 
 
-def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
+def LIS_matrix(data, pae_cutoff=12.0):
     """
     Compute the LIS score as define in [2]_.
 
@@ -685,8 +681,6 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
         object containing the data
     pae_cutoff : float
         cutoff for PAE matrix values, default is 12.0 A
-    verbose : bool
-        print progress bar
 
     Returns
     -------
@@ -695,12 +689,13 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
     """
     LIS_matrix_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, data_path in tqdm(
         zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="LIS_matrix",
     ):
         if data.chain_length[query] is None:
             LIS_matrix_list.append(None)
@@ -714,7 +709,7 @@ def LIS_matrix(data, pae_cutoff=12.0, verbose=True):
     data.df.loc[:, "LIS"] = LIS_matrix_list
 
 
-def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
+def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
     """Compute the Local Interaction Area from the PAE matrix and pdb.
 
         Implementation is based on the LIS/LIA from the IPSAE package
@@ -730,9 +725,7 @@ def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
             object containing the dipSAE(ata
         ref_dict : dict
             dictionary containing the reference PAE matrix for each query
-        verbose : bool
-            print progress bar
-
+    
         Returns
         -------
         None
@@ -741,12 +734,13 @@ def LIA_matrix(data, verbose=True, pae_cutoff=12.0, dist_cutoff=8.0):
 
     LIA_matrix_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, data_file, pdb in tqdm(
         zip(data.df["query"], data.df["data_file"], data.df["pdb"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="LIA_matrix",
     ):
 
         PAE_matrix = get_pae(data_file)
@@ -859,7 +853,7 @@ def compute_LIA_matrix(
     return LIA_list
 
 
-def PAE_matrix(data, verbose=True, fun=np.average):
+def PAE_matrix(data, fun=np.average):
     """
     Compute the average (or something else) PAE matrix.
 
@@ -867,8 +861,6 @@ def PAE_matrix(data, verbose=True, fun=np.average):
     ----------
     data : AFData
         object containing the data
-    verbose : bool
-        print progress bar
     fun : function
         function to apply to the PAE scores
 
@@ -880,12 +872,13 @@ def PAE_matrix(data, verbose=True, fun=np.average):
 
     PAE_avg_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, data_path in tqdm(
         zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="PAE_matrix",
     ):
         if data.chain_length[query] is None:
             PAE_avg_list.append(None)
@@ -1128,7 +1121,7 @@ def compute_ftdmp(
     return
 
 
-def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0.3):
+def compute_dockq(data, ref_dict, fun=np.average, dockq_thresold=0.3):
     """Compute the DockQ score from the PAE matrix.
 
     Parameters
@@ -1137,8 +1130,6 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
         object containing the data
     ref_dict : dict
         dictionary containing the reference PAE matrix for each query
-    verbose : bool
-        print progress bar
     fun : function
         function to apply to the PAE scores
     dockq_thresold : float
@@ -1156,12 +1147,13 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
     fnat_list = []
     old_query = ""
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, pdb in tqdm(
         zip(data.df["query"], data.df["pdb"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="dockq",
     ):
         if (
             query not in ref_dict
@@ -1238,7 +1230,7 @@ def compute_dockq(data, ref_dict, verbose=True, fun=np.average, dockq_thresold=0
     data.df.loc[:, "fnat"] = fnat_list
 
 
-def ipTM_d0(data, verbose=True):
+def ipTM_d0(data):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Implementation is based on the ipTM_d0 function from the IPSAE package
@@ -1254,8 +1246,6 @@ def ipTM_d0(data, verbose=True):
         object containing the data
     ref_dict : dict
         dictionary containing the reference PAE matrix for each query
-    verbose : bool
-        print progress bar
 
     Returns
     -------
@@ -1266,12 +1256,13 @@ def ipTM_d0(data, verbose=True):
     iptm_d0_list = []
     iptm_d0_matrix_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, data_file in tqdm(
         zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="ipTM_d0",
     ):
 
         PAE_matrix = get_pae(data_file)
@@ -1396,7 +1387,7 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
     return iptm_d0_dict
 
 
-def ipSAE(data, verbose=True, pae_cutoff=10.0, dist_cutoff=10.0):
+def ipSAE(data, pae_cutoff=10.0, dist_cutoff=10.0):
     """Compute the ipSAE score from the PAE matrix.
 
         Implementation is based on the ipTM_d0 function from the IPSAE package
@@ -1412,9 +1403,7 @@ def ipSAE(data, verbose=True, pae_cutoff=10.0, dist_cutoff=10.0):
             object containing the dipSAE(ata
         ref_dict : dict
             dictionary containing the reference PAE matrix for each query
-        verbose : bool
-            print progress bar
-
+    
         Returns
         -------
         None
@@ -1423,12 +1412,13 @@ def ipSAE(data, verbose=True, pae_cutoff=10.0, dist_cutoff=10.0):
 
     ipSAE_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, data_file in tqdm(
         zip(data.df["query"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="ipSAE",
     ):
 
         PAE_matrix = get_pae(data_file)
@@ -1562,7 +1552,7 @@ def compute_ipSAE_matrix(
     return ipSAE_dict
 
 
-def ipTM_d0_interface(data, verbose=True):
+def ipTM_d0_interface(data):
     """Compute the ipTM_d0 score from the PAE matrix.
 
     Implementation is based on the ipTM_d0 function from the IPSAE package
@@ -1578,8 +1568,6 @@ def ipTM_d0_interface(data, verbose=True):
         object containing the data
     ref_dict : dict
         dictionary containing the reference PAE matrix for each query
-    verbose : bool
-        print progress bar
 
     Returns
     -------
@@ -1589,12 +1577,13 @@ def ipTM_d0_interface(data, verbose=True):
 
     iptm_d0_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for query, pdb, data_file in tqdm(
         zip(data.df["query"], data.df["pdb"], data.df["data_file"]),
         total=len(data.df["query"]),
         disable=disable,
+        desc="ipTM_d0_interface",
     ):
 
         PAE_matrix = get_pae(data_file)
@@ -1727,7 +1716,7 @@ def compute_iptm_d0_interface_values(
     return iptm_d0_dict
 
 
-def iplddt(data, cutoff=10.0, verbose=True):
+def iplddt(data, cutoff=10.0):
     r"""Compute the iplddt from the pdb file.
 
     Parameters
@@ -1736,8 +1725,6 @@ def iplddt(data, cutoff=10.0, verbose=True):
         object containing the data
     cutoff : float
         distance cutoff to define interface residues, default is 10.0 A
-    verbose : bool
-        print progress bar
 
 
     Implementation was inspired from https://github.com/piercelab/alphafold_v2.2_customize/blob/master/get_interface_plddt.pl
@@ -1756,12 +1743,13 @@ def iplddt(data, cutoff=10.0, verbose=True):
 
     iplddt_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(data, 'verbose', True)
 
     for pdb, query in tqdm(
         zip(data.df["pdb"], data.df["query"]),
         total=len(data.df["pdb"]),
         disable=disable,
+        desc="iplddt",
     ):
         if pdb is None or pdb is np.nan:
             iplddt_list.append(None)

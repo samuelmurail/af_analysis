@@ -75,6 +75,8 @@ class Data:
 
     Parameters
     ----------
+    verbose : bool
+        Print progress bar during analysis.
     dir : str
         Path to the directory containing the `log.txt` file.
     format : str
@@ -123,6 +125,7 @@ class Data:
         self, directory=None, data_dict=None, csv=None, verbose=True, format=None
     ):
         """ """
+        self.verbose = verbose
 
         if directory is not None:
             self.read_directory(directory, verbose=verbose, format=format)

@@ -280,13 +280,13 @@ The ``docking`` package allow to compute:
     from af_analysis import docking
 
     #extract_pae_pep
-    docking.pae_pep(my_data, verbose=False)
+    docking.pae_pep(my_data)
     #compute_pdockq2_lig
-    docking.pdockq2_lig(my_data, verbose=False)
+    docking.pdockq2_lig(my_data)
     #compute_LIS_pep
-    docking.LIS_pep(my_data, verbose=False)
+    docking.LIS_pep(my_data)
     #extract_plddt_pep
-    docking.plddt_pep(my_data, verbose=False)
+    docking.plddt_pep(my_data)
 
 Plots
 =====

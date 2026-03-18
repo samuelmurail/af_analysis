@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import queue
 import traceback
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 from typing import Any
 
 import numpy as np
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 import af_analysis
 
@@ -37,6 +39,74 @@ class AppState:
         self.lock = Lock()
         self.af_data: af_analysis.Data | None = None
         self.last_error = ""
+
+
+class _TqdmStream:
+    """Drop-in tqdm replacement that pushes progress events to a queue.
+
+    It mirrors the subset of the tqdm API used by analysis.py so it can be
+    injected as a module-level monkey-patch without changing library code.
+    """
+
+    def __init__(self, iterable=None, *, total=None, disable=False, desc=None, **_kw):
+        self._iter = iter(iterable) if iterable is not None else None
+        self._total = total if total is not None else (len(iterable) if hasattr(iterable, '__len__') else None)
+        self._n = 0
+        self._disable = disable
+        self._desc = desc or ""
+        self._q: queue.Queue | None = _PROGRESS_QUEUE
+
+    # ── context manager ──────────────────────────────────────────────────────
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        if not self._disable:
+            self._push(done=True)
+
+    # ── iteration ────────────────────────────────────────────────────────────
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            value = next(self._iter)
+        except StopIteration:
+            if not self._disable:
+                self._push(done=True)
+            raise
+        self._n += 1
+        if not self._disable:
+            self._push()
+        return value
+
+    # ── manual update (not used by analysis.py but keeps API complete) ────────
+    def update(self, n=1):
+        self._n += n
+        if not self._disable:
+            self._push()
+
+    def close(self):
+        pass
+
+    # ── internal ─────────────────────────────────────────────────────────────
+    def _push(self, done=False):
+        if self._q is None:
+            return
+        try:
+            self._q.put_nowait({
+                "desc": self._desc,
+                "n": self._n,
+                "total": self._total,
+                "done": done,
+            })
+        except queue.Full:
+            pass  # never block the computation thread
+
+
+# One queue per server process; computations stream into it.
+# Bounded so a slow client can't grow memory unboundedly.
+_PROGRESS_QUEUE: queue.Queue = queue.Queue(maxsize=512)
 
 
 STATE = AppState()
@@ -82,7 +152,7 @@ def api_load_dataset():
 
     try:
         format_arg = None if format_name == "auto" else format_name
-        data = af_analysis.Data(directory=directory, format=format_arg, verbose=False)
+        data = af_analysis.Data(directory=directory, format=format_arg, verbose=True)
         with STATE.lock:
             STATE.af_data = data
             STATE.last_error = ""
@@ -328,6 +398,27 @@ def api_health():
     return jsonify({"loaded": loaded, "rows": rows})
 
 
+@app.get("/api/progress/stream")
+def api_progress_stream():
+    """Server-Sent Events stream of tqdm progress from the current computation."""
+
+    def generate():
+        while True:
+            try:
+                event = _PROGRESS_QUEUE.get(timeout=60)  # wait up to 60 s
+            except queue.Empty:
+                # Send a keep-alive comment so the connection stays open.
+                yield ": keep-alive\n\n"
+                continue
+            payload = json.dumps(event)
+            yield f"data: {payload}\n\n"
+            if event.get("done") and event.get("desc") == "__end__":
+                return
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @app.post("/api/compute")
 def api_compute():
     """Run one of the supported scoring functions on the loaded dataset.
@@ -335,7 +426,9 @@ def api_compute():
     Body JSON: { "score": "pdockq2" | "LIS" | "iptm_d0" }
     Returns:   { "ok": true, "columns_added": [...] }
     """
-    from af_analysis import analysis as ana
+    import af_analysis.analysis as _ana_mod
+    import af_analysis.data as _data_mod
+    import tqdm as _tqdm_mod
 
     try:
         data = _require_data()
@@ -345,22 +438,48 @@ def api_compute():
     payload = request.get_json(silent=True) or {}
     score = str(payload.get("score", "")).strip()
 
-    cols_before = set(data.df.columns)
-    try:
-        if score == "pdockq2":
-            ana.pdockq2(data, verbose=False)
-        elif score == "LIS":
-            ana.LIS_matrix(data, verbose=False)
-        elif score == "LIA":
-            ana.LIA_matrix(data, verbose=False)
-        elif score == "iptm_d0":
-            ana.ipTM_d0(data, verbose=False)
-        else:
-            return jsonify({"error": f"Unknown score '{score}'"}), 400
-    except Exception:
-        return jsonify({"error": "Computation failed", "details": traceback.format_exc()}), 500
+    if score not in {"pdockq2", "LIS", "LIA", "iptm_d0"}:
+        return jsonify({"error": f"Unknown score '{score}'"}), 400
 
-    cols_added = [c for c in data.df.columns if c not in cols_before]
+    # Drain any stale events from a previous run.
+    while not _PROGRESS_QUEUE.empty():
+        try:
+            _PROGRESS_QUEUE.get_nowait()
+        except queue.Empty:
+            break
+
+    # Monkey-patch tqdm in both the analysis module and the tqdm.auto namespace
+    # so that all tqdm() calls in analysis.py emit progress events.
+    _orig_ana = _ana_mod.tqdm
+    _orig_data = _data_mod.tqdm
+    _orig_auto = _tqdm_mod.auto.tqdm
+    try:
+        _ana_mod.tqdm = _TqdmStream
+        _data_mod.tqdm = _TqdmStream
+        _tqdm_mod.auto.tqdm = _TqdmStream
+
+        data.verbose = True
+        cols_before = set(data.df.columns)
+        from af_analysis import analysis as ana
+        if score == "pdockq2":
+            ana.pdockq2(data)
+        elif score == "LIS":
+            ana.LIS_matrix(data)
+        elif score == "LIA":
+            ana.LIA_matrix(data)
+        elif score == "iptm_d0":
+            ana.ipTM_d0(data)
+        cols_added = [c for c in data.df.columns if c not in cols_before]
+    except Exception:
+        _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
+        return jsonify({"error": "Computation failed", "details": traceback.format_exc()}), 500
+    finally:
+        _ana_mod.tqdm = _orig_ana
+        _data_mod.tqdm = _orig_data
+        _tqdm_mod.auto.tqdm = _orig_auto
+
+    # Signal the SSE stream that computation is finished.
+    _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
     return jsonify({"ok": True, "columns_added": cols_added})
 
 

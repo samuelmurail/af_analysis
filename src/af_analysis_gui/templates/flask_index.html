@@ -66,6 +66,12 @@
         <button id="compute-btn" type="button">Compute</button>
       </div>
       <div class="status" id="compute-status"></div>
+      <div id="compute-progress" style="display:none; margin-top:6px;">
+        <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="progress-label"></div>
+        <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
+          <div id="progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
+        </div>
+      </div>
     </details>
 
     <div class="layout" id="layout">

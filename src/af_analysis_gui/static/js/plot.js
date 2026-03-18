@@ -80,6 +80,7 @@ let _hoverHighlightTimer = null;
 let _paeState = null;
 let _paeOverlayActive = false; // guard against recursive plotly_deselect
 let _paeActiveBaseShapes = []; // chain-boundary lines (or chain + selection overlay shapes) currently rendered
+let _paeStrip = 2; // strip width (residue units) computed at renderPaePlot time
 let _paeHoverLines = [];       // transient vertical+horizontal crosshair added on top of base shapes
 
 const PAE_GREEN  = "#22c55e";  // scored residues  (x-axis strip, y = 0)
@@ -95,30 +96,35 @@ function _applyPaeOverlay(xResidues, yResidues) {
   const xSet = new Set(xResidues);
   const ySet = new Set(yResidues);
 
+  // Re-use the strip width computed at renderPaePlot time so the overlay
+  // geometry always matches the pre-reserved gutter in the initial layout.
+  const STRIP = _paeStrip;
+  const OUTER = -(STRIP + 0.5);  // outer edge of both strips
+
   // Keep existing chain-boundary lines, then append selection shapes.
   const selectionShapes = [];
 
   // White background strips so shapes are visible outside the heatmap.
   selectionShapes.push(
-    { type: "rect", x0: 0.5, x1: n + 0.5, y0: -0.5, y1: -2,
+    { type: "rect", x0: 0.5, x1: n + 0.5, y0: -0.5, y1: OUTER,
       fillcolor: "#ffffff", line: { width: 0 }, layer: "above" },
-    { type: "rect", x0: -0.5, x1: -2, y0: 0.5, y1: n + 0.5,
+    { type: "rect", x0: -0.5, x1: OUTER, y0: 0.5, y1: n + 0.5,
       fillcolor: "#ffffff", line: { width: 0 }, layer: "above" },
   );
 
-  // One rectangle per scored residue along the top strip (y ∈ [-0.5, -2]).
+  // One rectangle per scored residue along the top strip (y ∈ [-0.5, OUTER]).
   for (const r of xResidues) {
     selectionShapes.push({
-      type: "rect", x0: r - 0.5, x1: r + 0.5, y0: -0.5, y1: -2,
+      type: "rect", x0: r - 0.5, x1: r + 0.5, y0: -0.5, y1: OUTER,
       fillcolor: ySet.has(r) ? PAE_PINK : PAE_GREEN,
       line: { width: 0 }, layer: "above",
     });
   }
 
-  // One rectangle per aligned residue along the left strip (x ∈ [-0.5, -2]).
+  // One rectangle per aligned residue along the left strip (x ∈ [OUTER, -0.5]).
   for (const r of yResidues) {
     selectionShapes.push({
-      type: "rect", x0: -0.5, x1: -2, y0: r - 0.5, y1: r + 0.5,
+      type: "rect", x0: -0.5, x1: OUTER, y0: r - 0.5, y1: r + 0.5,
       fillcolor: xSet.has(r) ? PAE_PINK : PAE_ORANGE,
       line: { width: 0 }, layer: "above",
     });
@@ -127,8 +133,8 @@ function _applyPaeOverlay(xResidues, yResidues) {
   const overlayLayout = {
     ...layout,
     shapes: [...(layout.shapes || []), ...selectionShapes],
-    xaxis: { ...layout.xaxis, range: [-2, n + 0.5], autorange: false },
-    yaxis: { ...layout.yaxis, range: [n + 0.5, -2], autorange: false },
+    xaxis: { ...layout.xaxis, range: [OUTER, n + 0.5], autorange: false },
+    yaxis: { ...layout.yaxis, range: [n + 0.5, OUTER], autorange: false },
   };
 
   _paeActiveBaseShapes = [...(layout.shapes || []), ...selectionShapes];
@@ -200,10 +206,18 @@ export function renderPaePlot(paePayload, handlers) {
     );
   }
 
+  // Compute strip width once and store it so _applyPaeOverlay uses the same value.
+  _paeStrip = Math.max(2, Math.ceil(n * 0.013));
+  const PAE_OUTER = -(_paeStrip + 0.5);
+
   const layout = {
     margin: { l: 50, r: 10, t: 38, b: 50 },
-    xaxis: { title: "Scored residue", scaleanchor: "y", scaleratio: 1, constrain: "domain" },
-    yaxis: { title: "Aligned residue", autorange: "reversed", constrain: "domain" },
+    // Pre-reserve space for the selection strips so the plot never resizes on
+    // first selection — range already includes the strip gutter.
+    xaxis: { title: "Scored residue", scaleanchor: "y", scaleratio: 1, constrain: "domain",
+             range: [PAE_OUTER, n + 0.5], autorange: false },
+    yaxis: { title: "Aligned residue", constrain: "domain",
+             range: [n + 0.5, PAE_OUTER], autorange: false },
     clickmode: "event+select",
     dragmode: "select",
     selectdirection: "any",
