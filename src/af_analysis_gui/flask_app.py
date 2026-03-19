@@ -29,7 +29,13 @@ def _normalize_for_json(value: Any) -> Any:
             return _normalize_for_json(value.tolist())
         except Exception:
             return str(value)
-    if value is None or isinstance(value, (str, int, float, bool)):
+    if isinstance(value, float):
+        # NaN and Inf are not valid JSON — convert to null so JSON.parse succeeds.
+        import math
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    if value is None or isinstance(value, (str, int, bool)):
         return value
     return str(value)
 
@@ -116,6 +122,8 @@ app = Flask(
     template_folder=str(APP_DIR / "templates"),
     static_folder=str(APP_DIR / "static"),
 )
+# Prevent NaN/Infinity literals in JSON responses (not valid JSON, breaks browser JSON.parse).
+app.config["JSON_SORT_KEYS"] = False
 
 
 def _require_data() -> af_analysis.Data:
@@ -143,6 +151,9 @@ def index():
 
 @app.post("/api/load")
 def api_load_dataset():
+    import sys
+    import tqdm as _tqdm_mod
+
     payload = request.get_json(silent=True) or {}
     directory = str(payload.get("directory", "")).strip()
     format_name = str(payload.get("format", "auto")).strip() or "auto"
@@ -150,17 +161,42 @@ def api_load_dataset():
     if not directory:
         return jsonify({"error": "Results directory is required"}), 400
 
+    # Drain stale progress events from any previous operation.
+    while not _PROGRESS_QUEUE.empty():
+        try:
+            _PROGRESS_QUEUE.get_nowait()
+        except queue.Empty:
+            break
+
+    # Patch every af_analysis.* module that has its own `tqdm` binding
+    # (each does `from tqdm.auto import tqdm`, creating an independent reference).
+    _patched: dict = {}
+    for _mod_name, _mod in list(sys.modules.items()):
+        if _mod_name.startswith("af_analysis") and hasattr(_mod, "tqdm"):
+            _patched[_mod_name] = _mod.tqdm
+            _mod.tqdm = _TqdmStream
+    _orig_auto = _tqdm_mod.auto.tqdm
+    _tqdm_mod.auto.tqdm = _TqdmStream
+
     try:
         format_arg = None if format_name == "auto" else format_name
         data = af_analysis.Data(directory=directory, format=format_arg, verbose=True)
         with STATE.lock:
             STATE.af_data = data
             STATE.last_error = ""
-        return jsonify({"ok": True, "rows": int(len(data.df))})
     except Exception:
         with STATE.lock:
             STATE.last_error = traceback.format_exc()
+        _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
         return jsonify({"error": "Failed to load dataset", "details": STATE.last_error}), 500
+    finally:
+        for _mod_name, _orig in _patched.items():
+            if _mod_name in sys.modules:
+                sys.modules[_mod_name].tqdm = _orig
+        _tqdm_mod.auto.tqdm = _orig_auto
+
+    _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
+    return jsonify({"ok": True, "rows": int(len(data.df))})
 
 
 @app.get("/api/browse")
@@ -395,7 +431,8 @@ def api_structure():
 def api_health():
     loaded = STATE.af_data is not None
     rows = int(len(STATE.af_data.df)) if loaded else 0
-    return jsonify({"loaded": loaded, "rows": rows})
+    directory = str(STATE.af_data.dir) if loaded and getattr(STATE.af_data, 'dir', None) else ""
+    return jsonify({"loaded": loaded, "rows": rows, "directory": directory})
 
 
 @app.get("/api/progress/stream")
@@ -437,6 +474,8 @@ def api_compute():
 
     payload = request.get_json(silent=True) or {}
     score = str(payload.get("score", "")).strip()
+    pae_cutoff = float(payload.get("pae_cutoff", 12.0))
+    dist_cutoff = float(payload.get("dist_cutoff", 8.0))
 
     if score not in {"pdockq2", "LIS", "LIA", "iptm_d0"}:
         return jsonify({"error": f"Unknown score '{score}'"}), 400
@@ -464,9 +503,9 @@ def api_compute():
         if score == "pdockq2":
             ana.pdockq2(data)
         elif score == "LIS":
-            ana.LIS_matrix(data)
+            ana.LIS_matrix(data, pae_cutoff=pae_cutoff)
         elif score == "LIA":
-            ana.LIA_matrix(data)
+            ana.LIA_matrix(data, pae_cutoff=pae_cutoff, dist_cutoff=dist_cutoff)
         elif score == "iptm_d0":
             ana.ipTM_d0(data)
         cols_added = [c for c in data.df.columns if c not in cols_before]
@@ -483,8 +522,43 @@ def api_compute():
     return jsonify({"ok": True, "columns_added": cols_added})
 
 
-def main() -> int:
-    app.run(host="127.0.0.1", port=5000, debug=True)
+def main(argv=None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="af_analysis_gui",
+        description="Launch the af_analysis web GUI.",
+    )
+    parser.add_argument(
+        "directory",
+        nargs="?",
+        default=None,
+        help="Path to the AlphaFold results directory to load on startup.",
+    )
+    parser.add_argument(
+        "--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)."
+    )
+    parser.add_argument(
+        "--port", type=int, default=5000, help="Port to listen on (default: 5000)."
+    )
+    parser.add_argument(
+        "--format", default=None, dest="fmt",
+        help="Force a specific input format (default: auto-detect).",
+    )
+    args = parser.parse_args(argv)
+
+    if args.directory:
+        directory = str(Path(args.directory).expanduser().resolve())
+        try:
+            data = af_analysis.Data(directory=directory, format=args.fmt, verbose=True)
+            with STATE.lock:
+                STATE.af_data = data
+                STATE.last_error = ""
+            print(f"Loaded {len(data.df)} models from {directory}")
+        except Exception:
+            print(f"Warning: could not load directory '{directory}':\n{traceback.format_exc()}")
+
+    app.run(host=args.host, port=args.port, debug=False, threaded=True)
     return 0
 
 

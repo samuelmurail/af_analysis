@@ -46,6 +46,12 @@
         <button id="load-btn" type="button">Load dataset</button>
       </div>
       <div class="status" id="status">Load a dataset to begin.</div>
+      <div id="load-progress" style="display:none; margin-top:6px;">
+        <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="load-progress-label"></div>
+        <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
+          <div id="load-progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
+        </div>
+      </div>
     </details>
 
     <details class="card" id="compute-card">
@@ -57,8 +63,26 @@
         <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
           <input type="checkbox" id="compute-LIS" /> LIS matrix
         </label>
+        <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIS">
+          PAE:
+          <input type="range" id="lis-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
+            oninput="document.getElementById('lis-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+          <span id="lis-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
+        </label>
         <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
           <input type="checkbox" id="compute-LIA" /> cLIS/LIA matrix
+        </label>
+        <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIA">
+          PAE:
+          <input type="range" id="lia-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
+            oninput="document.getElementById('lia-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+          <span id="lia-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="Distance cutoff for LIA">
+          Dist:
+          <input type="range" id="lia-dist-cutoff" min="4" max="20" step="0.5" value="8" style="width:70px; cursor:pointer;"
+            oninput="document.getElementById('lia-dist-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+          <span id="lia-dist-cutoff-val" style="min-width:34px;">8.0 Å</span>
         </label>
         <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
           <input type="checkbox" id="compute-iptm_d0" /> Dunbrack ipTM

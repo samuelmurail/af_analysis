@@ -362,7 +362,7 @@ export function clearPlotSelection() {
   if (traceType === 'scatter') {
     Plotly.restyle('plddt-plot', { selectedpoints: [[]] }, [0]);
     Plotly.relayout('plddt-plot', { shapes: _plddtChainShapes });
-  } else if (traceType === 'heatmap') {
+  } else if (traceType === 'heatmap' && plotDiv.classList.contains('pae-active')) {
     _clearPaeOverlay();
   }
 }

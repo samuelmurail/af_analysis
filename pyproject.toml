@@ -37,7 +37,7 @@ classifiers = [
 
 [project.scripts]
 af_analysis = "af_analysis.__main__:main"
-af_analysis_gui = "af_analysis_gui.__main__:main"
+af_analysis_gui = "af_analysis_gui.__main__:main_cli"
 
 [project.optional-dependencies]
 gui = [

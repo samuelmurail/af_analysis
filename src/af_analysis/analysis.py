@@ -1392,8 +1392,8 @@ def ipSAE(data, pae_cutoff=10.0, dist_cutoff=10.0):
 
         Implementation is based on the ipTM_d0 function from the IPSAE package
         https://github.com/DunbrackLab/IPSAE/blob/main/ipsae.py
-    # apply cutoff
-        Cite:
+
+                Cite:
         .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
         ipTM score and how to fix it" bioRxiv (2025).
 

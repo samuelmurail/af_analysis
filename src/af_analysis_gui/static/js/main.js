@@ -195,16 +195,49 @@ function initEvents() {
       return;
     }
 
+    const progressEl = document.getElementById('load-progress');
+    const barEl      = document.getElementById('load-progress-bar');
+    const labelEl    = document.getElementById('load-progress-label');
+    const showProgress = (desc, n, total) => {
+      if (!progressEl) return;
+      progressEl.style.display = '';
+      const pct = total > 0 ? Math.round(100 * n / total) : 0;
+      if (barEl)   barEl.style.width = `${pct}%`;
+      if (labelEl) labelEl.textContent = total > 0
+        ? `${desc}: ${n} / ${total} (${pct}%)`
+        : `${desc}…`;
+    };
+    const hideProgress = () => { if (progressEl) progressEl.style.display = 'none'; };
+
     setStatus('Loading dataset...');
+    hideProgress();
+
+    // Open SSE stream before the POST so no events are missed.
+    let sseResolve;
+    const sseDone = new Promise(r => { sseResolve = r; });
+    const es = new EventSource('/api/progress/stream');
+    es.onmessage = (ev) => {
+      try {
+        const d = JSON.parse(ev.data);
+        if (d.desc === '__end__') { es.close(); sseResolve(); }
+        else { showProgress(d.desc, d.n, d.total); }
+      } catch {}
+    };
+    es.onerror = () => { es.close(); sseResolve(); };
+
     try {
       const payload = await api('/api/load', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ directory, format })
       });
+      await sseDone;
+      hideProgress();
       setStatus(`Dataset loaded (${payload.rows} rows)`);
       await refreshTableAndPanels();
     } catch (err) {
+      await sseDone;
+      hideProgress();
       setStatus(String(err), true);
     }
   });
@@ -274,10 +307,18 @@ function initEvents() {
         };
         es.onerror = () => { es.close(); sseResolve(); };
 
+        const lisPaeCutoff  = parseFloat(document.getElementById('lis-pae-cutoff')?.value  ?? 12);
+        const liaPaeCutoff  = parseFloat(document.getElementById('lia-pae-cutoff')?.value  ?? 12);
+        const liaDistCutoff = parseFloat(document.getElementById('lia-dist-cutoff')?.value ?? 8);
+        const extraParams = score === 'LIS'
+          ? { pae_cutoff: lisPaeCutoff }
+          : score === 'LIA'
+            ? { pae_cutoff: liaPaeCutoff, dist_cutoff: liaDistCutoff }
+            : {};
         const res = await api('/api/compute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ score }),
+          body: JSON.stringify({ score, ...extraParams }),
         });
         await sseDone;  // wait for last SSE event before moving on
         added.push(...(res.columns_added || []));
@@ -356,6 +397,20 @@ async function main() {
   initEvents();
   initBrowser();
   renderSelectedResidues();
+
+  // If the server already has data loaded (e.g. --directory CLI arg), populate
+  // the directory input and refresh all panels without requiring a manual load.
+  try {
+    const health = await api('/api/health');
+    if (health.loaded) {
+      if (health.directory) {
+        const dirInput = document.getElementById('directory');
+        if (dirInput) dirInput.value = health.directory;
+      }
+      setStatus(`Dataset loaded — ${health.rows} models.`);
+      await refreshTableAndPanels();
+    }
+  } catch (_) { /* server not ready yet, ignore */ }
 }
 
 main().catch((err) => {
