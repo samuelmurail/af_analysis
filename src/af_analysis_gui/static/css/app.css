@@ -78,6 +78,17 @@ body {
     min-height: 0;
 }
 
+.card-title {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 2px 0 6px 0;
+    user-select: none;
+}
+
+.card-body {
+    overflow: hidden;
+}
+
 table {
     border-collapse: collapse;
     width: 100%;

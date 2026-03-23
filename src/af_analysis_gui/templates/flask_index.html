@@ -8,6 +8,23 @@
   <link rel="stylesheet" href="https://unpkg.com/molstar/build/viewer/molstar.css" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
   <script src="https://unpkg.com/molstar/build/viewer/molstar.js"></script>
+  <script>
+    window.toggleCard = function(titleEl) {
+      const body = titleEl.nextElementSibling;
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? '' : 'none';
+      titleEl.textContent = (collapsed ? '\u25BC ' : '\u25BA ') + titleEl.textContent.slice(2);
+    };
+    window.collapseCard = function(cardId) {
+      const card = document.getElementById(cardId);
+      if (!card) return;
+      const titleEl = card.querySelector('.card-title');
+      const body = card.querySelector('.card-body');
+      if (!titleEl || !body) return;
+      body.style.display = 'none';
+      titleEl.textContent = '\u25BA ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
+    };
+  </script>
 </head>
 <body>
   <div class="page">
@@ -17,86 +34,100 @@
       Af_analysis GUI
     </h2>
 
-    <details class="card" open>
-      <summary style="cursor: pointer; padding: 10px; font-weight: 600;">Load dataset</summary>
-      <div class="toolbar" style="margin-top: 6px;">
-        <div>
-          <label for="directory">Results directory</label>
-          <div style="display:flex; gap:6px;">
-            <input id="directory" type="text" value="/home/murail/Documents/Code/af_analysis/tests/inputs/fold_2024_07_01_12_14_prot_dna_zn/" placeholder="/path/to/results" style="flex:1;" />
-            <button id="browse-btn" type="button" style="background:#4b5563;">Browse…</button>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+
+      <div class="card" id="load-card">
+        <div class="card-title" onclick="toggleCard(this)">&#9658; Load dataset</div>
+        <div class="card-body" style="display:none">
+          <div class="toolbar" style="margin-top: 6px;">
+            <div>
+              <label for="directory">Results directory</label>
+              <div style="display:flex; gap:6px;">
+                <input id="directory" type="text" value="/home/murail/Documents/Code/af_analysis/tests/inputs/fold_2024_07_01_12_14_prot_dna_zn/" placeholder="/path/to/results" style="flex:1;" />
+                <button id="browse-btn" type="button" style="background:#4b5563;">Browse…</button>
+              </div>
+            </div>
+            <div>
+              <label for="format">Format</label>
+              <select id="format" style="width: 100%;">
+                <option value="auto">auto</option>
+                <option value="default">default</option>
+                <option value="colabfold_1.5">colabfold_1.5</option>
+                <option value="AF3_local">AF3_local</option>
+                <option value="AF3_webserver">AF3_webserver</option>
+                <option value="alphapulldown">alphapulldown</option>
+                <option value="alphapulldown_full">alphapulldown_full</option>
+                <option value="boltz1">boltz1</option>
+                <option value="chai1">chai1</option>
+                <option value="massivefold">massivefold</option>
+                <option value="full_massivefold">full_massivefold</option>
+              </select>
+            </div>
+            <button id="load-btn" type="button">Load dataset</button>
+          </div>
+          <div id="load-progress" style="display:none; margin-top:6px;">
+            <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="load-progress-label"></div>
+            <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
+              <div id="load-progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
+            </div>
           </div>
         </div>
-        <div>
-          <label for="format">Format</label>
-          <select id="format" style="width: 100%;">
-            <option value="auto">auto</option>
-            <option value="default">default</option>
-            <option value="colabfold_1.5">colabfold_1.5</option>
-            <option value="AF3_local">AF3_local</option>
-            <option value="AF3_webserver">AF3_webserver</option>
-            <option value="alphapulldown">alphapulldown</option>
-            <option value="alphapulldown_full">alphapulldown_full</option>
-            <option value="boltz1">boltz1</option>
-            <option value="chai1">chai1</option>
-            <option value="massivefold">massivefold</option>
-            <option value="full_massivefold">full_massivefold</option>
-          </select>
-        </div>
-        <button id="load-btn" type="button">Load dataset</button>
       </div>
-      <div class="status" id="status">Load a dataset to begin.</div>
-      <div id="load-progress" style="display:none; margin-top:6px;">
-        <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="load-progress-label"></div>
-        <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
-          <div id="load-progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
-        </div>
-      </div>
-    </details>
 
-    <details class="card" id="compute-card">
-      <summary style="cursor:pointer; padding:10px; font-weight:600;">Compute scores</summary>
-      <div class="toolbar" style="margin-top:6px; flex-direction:row; flex-wrap:wrap; align-items:center; gap:8px;">
-        <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-          <input type="checkbox" id="compute-pdockq2" /> pdockq2
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-          <input type="checkbox" id="compute-LIS" /> LIS matrix
-        </label>
-        <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIS">
-          PAE:
-          <input type="range" id="lis-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
-            oninput="document.getElementById('lis-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-          <span id="lis-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-          <input type="checkbox" id="compute-LIA" /> cLIS/LIA matrix
-        </label>
-        <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIA">
-          PAE:
-          <input type="range" id="lia-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
-            oninput="document.getElementById('lia-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-          <span id="lia-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="Distance cutoff for LIA">
-          Dist:
-          <input type="range" id="lia-dist-cutoff" min="4" max="20" step="0.5" value="8" style="width:70px; cursor:pointer;"
-            oninput="document.getElementById('lia-dist-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-          <span id="lia-dist-cutoff-val" style="min-width:34px;">8.0 Å</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-          <input type="checkbox" id="compute-iptm_d0" /> Dunbrack ipTM
-        </label>
-        <button id="compute-btn" type="button">Compute</button>
-      </div>
-      <div class="status" id="compute-status"></div>
-      <div id="compute-progress" style="display:none; margin-top:6px;">
-        <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="progress-label"></div>
-        <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
-          <div id="progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
+      <div class="card" id="compute-card">
+        <div class="card-title" onclick="toggleCard(this)">&#9658; Compute scores</div>
+        <div class="card-body" style="display:none">
+          <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+              <input type="checkbox" id="compute-pdockq2" /> pdockq2
+            </label>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+                <input type="checkbox" id="compute-LIS" /> LIS matrix
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIS">
+                PAE:
+                <input type="range" id="lis-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
+                  oninput="document.getElementById('lis-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+                <span id="lis-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
+              </label>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+                <input type="checkbox" id="compute-LIA" /> cLIS/LIA matrix
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIA">
+                PAE:
+                <input type="range" id="lia-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
+                  oninput="document.getElementById('lia-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+                <span id="lia-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="Distance cutoff for LIA">
+                Dist:
+                <input type="range" id="lia-dist-cutoff" min="4" max="20" step="0.5" value="8" style="width:70px; cursor:pointer;"
+                  oninput="document.getElementById('lia-dist-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+                <span id="lia-dist-cutoff-val" style="min-width:34px;">8.0 Å</span>
+              </label>
+            </div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+              <input type="checkbox" id="compute-iptm_d0" /> Dunbrack ipTM
+            </label>
+            <div>
+              <button id="compute-btn" type="button">Compute</button>
+            </div>
+          </div>
+          <div class="status" id="compute-status"></div>
+          <div id="compute-progress" style="display:none; margin-top:6px;">
+            <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="progress-label"></div>
+            <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
+              <div id="progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
+            </div>
+          </div>
         </div>
       </div>
-    </details>
+
+    </div>
+    <div class="status" id="status">Load a dataset to begin.</div>
 
     <div class="layout" id="layout">
       <div class="card table-wrap">

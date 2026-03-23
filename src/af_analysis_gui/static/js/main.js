@@ -4,6 +4,16 @@ import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearP
 import { loadStructure, highlightResidue, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
+function collapseCard(cardId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  const titleEl = card.querySelector('.card-title');
+  const body = card.querySelector('.card-body');
+  if (!titleEl || !body) return;
+  body.style.display = 'none';
+  titleEl.textContent = '\u25BA ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
+}
+
 function renderCurrentTable(columns, rows) {
   renderTable(columns, rows, async (selectedRow) => {
     state.selectedModel = Number(selectedRow);
@@ -234,6 +244,7 @@ function initEvents() {
       await sseDone;
       hideProgress();
       setStatus(`Dataset loaded (${payload.rows} rows)`);
+      collapseCard('load-card');
       await refreshTableAndPanels();
     } catch (err) {
       await sseDone;
@@ -327,6 +338,7 @@ function initEvents() {
       if (statusEl) statusEl.textContent = added.length
         ? `Done. New columns: ${added.join(', ')}`
         : 'Done (no new columns added).';
+      collapseCard('compute-card');
       await refreshTableAndPanels();
     } catch (err) {
       hideProgress();
@@ -408,6 +420,7 @@ async function main() {
         if (dirInput) dirInput.value = health.directory;
       }
       setStatus(`Dataset loaded — ${health.rows} models.`);
+      collapseCard('load-card');
       await refreshTableAndPanels();
     }
   } catch (_) { /* server not ready yet, ignore */ }
