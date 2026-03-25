@@ -238,7 +238,8 @@ def api_table():
     has_lis = "LIS" in df.columns and bool(df["LIS"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
     has_lia = "LIA" in df.columns and bool(df["LIA"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
     has_iptm_d0_matrix = "ipTM_d0_matrix" in df.columns and bool(df["ipTM_d0_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
-    return jsonify({"columns": ["row", *columns], "rows": rows, "total": int(len(df)), "has_lis": has_lis, "has_lia": has_lia, "has_iptm_d0_matrix": has_iptm_d0_matrix})
+    has_ipsae_matrix = "ipSAE_matrix" in df.columns and bool(df["ipSAE_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
+    return jsonify({"columns": ["row", *columns], "rows": rows, "total": int(len(df)), "has_lis": has_lis, "has_lia": has_lia, "has_iptm_d0_matrix": has_iptm_d0_matrix, "has_ipsae_matrix": has_ipsae_matrix})
 
 
 @app.get("/api/plddt")
@@ -391,6 +392,27 @@ def api_iptm_d0():
     return jsonify({"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipTM d0"})
 
 
+@app.get("/api/ipsae")
+def api_ipsae():
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    index = request.args.get("index", default=0, type=int)
+    if index < 0 or index >= len(data.df):
+        return jsonify({"error": "Model index out of range"}), 400
+
+    row = data.df.iloc[index]
+    matrix = row.get("ipSAE_matrix")
+    if not isinstance(matrix, (list, np.ndarray)):
+        return jsonify({"error": "No ipSAE matrix data for this model"}), 404
+
+    query = row.get("query")
+    chain_ids = [str(c) for c in data.chains.get(query, [])]
+    return jsonify({"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipSAE"})
+
+
 @app.get("/api/structure")
 def api_structure():
     try:
@@ -508,6 +530,7 @@ def api_compute():
             ana.LIA_matrix(data, pae_cutoff=pae_cutoff, dist_cutoff=dist_cutoff)
         elif score == "iptm_d0":
             ana.ipTM_d0(data)
+            ana.ipSAE(data, pae_cutoff=pae_cutoff)
         cols_added = [c for c in data.df.columns if c not in cols_before]
     except Exception:
         _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})

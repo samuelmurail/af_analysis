@@ -1,8 +1,11 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
-import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay } from './plot.js';
+import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay, getPlotZoom } from './plot.js';
 import { loadStructure, highlightResidue, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
 import { initResizableLayout } from './resize.js';
+
+// Track the last rendered plot type so we only restore zoom when staying on the same type.
+let _lastPlotType = null;
 
 function collapseCard(cardId) {
   const card = document.getElementById(cardId);
@@ -25,6 +28,10 @@ function renderCurrentTable(columns, rows) {
 async function refreshModelPanels() {
   const plotType = document.getElementById('plot-type')?.value || 'plddt';
 
+  // Capture zoom before re-rendering, but only restore it when staying on the same plot type.
+  const savedZoom = (plotType === _lastPlotType) ? getPlotZoom() : null;
+  _lastPlotType = plotType;
+
   const plddtPayload = await api(`/api/plddt?index=${state.selectedModel}`);
   state.chainIds = plddtPayload.chain_ids || [];
   state.chainLengths = plddtPayload.chain_lengths || [];
@@ -32,7 +39,7 @@ async function refreshModelPanels() {
   if (plotType === 'pae') {
     try {
       const paePayload = await api(`/api/pae?index=${state.selectedModel}`);
-      renderPaePlot(paePayload, makePaeHandlers());
+      renderPaePlot(paePayload, makePaeHandlers(), savedZoom);
       if (state.paeSelection) {
         const { xResidues, yResidues } = state.paeSelection;
         reapplyPaePlotOverlay(xResidues, yResidues);
@@ -40,7 +47,7 @@ async function refreshModelPanels() {
         if (el) el.textContent = `Scored: [${xResidues.join(", ")}] | Aligned: [${yResidues.join(", ")}]`;
       }
     } catch (e) {
-      renderPlot(plddtPayload, makePlddtHandlers());
+      renderPlot(plddtPayload, makePlddtHandlers(), savedZoom);
       document.getElementById('plot-type').value = 'plddt';
     }
   } else if (plotType === 'lis') {
@@ -67,8 +74,16 @@ async function refreshModelPanels() {
       renderPlot(plddtPayload, makePlddtHandlers());
       document.getElementById('plot-type').value = 'plddt';
     }
+  } else if (plotType === 'ipsae_matrix') {
+    try {
+      const ipsaePayload = await api(`/api/ipsae?index=${state.selectedModel}`);
+      renderLisPlot(ipsaePayload, makeLisHandlers());
+    } catch (e) {
+      renderPlot(plddtPayload, makePlddtHandlers());
+      document.getElementById('plot-type').value = 'plddt';
+    }
   } else {
-    renderPlot(plddtPayload, makePlddtHandlers());
+    renderPlot(plddtPayload, makePlddtHandlers(), savedZoom);
   }
 
   renderSelectedResidues();
@@ -169,18 +184,21 @@ function makePlddtHandlers() {
   };
 }
 
-function _updateLisOption(hasLis, hasLia, hasIptmD0) {
+function _updateLisOption(hasLis, hasLia, hasIptmD0, hasIpsae) {
   const optLis = document.getElementById('opt-lis');
   const optLia = document.getElementById('opt-lia');
   const optIptm = document.getElementById('opt-iptm-d0');
+  const optIpsae = document.getElementById('opt-ipsae');
   const plotType = document.getElementById('plot-type');
   if (optLis) optLis.style.display = hasLis ? '' : 'none';
   if (optLia) optLia.style.display = hasLia ? '' : 'none';
   if (optIptm) optIptm.style.display = hasIptmD0 ? '' : 'none';
+  if (optIpsae) optIpsae.style.display = hasIpsae ? '' : 'none';
   if (plotType) {
     if (!hasLis && plotType.value === 'lis') plotType.value = 'plddt';
     if (!hasLia && plotType.value === 'lia') plotType.value = 'plddt';
     if (!hasIptmD0 && plotType.value === 'iptm_d0_matrix') plotType.value = 'plddt';
+    if (!hasIpsae && plotType.value === 'ipsae_matrix') plotType.value = 'plddt';
   }
 }
 
@@ -188,7 +206,7 @@ async function refreshTableAndPanels() {
   const table = await api('/api/table');
   state.tableRows = table.rows;
   state.selectedModel = 0;
-  _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix);
+  _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix, !!table.has_ipsae_matrix);
   renderCurrentTable(table.columns, table.rows);
   await refreshModelPanels();
 }
@@ -278,6 +296,7 @@ function initEvents() {
     const scores = ['pdockq2', 'LIS', 'LIA', 'iptm_d0'].filter(
       id => document.getElementById(`compute-${id}`)?.checked
     );
+    // iptm_d0 implies ipSAE — handled server-side, no separate checkbox needed.
     if (!scores.length) return;
     const statusEl  = document.getElementById('compute-status');
     const progressEl = document.getElementById('compute-progress');
@@ -318,14 +337,17 @@ function initEvents() {
         };
         es.onerror = () => { es.close(); sseResolve(); };
 
-        const lisPaeCutoff  = parseFloat(document.getElementById('lis-pae-cutoff')?.value  ?? 12);
-        const liaPaeCutoff  = parseFloat(document.getElementById('lia-pae-cutoff')?.value  ?? 12);
-        const liaDistCutoff = parseFloat(document.getElementById('lia-dist-cutoff')?.value ?? 8);
+        const lisPaeCutoff   = parseFloat(document.getElementById('lis-pae-cutoff')?.value   ?? 12);
+        const liaPaeCutoff   = parseFloat(document.getElementById('lia-pae-cutoff')?.value   ?? 12);
+        const liaDistCutoff  = parseFloat(document.getElementById('lia-dist-cutoff')?.value  ?? 8);
+        const ipsaePaeCutoff = parseFloat(document.getElementById('ipsae-pae-cutoff')?.value ?? 10);
         const extraParams = score === 'LIS'
           ? { pae_cutoff: lisPaeCutoff }
           : score === 'LIA'
             ? { pae_cutoff: liaPaeCutoff, dist_cutoff: liaDistCutoff }
-            : {};
+            : score === 'iptm_d0'
+              ? { pae_cutoff: ipsaePaeCutoff }
+              : {};
         const res = await api('/api/compute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

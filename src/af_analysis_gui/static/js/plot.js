@@ -1,4 +1,4 @@
-export function renderPlot(plddtPayload, handlers) {
+export function renderPlot(plddtPayload, handlers, savedZoom = null) {
   const plotlyConfig = { responsive: true };
 
   const trace = {
@@ -36,7 +36,11 @@ export function renderPlot(plddtPayload, handlers) {
   // lines to them without needing to read custom properties back from Plotly.
   _plddtChainShapes = shapes;
 
-  Plotly.newPlot("plddt-plot", [trace], layout, plotlyConfig);
+  Plotly.newPlot("plddt-plot", [trace], layout, plotlyConfig).then(() => {
+    if (savedZoom?.xRange) {
+      Plotly.relayout("plddt-plot", { 'xaxis.range': savedZoom.xRange, 'xaxis.autorange': false });
+    }
+  });
   document.getElementById('plddt-plot')?.classList.remove('pae-active');
 
   const plotDiv = document.getElementById("plddt-plot");
@@ -92,6 +96,9 @@ const PAE_PINK   = "#ec4899";  // residues in both groups
 function _applyPaeOverlay(xResidues, yResidues) {
   if (!_paeState) return;
   const { payload, trace, layout } = _paeState;
+  const plotDiv = document.getElementById("plddt-plot");
+  const curXRange = plotDiv?._fullLayout?.xaxis?.range?.slice() || layout.xaxis.range;
+  const curYRange = plotDiv?._fullLayout?.yaxis?.range?.slice() || layout.yaxis.range;
   const n = payload.residues.length;
   const xSet = new Set(xResidues);
   const ySet = new Set(yResidues);
@@ -133,8 +140,8 @@ function _applyPaeOverlay(xResidues, yResidues) {
   const overlayLayout = {
     ...layout,
     shapes: [...(layout.shapes || []), ...selectionShapes],
-    xaxis: { ...layout.xaxis, range: [OUTER, n + 0.5], autorange: false },
-    yaxis: { ...layout.yaxis, range: [n + 0.5, OUTER], autorange: false },
+    xaxis: { ...layout.xaxis, range: curXRange, autorange: false },
+    yaxis: { ...layout.yaxis, range: curYRange, autorange: false },
   };
 
   _paeActiveBaseShapes = [...(layout.shapes || []), ...selectionShapes];
@@ -147,12 +154,20 @@ function _applyPaeOverlay(xResidues, yResidues) {
 function _clearPaeOverlay() {
   if (!_paeState || _paeOverlayActive) return;
   const { trace, layout } = _paeState;
+  const plotDiv = document.getElementById("plddt-plot");
+  const curXRange = plotDiv?._fullLayout?.xaxis?.range?.slice() || layout.xaxis.range;
+  const curYRange = plotDiv?._fullLayout?.yaxis?.range?.slice() || layout.yaxis.range;
   _paeActiveBaseShapes = layout.shapes || [];
   _paeHoverLines = [];
-  Plotly.react("plddt-plot", [trace], layout);
+  const preservedLayout = {
+    ...layout,
+    xaxis: { ...layout.xaxis, range: curXRange, autorange: false },
+    yaxis: { ...layout.yaxis, range: curYRange, autorange: false },
+  };
+  Plotly.react("plddt-plot", [trace], preservedLayout);
 }
 
-export function renderPaePlot(paePayload, handlers) {
+export function renderPaePlot(paePayload, handlers, savedZoom = null) {
   // Heatmap traces filter out the built-in "select2d" string from
   // modeBarButtonsToAdd, so we must supply a full custom-button object.
   const plotlyConfig = {
@@ -233,7 +248,16 @@ export function renderPaePlot(paePayload, handlers) {
   const selEl = document.getElementById("selected-residues");
   if (selEl) selEl.style.display = "";
 
-  Plotly.newPlot("plddt-plot", [trace], layout, plotlyConfig);
+  Plotly.newPlot("plddt-plot", [trace], layout, plotlyConfig).then(() => {
+    if (savedZoom?.xRange && savedZoom?.yRange) {
+      Plotly.relayout("plddt-plot", {
+        'xaxis.range': savedZoom.xRange,
+        'xaxis.autorange': false,
+        'yaxis.range': savedZoom.yRange,
+        'yaxis.autorange': false,
+      });
+    }
+  });
   document.getElementById('plddt-plot')?.classList.add('pae-active');
 
   const plotDiv = document.getElementById("plddt-plot");
@@ -347,6 +371,19 @@ export function resizePlot() {
   if (plotDiv && typeof Plotly !== "undefined" && Plotly.Plots?.resize) {
     Plotly.Plots.resize(plotDiv);
   }
+}
+
+/**
+ * Return the current axis zoom ranges of the active plot, or null if no plot.
+ * Shape: { xRange: [min, max], yRange: [min, max] }
+ */
+export function getPlotZoom() {
+  const plotDiv = document.getElementById("plddt-plot");
+  if (!plotDiv?._fullLayout) return null;
+  const xRange = plotDiv._fullLayout.xaxis?.range?.slice();
+  const yRange = plotDiv._fullLayout.yaxis?.range?.slice();
+  if (!xRange || !yRange) return null;
+  return { xRange, yRange };
 }
 
 // Re-apply the PAE overlay after a plot re-render (e.g. model switch).

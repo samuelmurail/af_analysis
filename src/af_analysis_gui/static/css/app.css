@@ -115,6 +115,39 @@ th.sort-active {
     color: #1843bf;
 }
 
+th.group-header {
+    background: #eef3ff;
+    color: #2d3a57;
+    font-style: italic;
+    white-space: nowrap;
+    text-align: center;
+    border-left: 2px solid #b8c7f0;
+    border-right: 2px solid #b8c7f0;
+}
+
+td.group-cell {
+    background: #f5f7ff;
+    border-left: 2px solid #b8c7f0;
+    border-right: 2px solid #b8c7f0;
+}
+
+button.group-toggle {
+    background: none;
+    border: 1px solid #b8c7f0;
+    border-radius: 3px;
+    color: #1843bf;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    padding: 1px 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+button.group-toggle:hover {
+    background: #dce7ff;
+}
+
 tr:hover {
     background: #eef3ff;
     cursor: pointer;

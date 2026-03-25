@@ -326,17 +326,22 @@ def compute_pdockQ2(
     if pae_array.shape != (models_CA.len, models_CA.len):
         logger.warning(f"PAE array shape {pae_array.shape} mismatch with CA atoms number {models_CA.len}")
 
+    # print(f"PAE array shape {pae_array.shape} CA atoms number {models_CA.len}")
+
     pdockq2_list = [[] for _ in models_chains]
 
     for frame_index in range(models_CA.model_num):
         model = models_CA.models[frame_index]
+        # print("model chain_str:", model.chain_str)
         chain_arr = np.asarray(model.chain_str)
         beta_arr = _scale_plddt_if_needed(np.asarray(model.beta))
         xyz = model.xyz
 
         for i, chain in enumerate(models_chains):
             chain_idx = np.where(chain_arr == chain)[0]
+            # print("chain_idx:", chain_idx)
             other_idx = np.where(chain_arr != chain)[0]
+            # print("other_idx:", other_idx)
 
             if len(chain_idx) == 0 or len(other_idx) == 0:
                 pdockq2_list[i].append(0.0)
@@ -353,6 +358,9 @@ def compute_pdockQ2(
 
             x_indexes = chain_idx[indexes[0]]
             y_indexes = other_idx[indexes[1]]
+
+            # print("x_indexes:", x_indexes)
+            # print("y_indexes:", y_indexes)
 
             pae_sel = pae_array[x_indexes, y_indexes]
             norm_if_interpae = np.mean(1 / (1 + (pae_sel / d0) ** 2))
@@ -746,9 +754,7 @@ def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
-            ipSAE_list.append(
-                {f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None}
-            )
+            LIA_matrix_list.append(None)
             continue
         LIA_matrix = compute_LIA_matrix(
             pdb=pdb,
@@ -1387,7 +1393,7 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
     return iptm_d0_dict
 
 
-def ipSAE(data, pae_cutoff=10.0, dist_cutoff=10.0):
+def ipSAE(data, pae_cutoff=10.0):
     """Compute the ipSAE score from the PAE matrix.
 
         Implementation is based on the ipTM_d0 function from the IPSAE package
@@ -1411,6 +1417,7 @@ def ipSAE(data, pae_cutoff=10.0, dist_cutoff=10.0):
     """
 
     ipSAE_list = []
+    ipSAE_matrix_list = []
 
     disable = not getattr(data, 'verbose', True)
 
@@ -1427,17 +1434,28 @@ def ipSAE(data, pae_cutoff=10.0, dist_cutoff=10.0):
             ipSAE_list.append(
                 {f"ipSAE_{data.chains[query][0]}_{data.chains[query][1]}": None}
             )
+            ipSAE_matrix_list.append(None)
             continue
-        ipSAE_matrix = compute_ipSAE_matrix(
+        ipSAE_values = compute_ipSAE_matrix(
             pae_array=PAE_matrix,
             pae_cutoff=pae_cutoff,
-            dist_cutoff=dist_cutoff,
             chain_ids=data.chains[query],
             chain_length=data.chain_length[query],
             chain_type=data.chain_type[query],
         )
 
-        ipSAE_list.append(ipSAE_matrix)
+        ipSAE_list.append(ipSAE_values)
+
+        # Build NxN matrix from per-pair values
+        chain_ids = data.chains[query]
+        matrix = [
+            [
+                ipSAE_values.get(f"ipSAE_{chain_ids[i]}_{chain_ids[j]}", 0.0)
+                for j in range(len(chain_ids))
+            ]
+            for i in range(len(chain_ids))
+        ]
+        ipSAE_matrix_list.append(matrix)
 
     assert len(ipSAE_list) == len(data.df["query"])
 
@@ -1446,9 +1464,11 @@ def ipSAE(data, pae_cutoff=10.0, dist_cutoff=10.0):
     for col in ipSAE_df.columns:
         data.df.loc[:, col] = ipSAE_df.loc[:, col].to_numpy()
 
+    data.df.loc[:, "ipSAE_matrix"] = ipSAE_matrix_list
+
 
 def compute_ipSAE_matrix(
-    pae_array, pae_cutoff, dist_cutoff, chain_ids, chain_length, chain_type
+    pae_array, pae_cutoff, chain_ids, chain_length, chain_type
 ):
     """Compute the ipSAE score from the PAE matrix.
 
@@ -1458,8 +1478,6 @@ def compute_ipSAE_matrix(
         array of predicted PAE
     pae_cutoff : float
         cutoff for PAE matrix values, default is 10.0 A
-    dist_cutoff : float
-        cutoff for distance between atoms, default is 10.0 A
     chain_ids : list
         list of chain IDs
     chain_length : list
@@ -1508,45 +1526,45 @@ def compute_ipSAE_matrix(
     ipSAE_dict = {}
     for i in range(len(chain_length)):
         for j in range(len(chain_length)):
-            if i != j:
-                sub_pae_array = pae_array[
-                    chain_len_sums[i] : chain_len_sums[i + 1],
-                    chain_len_sums[j] : chain_len_sums[j + 1],
-                ]
 
-                type = (
-                    "nucleic_acid"
-                    if (chain_type[i] != "protein" or chain_type[j] != "protein")
-                    else "protein"
-                )
-                valid_pairs_matrix = sub_pae_array <= pae_cutoff
-                n0res_byres_all = np.sum(valid_pairs_matrix, axis=1)
-                d0_res = calc_d0_array(n0res_byres_all, type)
+            sub_pae_array = pae_array[
+                chain_len_sums[i] : chain_len_sums[i + 1],
+                chain_len_sums[j] : chain_len_sums[j + 1],
+            ]
 
-                ipsae_d0res_byres = np.zeros(chain_length[i])
+            type = (
+                "nucleic_acid"
+                if (chain_type[i] != "protein" or chain_type[j] != "protein")
+                else "protein"
+            )
+            valid_pairs_matrix = sub_pae_array <= pae_cutoff
+            n0res_byres_all = np.sum(valid_pairs_matrix, axis=1)
+            d0_res = calc_d0_array(n0res_byres_all, type)
 
-                # print(
-                #     "sub_pae_array:",
-                #     sub_pae_array.shape,
-                #     "d0_res.shape:",
-                #     d0_res.shape,
-                #     "chain_length[i]:",
-                #     chain_length[i],
-                # )
+            ipsae_d0res_byres = np.zeros(chain_length[i])
 
-                for k in range(chain_length[i]):
-                    ptm_row_d0res = ptm_func_vec(sub_pae_array[k], d0_res[k])
-                    if valid_pairs_matrix[k].any():
-                        ipsae_d0res_byres[k] = ptm_row_d0res[
-                            valid_pairs_matrix[k]
-                        ].mean()
-                    else:
-                        ipsae_d0res_byres[k] = 0.0
+            # print(
+            #     "sub_pae_array:",
+            #     sub_pae_array.shape,
+            #     "d0_res.shape:",
+            #     d0_res.shape,
+            #     "chain_length[i]:",
+            #     chain_length[i],
+            # )
 
-                max_index = np.argmax(ipsae_d0res_byres)
-                ipSAE_dict[f"ipSAE_{chain_ids[i]}_{chain_ids[j]}"] = ipsae_d0res_byres[
-                    max_index
-                ]
+            for k in range(chain_length[i]):
+                ptm_row_d0res = ptm_func_vec(sub_pae_array[k], d0_res[k])
+                if valid_pairs_matrix[k].any():
+                    ipsae_d0res_byres[k] = ptm_row_d0res[
+                        valid_pairs_matrix[k]
+                    ].mean()
+                else:
+                    ipsae_d0res_byres[k] = 0.0
+
+            max_index = np.argmax(ipsae_d0res_byres)
+            ipSAE_dict[f"ipSAE_{chain_ids[i]}_{chain_ids[j]}"] = ipsae_d0res_byres[
+                max_index
+            ]
                 # print("ipsae_d0res_byres[max_index]", ipsae_d0res_byres[max_index])
 
     return ipSAE_dict

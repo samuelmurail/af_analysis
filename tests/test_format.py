@@ -219,7 +219,7 @@ def test_af3_webserver_protein_rna_ligand_ion():
 
     query = my_data.df.iloc[0]["query"]
 
-    assert my_data.chain_length[query] == [440, 1, 1, 5]
+    assert my_data.chain_length[query] == [440, 27, 1, 5]
     assert my_data.chains[query] == ["A", "B", "C", "D"]
     assert my_data.chain_type[query] == [
         "protein",
@@ -316,7 +316,7 @@ def test_boltz1():
 
     query = my_data.df.iloc[0]["query"]
 
-    assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
+    assert my_data.chain_length[query] == [586, 26, 13, 13, 19]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
     assert my_data.chain_type[query] == [
         "protein",
@@ -370,7 +370,7 @@ def test_chai1():
 
     query = my_data.df.iloc[0]["query"]
 
-    assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
+    assert my_data.chain_length[query] == [586, 26, 13, 13, 19]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
     assert my_data.chain_type[query] == [
         "protein",
@@ -425,7 +425,7 @@ def test_chai1_webserver():
 
     query = my_data.df.iloc[0]["query"]
 
-    assert my_data.chain_length[query] == [586, 26, 13, 13, 1]
+    assert my_data.chain_length[query] == [586, 26, 13, 13, 19]
     assert my_data.chains[query] == ["A", "B", "C", "D", "E"]
     assert my_data.chain_type[query] == [
         "protein",

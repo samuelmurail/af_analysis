@@ -229,34 +229,17 @@ class Data:
         -------
         None
         """
+        nuc_list = ["DA", "DC", "DT", "DG", "A", "C", "U", "G", "T"]
+        aa_list = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN",
+                   "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE",
+                   "PRO", "SER", "THR", "TRP", "TYR", "VAL",]
+        aa_nuc_list = aa_list + nuc_list
 
         def get_type(resnames):
-            nuc_list = ["DA", "DC", "DT", "DG", "A", "C", "U", "G", "T"]
             for resname in resnames:
                 if resname in nuc_list:
                     return "nucleic_acid"
-            aa_list = [
-                "ALA",
-                "ARG",
-                "ASN",
-                "ASP",
-                "CYS",
-                "GLU",
-                "GLN",
-                "GLY",
-                "HIS",
-                "ILE",
-                "LEU",
-                "LYS",
-                "MET",
-                "PHE",
-                "PRO",
-                "SER",
-                "THR",
-                "TRP",
-                "TYR",
-                "VAL",
-            ]
+
             for resname in resnames:
                 if resname in aa_list:
                     return "protein"
@@ -277,10 +260,22 @@ class Data:
             resname = np.asarray(model.resname_str)
 
             self.chains[querie] = _unique_preserve_order(chain_arr.tolist())
-            self.chain_length[querie] = [
-                len(np.unique(uniq_resid[chain_arr == chain]))
-                for chain in self.chains[querie]
-            ]
+            # self.chain_length[querie] = [
+            #     len(np.unique(uniq_resid[chain_arr == chain]))
+            #     for chain in self.chains[querie]
+            # ]
+            self.chain_length[querie] = []
+            for chain in self.chains[querie]:
+                # check that all resname are in aa)=_list or nuc_list
+                resname_chain = resname[chain_arr == chain]
+                if all(res in aa_nuc_list for res in resname_chain):
+                    self.chain_length[querie].append(
+                        len(np.unique(uniq_resid[chain_arr == chain]))
+                    )
+                else:
+                    self.chain_length[querie].append(
+                        sum(chain_arr == chain)
+                    )
 
             self.chain_type[querie] = [
                 get_type(resname[chain_arr == chain]) for chain in self.chains[querie]
