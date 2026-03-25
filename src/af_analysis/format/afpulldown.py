@@ -111,7 +111,6 @@ def read_full_dir(directory):
     log_pd_list = []
 
     for folder in subfolders:
-
         # print(f"Reading {folder}")
         log_pd = read_dir(folder)
         # print(log_pd)

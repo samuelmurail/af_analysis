@@ -4,6 +4,7 @@ export const state = {
   paeSelection: null,   // { xResidues, yResidues } | null
   chainIds: [],
   chainLengths: [],
+  chainTypes: [],
   viewer: null,
   plugin: null,
   tableRows: [],

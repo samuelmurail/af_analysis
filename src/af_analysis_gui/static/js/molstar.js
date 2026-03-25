@@ -11,10 +11,48 @@ let _paeSelection = null; // { scored: Set<"chainId:seqId">, aligned: Set<"chain
 let _programmaticHighlight = false;
 
 // The CDN viewer bundle exposes structure exports under window.molstar.lib.structure.
-// Script.getStructureSelection is NOT exported by the CDN build, so we build loci
-// manually by iterating structure units using StructureElement + StructureProperties.
 function getStructLib() {
   return window.molstar?.lib?.structure ?? {};
+}
+
+// Mol* Script + StructureSelection — needed for MolScript-based atom queries.
+// The CDN build exposes Script at window.molstar.Script (top-level export).
+function getMolScriptLib() {
+  const mol = window.molstar;
+  if (!mol) return {};
+  return {
+    Script: mol.Script ?? mol.lib?.['mol-script/script']?.Script,
+    StructureSelection:
+      mol.lib?.structure?.StructureSelection ??
+      mol.StructureSelection,
+  };
+}
+
+// Select individual atoms by their CIF _atom_site.id using MolScript.
+// Returns an element-loci covering exactly those atoms, or null on failure.
+function selectAtomsByIds(plugin, atomCifIds) {
+  const { Script, StructureSelection } = getMolScriptLib();
+  if (!Script?.getStructureSelection || !StructureSelection?.toLociWithSourceUnits) {
+    return null;
+  }
+  const data = plugin.managers.structure.hierarchy.current.structures[0]?.cell?.obj?.data;
+  if (!data) return null;
+  try {
+    const ids = atomCifIds.map(Number);
+    const sel = Script.getStructureSelection(
+      Q => Q.struct.generator.atomGroups({
+        'atom-test': Q.core.set.has([
+          Q.set(...ids),
+          Q.core.type.num([Q.struct.atomProperty.core.id()]),
+        ]),
+      }),
+      data
+    );
+    return StructureSelection.toLociWithSourceUnits(sel);
+  } catch (e) {
+    console.warn('[molstar] selectAtomsByIds failed:', e);
+    return null;
+  }
 }
 
 function mapGlobalResidue(globalResidue) {
@@ -24,7 +62,10 @@ function mapGlobalResidue(globalResidue) {
   // which covers polymer chains AND single-residue ion chains.
   if (state.residueMap && idx >= 0 && idx < state.residueMap.length) {
     const e = state.residueMap[idx];
-    return { chainId: e.chainId, localResidue: e.seqId };
+    const result = { chainId: e.chainId, localResidue: e.seqId };
+    if (e.ligandAtomIdx !== undefined) result.ligandAtomIdx = e.ligandAtomIdx;
+    if (e.atomName !== undefined) result.atomName = e.atomName;
+    return result;
   }
   // Fallback: use API chain_ids/chain_lengths metadata.
   let r = Number(globalResidue);
@@ -38,9 +79,9 @@ function mapGlobalResidue(globalResidue) {
   return { chainId: null, localResidue: null };
 }
 
-// Build a Mol* element-loci for an array of { chainId, seqId } pairs.
-// Uses StructureElement + StructureProperties from lib.structure (available in CDN viewer bundle).
-// StructureElement.Loci is duck-typed: { kind: 'element-loci', structure, elements: [{unit, indices}] }
+// Build a Mol* element-loci for an array of targets.
+// Each target is either { chainId, seqId } for residue-level selection,
+// or { chainId, seqId, atomName } (where atomName = CIF _atom_site.id) for atom-precise ligand selection.
 function buildMultiResidueLoci(plugin, targets) {
   const sl = getStructLib();
   const StructureElement = sl.StructureElement;
@@ -54,10 +95,50 @@ function buildMultiResidueLoci(plugin, targets) {
     return null;
   }
 
+  // Atom-level targets (ligand atoms): use Script-based selection by CIF _atom_site.id.
+  const atomTargets   = targets.filter(t => t.atomName !== undefined);
+  const residueTargets = targets.filter(t => t.atomName === undefined);
+
+  if (atomTargets.length > 0) {
+    const cifIds = atomTargets.map(t => Number(t.atomName));
+    const scriptLoci = selectAtomsByIds(plugin, cifIds);
+    if (scriptLoci && residueTargets.length === 0) return scriptLoci;
+    // If we also have residue targets, fall through to build both and merge;
+    // for simplicity, the Script loci already covers atom targets accurately.
+    if (scriptLoci) {
+      // Build residue loci and merge manually.
+      const residueLoci = _buildResidueLociOnly(plugin, residueTargets, StructureElement, StructureProperties, data);
+      if (!residueLoci) return scriptLoci;
+      // Merge: combine elements arrays.
+      const merged = [...scriptLoci.elements, ...residueLoci.elements];
+      return { kind: 'element-loci', structure: data, elements: merged };
+    }
+    // Script unavailable — fall through to manual loop for all targets.
+  }
+
+  return _buildResidueLociOnly(plugin, targets, StructureElement, StructureProperties, data);
+}
+
+// Internal helper: build element-loci by iterating units.
+// Handles both residue-level targets ({ chainId, seqId }) and
+// atom-level targets ({ chainId, seqId, atomName }) where atomName is
+// the CIF _atom_site.id stored during loadStructure expansion.
+function _buildResidueLociOnly(plugin, targets, StructureElement, StructureProperties, data) {
   try {
     const loc = StructureElement.Location.create(data);
-    // Group matched UnitIndex values by unit reference.
     const unitIndexMap = new Map();
+
+    // Separate residue-level from atom-level targets.
+    const residueTargets = targets.filter(t => t.atomName === undefined);
+    const atomTargets    = targets.filter(t => t.atomName !== undefined);
+
+    // Build per-chain Set of CIF atom ids for atom-level targets.
+    // atomName holds String(_SP.atom.id?.(loc) ?? loc.element) from the expansion.
+    const atomSetByChain = new Map();
+    for (const t of atomTargets) {
+      if (!atomSetByChain.has(t.chainId)) atomSetByChain.set(t.chainId, new Set());
+      atomSetByChain.get(t.chainId).add(t.atomName);
+    }
 
     for (const unit of data.units) {
       loc.unit = unit;
@@ -65,63 +146,38 @@ function buildMultiResidueLoci(plugin, targets) {
         loc.element = unit.elements[i];
         const seq   = StructureProperties.residue.label_seq_id(loc);
         const chain = StructureProperties.chain.label_asym_id(loc);
-        for (const { chainId, seqId } of targets) {
+        let matched = false;
+
+        // Residue-level matching.
+        for (const { chainId, seqId } of residueTargets) {
           if (seq !== seqId) continue;
           if (chainId && chain !== chainId) continue;
+          matched = true;
+          break;
+        }
+
+        // Atom-level matching: use the same CIF atom id as stored in atomName.
+        if (!matched && atomSetByChain.has(chain)) {
+          const cifId = String(StructureProperties.atom.id?.(loc) ?? loc.element);
+          if (atomSetByChain.get(chain).has(cifId)) matched = true;
+        }
+
+        if (matched) {
           if (!unitIndexMap.has(unit)) unitIndexMap.set(unit, new Set());
           unitIndexMap.get(unit).add(i);
-          break; // matched — no need to check remaining targets for this atom
         }
       }
     }
 
     if (unitIndexMap.size === 0) return null;
-
     const elements = [];
     for (const [unit, indexSet] of unitIndexMap) {
       elements.push({ unit, indices: new Int32Array([...indexSet].sort((a, b) => a - b)) });
     }
-    console.debug("[molstar] buildMultiResidueLoci %d targets → %d units", targets.length, elements.length);
-    return { kind: "element-loci", structure: data, elements };
+    return { kind: 'element-loci', structure: data, elements };
   } catch (e) {
-    console.warn("[molstar] buildMultiResidueLoci failed:", e);
+    console.warn("[molstar] _buildResidueLociOnly failed:", e);
     return null;
-  }
-}
-
-// Log sample residues from the loaded structure to help debug seq-id mismatches.
-function debugStructureResidues(plugin) {
-  try {
-    const sl = getStructLib();
-    const StructureElement = sl.StructureElement;
-    const StructureProperties = sl.StructureProperties;
-    const data = plugin.managers.structure.hierarchy.current.structures[0]?.cell?.obj?.data;
-    if (!data || !StructureElement || !StructureProperties) {
-      console.warn("[molstar] debug: StructureElement=%o StructureProperties=%o. lib.structure keys: %o",
-        !!StructureElement, !!StructureProperties, Object.keys(sl));
-      return;
-    }
-    const loc = StructureElement.Location.create(data);
-    const seen = new Set();
-    const samples = [];
-    for (const unit of data.units) {
-      loc.unit = unit;
-      for (let i = 0; i < unit.elements.length; i++) {
-        loc.element = unit.elements[i];
-        const chain = StructureProperties.chain.label_asym_id(loc);
-        const seq   = StructureProperties.residue.label_seq_id(loc);
-        const key   = `${chain}:${seq}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          samples.push({ chain, seq });
-          if (samples.length >= 15) break;
-        }
-      }
-      if (samples.length >= 15) break;
-    }
-    console.debug("[molstar] sample residues (label_asym_id:label_seq_id):", samples);
-  } catch (e) {
-    console.warn("[molstar] debugStructureResidues failed:", e);
   }
 }
 
@@ -223,7 +279,7 @@ export function subscribeToMolstarHover(callback) {
       }
 
       const g = state._reverseResidueMap.get(`${chainId}:${seqId}`);
-      callback(g != null ? [g] : []);
+      callback(g ?? []);
     } catch (e) {
       // Hover fires very frequently — only warn on the first failure.
       console.warn('[molstar] subscribeToMolstarHover handler failed:', e);
@@ -251,11 +307,15 @@ export function highlightResidues(globalResidues) {
   if (!state.plugin || !globalResidues?.length) return false;
 
   // Build candidate target lists: prefer chain+local, fall back to global seq id.
+  // For ligand atoms, include ligandAtomIdx for atom-precise highlighting.
   const targets = [];
   for (const g of globalResidues) {
-    const { chainId, localResidue } = mapGlobalResidue(g);
+    const { chainId, localResidue, ligandAtomIdx, atomName } = mapGlobalResidue(g);
     if (chainId && localResidue != null) {
-      targets.push({ chainId, seqId: localResidue });
+      const t = { chainId, seqId: localResidue };
+      if (ligandAtomIdx !== undefined) t.ligandAtomIdx = ligandAtomIdx;
+      if (atomName !== undefined) t.atomName = atomName;
+      targets.push(t);
     } else {
       targets.push({ chainId: null, seqId: Number(g) });
     }
@@ -308,10 +368,14 @@ export function hoverResidues(globalResidues) {
       return;
     }
     const targets = globalResidues.map(g => {
-      const { chainId, localResidue } = mapGlobalResidue(g);
-      return (chainId && localResidue != null)
-        ? { chainId, seqId: localResidue }
-        : { chainId: null, seqId: Number(g) };
+      const { chainId, localResidue, ligandAtomIdx, atomName } = mapGlobalResidue(g);
+      if (chainId && localResidue != null) {
+        const t = { chainId, seqId: localResidue };
+        if (ligandAtomIdx !== undefined) t.ligandAtomIdx = ligandAtomIdx;
+        if (atomName !== undefined) t.atomName = atomName;
+        return t;
+      }
+      return { chainId: null, seqId: Number(g) };
     });
     const loci = buildMultiResidueLoci(state.plugin, targets);
     if (loci) {
@@ -395,12 +459,20 @@ export async function applyPaeColors(xResidues, yResidues) {
   const scored  = new Set();
   const aligned = new Set();
   for (const g of xResidues) {
-    const { chainId, localResidue } = mapGlobalResidue(g);
-    scored.add(chainId ? `${chainId}:${localResidue}` : `*:${Number(g)}`);
+    const { chainId, localResidue, atomName } = mapGlobalResidue(g);
+    if (chainId && atomName !== undefined) {
+      scored.add(`${chainId}:${localResidue}:${atomName}`);
+    } else {
+      scored.add(chainId ? `${chainId}:${localResidue}` : `*:${Number(g)}`);
+    }
   }
   for (const g of yResidues) {
-    const { chainId, localResidue } = mapGlobalResidue(g);
-    aligned.add(chainId ? `${chainId}:${localResidue}` : `*:${Number(g)}`);
+    const { chainId, localResidue, atomName } = mapGlobalResidue(g);
+    if (chainId && atomName !== undefined) {
+      aligned.add(`${chainId}:${localResidue}:${atomName}`);
+    } else {
+      aligned.add(chainId ? `${chainId}:${localResidue}` : `*:${Number(g)}`);
+    }
   }
   _paeSelection = { scored, aligned };
   await _recolorRepr('pae-selection');
@@ -429,10 +501,6 @@ export async function clearPaeColors() {
   _paeSelection = null;
   const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
   await _recolorRepr(colorScheme);
-}
-
-export async function highlightTwoGroups(xResidues, yResidues) {
-  await applyPaeColors(xResidues, yResidues);
 }
 
 // AlphaFold 3 pLDDT color scheme — reads B-factor (= pLDDT) from each atom.
@@ -484,6 +552,9 @@ function registerAfPlddt(plugin) {
 }
 
 // Custom color theme: everything white except PAE-selected residues.
+// For ligands, atom-precise keys (chain:seq:cifId) are stored in _paeSelection,
+// so 'groupInstance' granularity (called once per atom in ball-and-stick) gives
+// per-atom coloring within a single-residue ligand (e.g. ATP).
 function registerPaeSelection(plugin) {
   const StructureProperties = getStructLib().StructureProperties;
   if (!StructureProperties) {
@@ -500,16 +571,22 @@ function registerPaeSelection(plugin) {
     category: 'Misc',
     isApplicable: () => true,
     factory: (_ctx, props) => ({
+      // 'groupInstance' calls color() once per atom for ball-and-stick/spacefill
+      // representations (each atom is its own group in those geometries).
       granularity: 'groupInstance',
       color: (location) => {
         if (!_paeSelection) return WHITE;
         try {
-          const chain = StructureProperties.chain.label_asym_id(location);
-          const seq   = StructureProperties.residue.label_seq_id(location);
-          const key   = `${chain}:${seq}`;
-          const wkey  = `*:${seq}`;
-          const inScored  = _paeSelection.scored.has(key)  || _paeSelection.scored.has(wkey);
-          const inAligned = _paeSelection.aligned.has(key) || _paeSelection.aligned.has(wkey);
+          const chain  = StructureProperties.chain.label_asym_id(location);
+          const seq    = StructureProperties.residue.label_seq_id(location);
+          // CIF _atom_site.id via StructureProperties.atom.id (if available),
+          // otherwise fall back to the raw ElementIndex.
+          const cifId  = String(StructureProperties.atom.id?.(location) ?? location.element);
+          const resKey  = `${chain}:${seq}`;
+          const atomKey = `${chain}:${seq}:${cifId}`;
+          const wkey    = `*:${seq}`;
+          const inScored  = _paeSelection.scored.has(resKey)  || _paeSelection.scored.has(atomKey)  || _paeSelection.scored.has(wkey);
+          const inAligned = _paeSelection.aligned.has(resKey) || _paeSelection.aligned.has(atomKey) || _paeSelection.aligned.has(wkey);
           if (inScored && inAligned) return PINK;
           if (inScored)  return GREEN;
           if (inAligned) return ORANGE;
@@ -612,13 +689,76 @@ export async function loadStructure(index) {
     });
   }
 
-  debugStructureResidues(state.plugin);
   state.residueMap = buildResidueMapFromStructure(state.plugin);
 
-  // Pre-build the reverse map (chainId:seqId → 1-based global index) once here
-  // so it is ready at hover time without being rebuilt on every cursor move.
+  // For ligand chains the PAE/pLDDT arrays have one entry per heavy atom,
+  // but buildResidueMapFromStructure only stores one entry per unique residue.
+  // Expand ligand entries so the residueMap index aligns with pLDDT/PAE positions.
+  const _cIds   = state.chainIds   || [];
+  const _cLens  = state.chainLengths || [];
+  const _cTypes = state.chainTypes  || [];
+  if (_cTypes.includes('ligand')) {
+    const perChain = {};
+    for (const e of state.residueMap) {
+      if (!perChain[e.chainId]) perChain[e.chainId] = [];
+      perChain[e.chainId].push(e);
+    }
+    const expanded = [];
+    // For atom-level ligand highlighting we need per-atom entries with ligandAtomIdx.
+    // Build these directly from the Mol* structure so the ordering matches the CIF file
+    // (= PAE/pLDDT atom order).
+    const _sl = getStructLib();
+    const _SE = _sl.StructureElement;
+    const _SP = _sl.StructureProperties;
+    const _structData = state.plugin.managers.structure.hierarchy.current.structures[0]?.cell?.obj?.data;
+    for (let i = 0; i < _cIds.length; i++) {
+      const entries = perChain[_cIds[i]] || [];
+      if (_cTypes[i] === 'ligand') {
+        // Build one entry per heavy atom using Mol* atom order (= PAE order).
+        if (_SE && _SP && _structData) {
+          const loc = _SE.Location.create(_structData);
+          const ligAtoms = [];
+          for (const unit of _structData.units) {
+            loc.unit = unit;
+            for (let k = 0; k < unit.elements.length; k++) {
+              loc.element = unit.elements[k];
+              if (_SP.chain.label_asym_id(loc) !== _cIds[i]) continue;
+              ligAtoms.push({
+                chainId: _cIds[i],
+                seqId: _SP.residue.label_seq_id(loc),
+                ligandAtomIdx: ligAtoms.length,
+                // Store CIF _atom_site.id (via StructureProperties.atom.id if available,
+                // otherwise fall back to ElementIndex). Used for Script-based selection
+                // and for the 'element'-granularity pae-selection color theme.
+                atomName: String(_SP.atom.id?.(loc) ?? loc.element),
+              });
+            }
+          }
+          if (ligAtoms.length > 0) {
+            expanded.push(...ligAtoms);
+            continue;
+          }
+        }
+        // Fallback: repeat the single-residue entry without atom-precision
+        const atomCount = Number(_cLens[i] || entries.length || 1);
+        const template = entries[0] || { chainId: _cIds[i], seqId: 1 };
+        for (let j = 0; j < atomCount; j++) expanded.push({ ...template });
+      } else {
+        expanded.push(...entries);
+      }
+    }
+    state.residueMap = expanded;
+  }
+
+  // Pre-build the reverse map (chainId:seqId → array of 1-based global indices).
+  // Storing arrays means hovering a ligand in Mol* highlights all its PAE/pLDDT rows.
   const rm = new Map();
-  state.residueMap.forEach((e, i) => rm.set(`${e.chainId}:${e.seqId}`, i + 1));
+  state.residueMap.forEach((e, i) => {
+    const key = `${e.chainId}:${e.seqId}`;
+    const existing = rm.get(key);
+    if (existing === undefined) rm.set(key, [i + 1]);
+    else existing.push(i + 1);
+  });
   state._reverseResidueMap = rm;
 
   if (state.selectedResidues.length > 0) {

@@ -324,7 +324,9 @@ def compute_pdockQ2(
     models_chains = np.unique(np.asarray(models_CA.chain_str))
 
     if pae_array.shape != (models_CA.len, models_CA.len):
-        logger.warning(f"PAE array shape {pae_array.shape} mismatch with CA atoms number {models_CA.len}")
+        logger.warning(
+            f"PAE array shape {pae_array.shape} mismatch with CA atoms number {models_CA.len}"
+        )
 
     # print(f"PAE array shape {pae_array.shape} CA atoms number {models_CA.len}")
 
@@ -415,16 +417,17 @@ def pdockq(data):
 
     pdockq_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
-    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable, desc="pdockq"):
+    for pdb in tqdm(
+        data.df["pdb"], total=len(data.df["pdb"]), disable=disable, desc="pdockq"
+    ):
         if pdb is None or pdb is np.nan:
             pdockq_list.append(None)
             continue
 
         model = pdb_cpp.Coor(pdb)
         pdockq_list += compute_pdockQ(model)
-
 
     data.df["pdockq"] = pdockq_list
 
@@ -465,9 +468,11 @@ def mpdockq(data):
     """
 
     pdockq_list = []
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
-    for pdb in tqdm(data.df["pdb"], total=len(data.df["pdb"]), disable=disable, desc="mpdockq"):
+    for pdb in tqdm(
+        data.df["pdb"], total=len(data.df["pdb"]), disable=disable, desc="mpdockq"
+    ):
         if pdb is None or pdb is np.nan:
             pdockq_list.append(None)
             continue
@@ -511,7 +516,7 @@ def pdockq2(data):
     for i in range(max_chain_num):
         pdockq_list.append([])
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     if "data_file" not in data.df.columns:
         raise ValueError(
@@ -569,7 +574,7 @@ def inter_chain_pae(data, fun=np.mean):
     """
     pae_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     if "data_file" not in data.df.columns:
         raise ValueError(
@@ -697,7 +702,7 @@ def LIS_matrix(data, pae_cutoff=12.0):
     """
     LIS_matrix_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, data_path in tqdm(
         zip(data.df["query"], data.df["data_file"]),
@@ -733,7 +738,7 @@ def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
             object containing the dipSAE(ata
         ref_dict : dict
             dictionary containing the reference PAE matrix for each query
-    
+
         Returns
         -------
         None
@@ -742,7 +747,7 @@ def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
 
     LIA_matrix_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, data_file, pdb in tqdm(
         zip(data.df["query"], data.df["data_file"], data.df["pdb"]),
@@ -750,7 +755,6 @@ def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
         disable=disable,
         desc="LIA_matrix",
     ):
-
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
@@ -833,7 +837,9 @@ def compute_LIA_matrix(
 
         valid = mapped_idx >= 0
         mapped = mapped_idx[valid]
-        contact_map[np.ix_(mapped, mapped)] = (distance[valid][:, valid] < dist_cutoff).astype(int)
+        contact_map[np.ix_(mapped, mapped)] = (
+            distance[valid][:, valid] < dist_cutoff
+        ).astype(int)
     trans_matrix = np.zeros_like(pae_array)
     mask = pae_array < pae_cutoff
     trans_matrix[mask] = 1 - pae_array[mask] / pae_cutoff
@@ -878,7 +884,7 @@ def PAE_matrix(data, fun=np.average):
 
     PAE_avg_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, data_path in tqdm(
         zip(data.df["query"], data.df["data_file"]),
@@ -1044,7 +1050,6 @@ def compute_ftdmp(
         os.path.dirname(pdb) == os.path.dirname(my_data.df["pdb"].iloc[0])
         for pdb in my_data.df["pdb"]
     ):
-
         pdb_run_list = []
         pdb_dir_list = []
         for pdb in my_data.df["pdb"].tolist():
@@ -1153,7 +1158,7 @@ def compute_dockq(data, ref_dict, fun=np.average, dockq_thresold=0.3):
     fnat_list = []
     old_query = ""
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, pdb in tqdm(
         zip(data.df["query"], data.df["pdb"]),
@@ -1262,7 +1267,7 @@ def ipTM_d0(data):
     iptm_d0_list = []
     iptm_d0_matrix_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, data_file in tqdm(
         zip(data.df["query"], data.df["data_file"]),
@@ -1270,7 +1275,6 @@ def ipTM_d0(data):
         disable=disable,
         desc="ipTM_d0",
     ):
-
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
@@ -1369,25 +1373,25 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
     for i in range(len(chain_length)):
         for j in range(len(chain_length)):
             # if i != j:
-                do_chain = chain_length[i] + chain_length[j]
-                type = (
-                    "nucleic_acid"
-                    if (chain_type[i] != "protein" or chain_type[j] != "protein")
-                    else "protein"
-                )
+            do_chain = chain_length[i] + chain_length[j]
+            type = (
+                "nucleic_acid"
+                if (chain_type[i] != "protein" or chain_type[j] != "protein")
+                else "protein"
+            )
 
-                d0 = calc_d0(do_chain, type)
-                iptm_d0_matrix = ptm_func_vec(
-                    pae_array[
-                        chain_len_sums[i] : chain_len_sums[i + 1],
-                        chain_len_sums[j] : chain_len_sums[j + 1],
-                    ],
-                    d0,
-                )
-                iptm_d0_mean = fun(iptm_d0_matrix)
-                iptm_d0_dict[f"ipTM_d0_{chain_ids[i]}_{chain_ids[j]}"] = iptm_d0_mean
-                iptm_do_sum += iptm_d0_mean * chain_length[i] * chain_length[j]
-                iptm_size += chain_length[i] * chain_length[j]
+            d0 = calc_d0(do_chain, type)
+            iptm_d0_matrix = ptm_func_vec(
+                pae_array[
+                    chain_len_sums[i] : chain_len_sums[i + 1],
+                    chain_len_sums[j] : chain_len_sums[j + 1],
+                ],
+                d0,
+            )
+            iptm_d0_mean = fun(iptm_d0_matrix)
+            iptm_d0_dict[f"ipTM_d0_{chain_ids[i]}_{chain_ids[j]}"] = iptm_d0_mean
+            iptm_do_sum += iptm_d0_mean * chain_length[i] * chain_length[j]
+            iptm_size += chain_length[i] * chain_length[j]
 
     iptm_d0_dict[f"ipTM_d0"] = iptm_do_sum / iptm_size if iptm_size > 0 else None
     return iptm_d0_dict
@@ -1396,30 +1400,30 @@ def compute_iptm_d0_values(pae_array, chain_ids, chain_length, chain_type):
 def ipSAE(data, pae_cutoff=10.0):
     """Compute the ipSAE score from the PAE matrix.
 
-        Implementation is based on the ipTM_d0 function from the IPSAE package
-        https://github.com/DunbrackLab/IPSAE/blob/main/ipsae.py
+    Implementation is based on the ipTM_d0 function from the IPSAE package
+    https://github.com/DunbrackLab/IPSAE/blob/main/ipsae.py
 
-                Cite:
-        .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
-        ipTM score and how to fix it" bioRxiv (2025).
+            Cite:
+    .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
+    ipTM score and how to fix it" bioRxiv (2025).
 
-        Parameters
-        ----------
-        data : AFData
-            object containing the dipSAE(ata
-        ref_dict : dict
-            dictionary containing the reference PAE matrix for each query
-    
-        Returns
-        -------
-        None
-            The dataframe is modified in place.
+    Parameters
+    ----------
+    data : AFData
+        object containing the dipSAE(ata
+    ref_dict : dict
+        dictionary containing the reference PAE matrix for each query
+
+    Returns
+    -------
+    None
+        The dataframe is modified in place.
     """
 
     ipSAE_list = []
     ipSAE_matrix_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, data_file in tqdm(
         zip(data.df["query"], data.df["data_file"]),
@@ -1427,7 +1431,6 @@ def ipSAE(data, pae_cutoff=10.0):
         disable=disable,
         desc="ipSAE",
     ):
-
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
@@ -1467,9 +1470,7 @@ def ipSAE(data, pae_cutoff=10.0):
     data.df.loc[:, "ipSAE_matrix"] = ipSAE_matrix_list
 
 
-def compute_ipSAE_matrix(
-    pae_array, pae_cutoff, chain_ids, chain_length, chain_type
-):
+def compute_ipSAE_matrix(pae_array, pae_cutoff, chain_ids, chain_length, chain_type):
     """Compute the ipSAE score from the PAE matrix.
 
     Parameters
@@ -1526,7 +1527,6 @@ def compute_ipSAE_matrix(
     ipSAE_dict = {}
     for i in range(len(chain_length)):
         for j in range(len(chain_length)):
-
             sub_pae_array = pae_array[
                 chain_len_sums[i] : chain_len_sums[i + 1],
                 chain_len_sums[j] : chain_len_sums[j + 1],
@@ -1555,9 +1555,7 @@ def compute_ipSAE_matrix(
             for k in range(chain_length[i]):
                 ptm_row_d0res = ptm_func_vec(sub_pae_array[k], d0_res[k])
                 if valid_pairs_matrix[k].any():
-                    ipsae_d0res_byres[k] = ptm_row_d0res[
-                        valid_pairs_matrix[k]
-                    ].mean()
+                    ipsae_d0res_byres[k] = ptm_row_d0res[valid_pairs_matrix[k]].mean()
                 else:
                     ipsae_d0res_byres[k] = 0.0
 
@@ -1565,7 +1563,7 @@ def compute_ipSAE_matrix(
             ipSAE_dict[f"ipSAE_{chain_ids[i]}_{chain_ids[j]}"] = ipsae_d0res_byres[
                 max_index
             ]
-                # print("ipsae_d0res_byres[max_index]", ipsae_d0res_byres[max_index])
+            # print("ipsae_d0res_byres[max_index]", ipsae_d0res_byres[max_index])
 
     return ipSAE_dict
 
@@ -1595,7 +1593,7 @@ def ipTM_d0_interface(data):
 
     iptm_d0_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for query, pdb, data_file in tqdm(
         zip(data.df["query"], data.df["pdb"], data.df["data_file"]),
@@ -1603,7 +1601,6 @@ def ipTM_d0_interface(data):
         disable=disable,
         desc="ipTM_d0_interface",
     ):
-
         PAE_matrix = get_pae(data_file)
         if PAE_matrix is None:
             logger.warning(f"No PAE matrix found for query {query}.")
@@ -1726,9 +1723,9 @@ def compute_iptm_d0_interface_values(
                 # Apply distance cutoff
                 iptm_d0_matrix[sub_distance > 10.0] = np.nan
                 iptm_d0_mean = fun(iptm_d0_matrix)
-                iptm_d0_dict[f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}"] = (
-                    iptm_d0_mean
-                )
+                iptm_d0_dict[
+                    f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}"
+                ] = iptm_d0_mean
                 # print(f"ipTM_interface_{chain_ids[i]}_{chain_ids[j]}", iptm_d0_mean)
 
     return iptm_d0_dict
@@ -1761,7 +1758,7 @@ def iplddt(data, cutoff=10.0):
 
     iplddt_list = []
 
-    disable = not getattr(data, 'verbose', True)
+    disable = not getattr(data, "verbose", True)
 
     for pdb, query in tqdm(
         zip(data.df["pdb"], data.df["query"]),
@@ -1782,7 +1779,9 @@ def iplddt(data, cutoff=10.0):
             coor_CA_CB = model.select_atoms(
                 "(protein and (name CB or (resname GLY and name CA))) or (dna and name P) or (not protein and not dna and noh)"
             )
-        model_chains = data.chains.get(query, np.unique(np.asarray(coor_CA_CB.chain_str)))
+        model_chains = data.chains.get(
+            query, np.unique(np.asarray(coor_CA_CB.chain_str))
+        )
         iplddt_local = {"pdb": pdb}
 
         for i, chain in enumerate(model_chains):
@@ -1807,9 +1806,7 @@ def iplddt(data, cutoff=10.0):
                 # chain_indices = np.unique(chain_indices)
                 # other_chain_indices = np.unique(other_chain_indices)
                 main_chain_beta = np.asarray(chain_sel.beta)[chain_indices]
-                other_chain_beta = np.asarray(other_chain_sel.beta)[
-                    other_chain_indices
-                ]
+                other_chain_beta = np.asarray(other_chain_sel.beta)[other_chain_indices]
                 if main_chain_beta.size > 0 and np.nanmax(main_chain_beta) <= 1.0:
                     main_chain_beta = main_chain_beta * 100.0
                 if other_chain_beta.size > 0 and np.nanmax(other_chain_beta) <= 1.0:

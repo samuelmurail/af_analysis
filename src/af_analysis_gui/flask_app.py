@@ -32,6 +32,7 @@ def _normalize_for_json(value: Any) -> Any:
     if isinstance(value, float):
         # NaN and Inf are not valid JSON — convert to null so JSON.parse succeeds.
         import math
+
         if math.isnan(value) or math.isinf(value):
             return None
         return value
@@ -56,7 +57,11 @@ class _TqdmStream:
 
     def __init__(self, iterable=None, *, total=None, disable=False, desc=None, **_kw):
         self._iter = iter(iterable) if iterable is not None else None
-        self._total = total if total is not None else (len(iterable) if hasattr(iterable, '__len__') else None)
+        self._total = (
+            total
+            if total is not None
+            else (len(iterable) if hasattr(iterable, "__len__") else None)
+        )
         self._n = 0
         self._disable = disable
         self._desc = desc or ""
@@ -100,12 +105,14 @@ class _TqdmStream:
         if self._q is None:
             return
         try:
-            self._q.put_nowait({
-                "desc": self._desc,
-                "n": self._n,
-                "total": self._total,
-                "done": done,
-            })
+            self._q.put_nowait(
+                {
+                    "desc": self._desc,
+                    "n": self._n,
+                    "total": self._total,
+                    "done": done,
+                }
+            )
         except queue.Full:
             pass  # never block the computation thread
 
@@ -187,8 +194,13 @@ def api_load_dataset():
     except Exception:
         with STATE.lock:
             STATE.last_error = traceback.format_exc()
-        _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
-        return jsonify({"error": "Failed to load dataset", "details": STATE.last_error}), 500
+        _PROGRESS_QUEUE.put_nowait(
+            {"desc": "__end__", "n": 0, "total": 0, "done": True}
+        )
+        return (
+            jsonify({"error": "Failed to load dataset", "details": STATE.last_error}),
+            500,
+        )
     finally:
         for _mod_name, _orig in _patched.items():
             if _mod_name in sys.modules:
@@ -202,6 +214,7 @@ def api_load_dataset():
 @app.get("/api/browse")
 def api_browse():
     import os
+
     raw = request.args.get("path", "~")
     try:
         p = Path(raw).expanduser().resolve()
@@ -210,11 +223,13 @@ def api_browse():
         entries = sorted(
             [e.name for e in p.iterdir() if e.is_dir() and not e.name.startswith(".")]
         )
-        return jsonify({
-            "path": str(p),
-            "parent": str(p.parent) if p != p.parent else None,
-            "dirs": entries,
-        })
+        return jsonify(
+            {
+                "path": str(p),
+                "parent": str(p.parent) if p != p.parent else None,
+                "dirs": entries,
+            }
+        )
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -235,11 +250,29 @@ def api_table():
             item[column] = _normalize_for_json(row[column])
         rows.append(item)
 
-    has_lis = "LIS" in df.columns and bool(df["LIS"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
-    has_lia = "LIA" in df.columns and bool(df["LIA"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
-    has_iptm_d0_matrix = "ipTM_d0_matrix" in df.columns and bool(df["ipTM_d0_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
-    has_ipsae_matrix = "ipSAE_matrix" in df.columns and bool(df["ipSAE_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any())
-    return jsonify({"columns": ["row", *columns], "rows": rows, "total": int(len(df)), "has_lis": has_lis, "has_lia": has_lia, "has_iptm_d0_matrix": has_iptm_d0_matrix, "has_ipsae_matrix": has_ipsae_matrix})
+    has_lis = "LIS" in df.columns and bool(
+        df["LIS"].apply(lambda v: isinstance(v, (list, np.ndarray))).any()
+    )
+    has_lia = "LIA" in df.columns and bool(
+        df["LIA"].apply(lambda v: isinstance(v, (list, np.ndarray))).any()
+    )
+    has_iptm_d0_matrix = "ipTM_d0_matrix" in df.columns and bool(
+        df["ipTM_d0_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any()
+    )
+    has_ipsae_matrix = "ipSAE_matrix" in df.columns and bool(
+        df["ipSAE_matrix"].apply(lambda v: isinstance(v, (list, np.ndarray))).any()
+    )
+    return jsonify(
+        {
+            "columns": ["row", *columns],
+            "rows": rows,
+            "total": int(len(df)),
+            "has_lis": has_lis,
+            "has_lia": has_lia,
+            "has_iptm_d0_matrix": has_iptm_d0_matrix,
+            "has_ipsae_matrix": has_ipsae_matrix,
+        }
+    )
 
 
 @app.get("/api/plddt")
@@ -271,6 +304,8 @@ def api_plddt():
         running += int(length)
         boundaries.append(running)
 
+    chain_types = [str(t) for t in data.chain_type.get(query, [])]
+
     return jsonify(
         {
             "residues": residues,
@@ -278,6 +313,7 @@ def api_plddt():
             "chain_ids": chain_ids,
             "chain_lengths": chain_lengths,
             "chain_boundaries": boundaries,
+            "chain_types": chain_types,
         }
     )
 
@@ -297,7 +333,9 @@ def api_pae():
 
     row = data.df.iloc[index]
     data_file = row.get("data_file")
-    if not data_file or (hasattr(data_file, "__class__") and str(data_file) in ("", "nan")):
+    if not data_file or (
+        hasattr(data_file, "__class__") and str(data_file) in ("", "nan")
+    ):
         return jsonify({"error": "No data file for this model"}), 404
 
     pae_matrix = get_pae(str(data_file))
@@ -347,7 +385,9 @@ def api_lis():
 
     query = row.get("query")
     chain_ids = [str(c) for c in data.chains.get(query, [])]
-    return jsonify({"lis": _normalize_for_json(lis), "chain_ids": chain_ids, "label": "LIS"})
+    return jsonify(
+        {"lis": _normalize_for_json(lis), "chain_ids": chain_ids, "label": "LIS"}
+    )
 
 
 @app.get("/api/lia")
@@ -368,7 +408,9 @@ def api_lia():
 
     query = row.get("query")
     chain_ids = [str(c) for c in data.chains.get(query, [])]
-    return jsonify({"lis": _normalize_for_json(lia), "chain_ids": chain_ids, "label": "cLIS (LIA)"})
+    return jsonify(
+        {"lis": _normalize_for_json(lia), "chain_ids": chain_ids, "label": "cLIS (LIA)"}
+    )
 
 
 @app.get("/api/iptm_d0")
@@ -389,7 +431,9 @@ def api_iptm_d0():
 
     query = row.get("query")
     chain_ids = [str(c) for c in data.chains.get(query, [])]
-    return jsonify({"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipTM d0"})
+    return jsonify(
+        {"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipTM d0"}
+    )
 
 
 @app.get("/api/ipsae")
@@ -410,7 +454,9 @@ def api_ipsae():
 
     query = row.get("query")
     chain_ids = [str(c) for c in data.chains.get(query, [])]
-    return jsonify({"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipSAE"})
+    return jsonify(
+        {"lis": _normalize_for_json(matrix), "chain_ids": chain_ids, "label": "ipSAE"}
+    )
 
 
 @app.get("/api/structure")
@@ -444,16 +490,28 @@ def api_structure():
     try:
         structure_text = path_obj.read_text(encoding="utf-8", errors="ignore")
     except Exception:
-        return jsonify({"error": "Failed to read structure file", "details": traceback.format_exc()}), 500
+        return (
+            jsonify(
+                {
+                    "error": "Failed to read structure file",
+                    "details": traceback.format_exc(),
+                }
+            ),
+            500,
+        )
 
-    return jsonify({"structure_text": structure_text, "structure_format": structure_format})
+    return jsonify(
+        {"structure_text": structure_text, "structure_format": structure_format}
+    )
 
 
 @app.get("/api/health")
 def api_health():
     loaded = STATE.af_data is not None
     rows = int(len(STATE.af_data.df)) if loaded else 0
-    directory = str(STATE.af_data.dir) if loaded and getattr(STATE.af_data, 'dir', None) else ""
+    directory = (
+        str(STATE.af_data.dir) if loaded and getattr(STATE.af_data, "dir", None) else ""
+    )
     return jsonify({"loaded": loaded, "rows": rows, "directory": directory})
 
 
@@ -474,8 +532,11 @@ def api_progress_stream():
             if event.get("done") and event.get("desc") == "__end__":
                 return
 
-    return Response(generate(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/compute")
@@ -522,6 +583,7 @@ def api_compute():
         data.verbose = True
         cols_before = set(data.df.columns)
         from af_analysis import analysis as ana
+
         if score == "pdockq2":
             ana.pdockq2(data)
         elif score == "LIS":
@@ -533,8 +595,13 @@ def api_compute():
             ana.ipSAE(data, pae_cutoff=pae_cutoff)
         cols_added = [c for c in data.df.columns if c not in cols_before]
     except Exception:
-        _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
-        return jsonify({"error": "Computation failed", "details": traceback.format_exc()}), 500
+        _PROGRESS_QUEUE.put_nowait(
+            {"desc": "__end__", "n": 0, "total": 0, "done": True}
+        )
+        return (
+            jsonify({"error": "Computation failed", "details": traceback.format_exc()}),
+            500,
+        )
     finally:
         _ana_mod.tqdm = _orig_ana
         _data_mod.tqdm = _orig_data
@@ -565,7 +632,9 @@ def main(argv=None) -> int:
         "--port", type=int, default=5000, help="Port to listen on (default: 5000)."
     )
     parser.add_argument(
-        "--format", default=None, dest="fmt",
+        "--format",
+        default=None,
+        dest="fmt",
         help="Force a specific input format (default: auto-detect).",
     )
     args = parser.parse_args(argv)
@@ -579,7 +648,9 @@ def main(argv=None) -> int:
                 STATE.last_error = ""
             print(f"Loaded {len(data.df)} models from {directory}")
         except Exception:
-            print(f"Warning: could not load directory '{directory}':\n{traceback.format_exc()}")
+            print(
+                f"Warning: could not load directory '{directory}':\n{traceback.format_exc()}"
+            )
 
     app.run(host=args.host, port=args.port, debug=False, threaded=True)
     return 0

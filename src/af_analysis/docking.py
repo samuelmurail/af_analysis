@@ -42,7 +42,7 @@ def pae_pep(my_data, fun=np.mean):
     pep_rec_pae_list = []
     rec_pep_pae_list = []
 
-    disable = not getattr(my_data, 'verbose', True)
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, data_file) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["data_file"])),
@@ -95,7 +95,7 @@ def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, max_pae=30.98):
     pep_rec_pae_list = []
     rec_pep_pae_list = []
 
-    disable = not getattr(my_data, 'verbose', True)
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, data_file, pdb) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["data_file"], my_data.df["pdb"])),
@@ -159,7 +159,7 @@ def plddt_pep(my_data, fun=np.mean):
     """
     pep_plddt_list = []
 
-    disable = not getattr(my_data, 'verbose', True)
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, pdb) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["pdb"])),
@@ -196,7 +196,7 @@ def plddt_contact_pep(my_data, fun=np.mean, cutoff=8.0):
     lig_plddt_list = []
     rec_plddt_list = []
 
-    disable = not getattr(my_data, 'verbose', True)
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, pdb) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["pdb"])),
@@ -301,9 +301,7 @@ def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max):
 
     """
 
-    analysis.LIA_matrix(
-        my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff
-    )
+    analysis.LIA_matrix(my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff)
 
     pep_LIA_list = []
     pep_LIA2_list = []
@@ -601,6 +599,7 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False):
 
     my_data.df.loc[:, "ipTM_interface_lig"] = ipTM_list
 
+
 def ipTM_between_chains(my_data, chain_groups):
     r"""
     Extract ipTM from pair_chain_iptm's array between user-specified chain groups.
@@ -613,7 +612,7 @@ def ipTM_between_chains(my_data, chain_groups):
     """
     id_group1 = list(chain_groups[0])
     id_group2 = list(chain_groups[1])
-    colname = ','.join(id_group1) + "-" + ','.join(id_group2) + "_ipTM"
+    colname = ",".join(id_group1) + "-" + ",".join(id_group2) + "_ipTM"
     try:
         my_data.df["chain_pair_iptm"]
     except KeyError:
@@ -622,12 +621,14 @@ def ipTM_between_chains(my_data, chain_groups):
 
     # get chain index in chain_pair_iptm array from ids
     # /!\ this code assumes that the model's first chain id is A
-    group1 = [ ord(chain_id) - ord('A') for chain_id in id_group1 ]
-    group2 = [ ord(chain_id) - ord('A') for chain_id in id_group2 ]
+    group1 = [ord(chain_id) - ord("A") for chain_id in id_group1]
+    group2 = [ord(chain_id) - ord("A") for chain_id in id_group2]
 
     chain_group_iptm = []
-    disable = not getattr(my_data, 'verbose', True)
-    for iptm_array in tqdm(my_data.df["chain_pair_iptm"], total=len(my_data.df["pdb"]), disable=disable):
+    disable = not getattr(my_data, "verbose", True)
+    for iptm_array in tqdm(
+        my_data.df["chain_pair_iptm"], total=len(my_data.df["pdb"]), disable=disable
+    ):
         if isinstance(iptm_array, float) and np.isnan(iptm_array):
             chain_group_iptm.append(np.nan)
             continue

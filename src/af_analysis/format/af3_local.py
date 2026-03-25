@@ -44,7 +44,6 @@ def read_dir(directory):
     ]
 
     for dir_path in dir_path_list:
-
         # Get the file ending by "_model.cif"
         cif_files = glob.glob(os.path.join(dir_path, "*model.cif"))
         # print("looking at :", os.path.join(dir_path, "*model.cif"))

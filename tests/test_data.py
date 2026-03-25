@@ -378,10 +378,12 @@ def test_get_plddt_rna_ions():
 
     plddt_array = my_data.get_plddt(0)
 
-    assert len(plddt_array) == 446
+    # 440 protein + 27 ATP heavy atoms + 1 MN ion + 5 RNA residues = 473
+    # (one value per heavy atom for ligand chains, matching PAE shape)
+    assert len(plddt_array) == 473
 
     expected_values = {
-        0: 91.58999633789062,
+        0: 91.58999633789062,   # protein chain A residue 1
         1: 98.12000274658203,
         2: 98.4000015258789,
         50: 98.55000305175781,
@@ -389,8 +391,9 @@ def test_get_plddt_rna_ions():
         200: 98.58999633789062,
         300: 97.8499984741211,
         400: 98.91999816894531,
-        440: 97.0199966430664,
-        445: 96.12999725341797,
+        440: 97.61000061035156,  # ATP heavy atom 1 (chain B)
+        467: 97.0199966430664,   # RNA chain D residue 1 (old index 440)
+        472: 96.12999725341797,  # RNA chain D residue 5 (old index 445)
     }
 
     precision = 0.001

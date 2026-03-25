@@ -426,19 +426,27 @@ function _doHighlightPlotResidues(globalResidues) {
     // so we can safely append/remove without relying on Plotly preserving any
     // custom marker property on shapes.
     if (!globalResidues?.length) {
-      // Remove hover lines by restoring chain-boundary-only shapes.
+      // Remove hover shapes by restoring chain-boundary-only shapes.
       const cur = plotDiv._fullLayout.shapes || [];
       if (cur.length > _plddtChainShapes.length) {
         Plotly.relayout('plddt-plot', { shapes: _plddtChainShapes });
       }
       return;
     }
-    const hoverShapes = globalResidues.map(r => ({
-      type: 'line',
-      x0: r, x1: r, y0: 0, y1: 100,
-      line: { color: '#f97316', width: 2, dash: 'dot' },
-      layer: 'above',
-    }));
+    let hoverShapes;
+    if (globalResidues.length === 1) {
+      // Single residue (protein / nucleic acid): vertical dotted line.
+      hoverShapes = [{ type: 'line', x0: globalResidues[0], x1: globalResidues[0],
+        y0: 0, y1: 100, line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' }];
+    } else {
+      // Multiple global indices (ligand atoms): a single filled rectangle spanning
+      // the whole residue range so the plot stays readable.
+      const x0 = Math.min(...globalResidues) - 0.5;
+      const x1 = Math.max(...globalResidues) + 0.5;
+      hoverShapes = [{ type: 'rect', x0, x1, y0: 0, y1: 100,
+        fillcolor: 'rgba(249,115,22,0.15)',
+        line: { color: '#f97316', width: 1 }, layer: 'above' }];
+    }
     Plotly.relayout('plddt-plot', { shapes: [..._plddtChainShapes, ...hoverShapes] });
   } else if (traceType === 'heatmap') {
     if (!_paeState) return;
@@ -454,12 +462,27 @@ function _doHighlightPlotResidues(globalResidues) {
       }
       return;
     }
-    _paeHoverLines = globalResidues.flatMap(r => [
-      { type: 'line', x0: r, x1: r, y0: r0, y1: r1,
-        line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' },
-      { type: 'line', x0: r0, x1: r1, y0: r, y1: r,
-        line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' },
-    ]);
+    if (globalResidues.length === 1) {
+      // Single residue: crosshair lines.
+      const r = globalResidues[0];
+      _paeHoverLines = [
+        { type: 'line', x0: r, x1: r, y0: r0, y1: r1,
+          line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' },
+        { type: 'line', x0: r0, x1: r1, y0: r, y1: r,
+          line: { color: '#f97316', width: 2, dash: 'dot' }, layer: 'above' },
+      ];
+    } else {
+      // Multiple global indices (ligand atoms): two filled rectangular bands
+      // (one vertical strip, one horizontal strip) spanning the full axis range.
+      const grMin = Math.min(...globalResidues) - 0.5;
+      const grMax = Math.max(...globalResidues) + 0.5;
+      _paeHoverLines = [
+        { type: 'rect', x0: grMin, x1: grMax, y0: r0, y1: r1,
+          fillcolor: 'rgba(249,115,22,0.15)', line: { color: '#f97316', width: 1 }, layer: 'above' },
+        { type: 'rect', x0: r0, x1: r1, y0: grMin, y1: grMax,
+          fillcolor: 'rgba(249,115,22,0.15)', line: { color: '#f97316', width: 1 }, layer: 'above' },
+      ];
+    }
     Plotly.relayout('plddt-plot', { shapes: [..._paeActiveBaseShapes, ..._paeHoverLines] });
   }
 }

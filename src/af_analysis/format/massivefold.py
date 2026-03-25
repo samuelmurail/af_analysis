@@ -32,10 +32,10 @@ def read_dir(directory):
 
     pred_dir = directory
     query = os.path.basename(os.path.normpath(pred_dir))
-    ranking_files = [ 
-        os.path.join(pred_dir, i) 
-        for i in os.listdir(pred_dir) 
-        if i.startswith('ranking_') and i.endswith('.json') 
+    ranking_files = [
+        os.path.join(pred_dir, i)
+        for i in os.listdir(pred_dir)
+        if i.startswith("ranking_") and i.endswith(".json")
     ]
 
     # get metrics preferably from massivefold ranking files instead of pickles
@@ -45,27 +45,32 @@ def read_dir(directory):
             json_ranking = json.load(ranking_file)
         ranking_metric = list(json_ranking.keys())[0]
         models_metric = json_ranking[ranking_metric]
-        metric_df = pd.DataFrame(models_metric.items(), columns=['prediction', ranking_metric])
+        metric_df = pd.DataFrame(
+            models_metric.items(), columns=["prediction", ranking_metric]
+        )
         if global_df.empty:
             global_df = metric_df
         else:
             global_df = global_df.merge(metric_df, on="prediction")
 
     # compute ranking_confidence for AF3 which has a different 'ranking_score'
-    if ({'iptm', 'ptm'}.issubset(set(global_df.columns))) and ('ranking_confidence' not in global_df.columns):
-        global_df["ranking_confidence"] = 0.8*global_df["iptm"] + 0.2*global_df["ptm"]
+    if ({"iptm", "ptm"}.issubset(set(global_df.columns))) and (
+        "ranking_confidence" not in global_df.columns
+    ):
+        global_df["ranking_confidence"] = (
+            0.8 * global_df["iptm"] + 0.2 * global_df["ptm"]
+        )
 
     ranking_scores = (
-        global_df
-        .set_index("prediction")
-        .to_dict(orient='index')
-    ) if not global_df.empty else {}
+        (global_df.set_index("prediction").to_dict(orient="index"))
+        if not global_df.empty
+        else {}
+    )
 
     # print("global_df",global_df)
 
     pkl_not_found = []
     for file in os.listdir(pred_dir):
-        
         if file.endswith(".pdb") or file.endswith(".cif"):
             is_pkl = True
             logger.info(f"Processing file: {file}")
@@ -96,9 +101,9 @@ def read_dir(directory):
                     if not os.path.exists(pkl_score):
                         logger.warning(f"Score file not found for {file}: {pkl_score}")
 
-            else: # Special case for af3
+            else:  # Special case for af3
                 tokens = file[:-4].split("_")
-                model = int(tokens[4]) # In reality it is a the seed
+                model = int(tokens[4])  # In reality it is a the seed
                 weight = "af3"
                 seed = int(tokens[-3])
                 pred_num = int(tokens[-1])
@@ -123,7 +128,9 @@ def read_dir(directory):
                             json_data = json.load(json_file)
                             # print(json_data.keys())
                     else:
-                        logger.warning(f"Confidence file not found for {file}: {confidence_score}")
+                        logger.warning(
+                            f"Confidence file not found for {file}: {confidence_score}"
+                        )
 
             pred_scores = ranking_scores.get(prediction, {})
             if not os.path.exists(pkl_score):
@@ -163,7 +170,9 @@ def read_dir(directory):
             elif is_pkl and "ranking_confidence" in np_score:
                 ranking_confidence = float(np_score["ranking_confidence"])
             elif confidence_score is not None:
-                ranking_confidence = json_data.get("ranking_score") if json_data is not None else None
+                ranking_confidence = (
+                    json_data.get("ranking_score") if json_data is not None else None
+                )
             else:
                 ranking_confidence = None
 
@@ -186,14 +195,22 @@ def read_dir(directory):
                 "data_file": pkl_score,
             }
             if ranking_confidence is not None:
-                if json_data is not None:                 
-                    af3_keys = ["chain_iptm", "chain_pair_iptm", "chain_ptm", "fraction_disordered", "has_clash"]
+                if json_data is not None:
+                    af3_keys = [
+                        "chain_iptm",
+                        "chain_pair_iptm",
+                        "chain_ptm",
+                        "fraction_disordered",
+                        "has_clash",
+                    ]
                     info_dict.update({key: json_data.get(key) for key in af3_keys})
-                    #{"chain_pair_iptm": json_data["chain_pair_iptm"]})
+                    # {"chain_pair_iptm": json_data["chain_pair_iptm"]})
             log_dict_list.append(info_dict)
 
     if pkl_not_found:
-        logger.warning(f"Detected {len(pkl_not_found)} non-existing score files (.pkl).")
+        logger.warning(
+            f"Detected {len(pkl_not_found)} non-existing score files (.pkl)."
+        )
 
     log_pd = pd.DataFrame(log_dict_list)
 
@@ -232,15 +249,26 @@ def read_full_directory(directory):
     subfolders = [f.path for f in os.scandir(directory) if f.is_dir()]
     # print(f"Found {len(subfolders)} subfolders in {directory}", subfolders)
     subfolders = [
-         folder for folder in subfolders
-         if len([ file for file in os.listdir(folder) if file.startswith('ranking_') and file.endswith('.json')]) >= 1
+        folder
+        for folder in subfolders
+        if len(
+            [
+                file
+                for file in os.listdir(folder)
+                if file.startswith("ranking_") and file.endswith(".json")
+            ]
+        )
+        >= 1
     ]
     log_pd_list = []
 
     for folder in subfolders:
         print(f"Extract MassiveFold run {os.path.basename(folder)}")
         # print(f"Reading {folder}")
-        if not os.path.basename(folder).startswith("msa") and os.path.basename(folder) != "all_pdbs":
+        if (
+            not os.path.basename(folder).startswith("msa")
+            and os.path.basename(folder) != "all_pdbs"
+        ):
             log_pd_list.append(read_dir(folder))
 
     if not log_pd_list:

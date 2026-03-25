@@ -1,7 +1,7 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
 import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay, getPlotZoom } from './plot.js';
-import { loadStructure, highlightResidue, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
+import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
 // Track the last rendered plot type so we only restore zoom when staying on the same type.
@@ -35,6 +35,7 @@ async function refreshModelPanels() {
   const plddtPayload = await api(`/api/plddt?index=${state.selectedModel}`);
   state.chainIds = plddtPayload.chain_ids || [];
   state.chainLengths = plddtPayload.chain_lengths || [];
+  state.chainTypes = plddtPayload.chain_types || [];
 
   if (plotType === 'pae') {
     try {
@@ -50,34 +51,11 @@ async function refreshModelPanels() {
       renderPlot(plddtPayload, makePlddtHandlers(), savedZoom);
       document.getElementById('plot-type').value = 'plddt';
     }
-  } else if (plotType === 'lis') {
+  } else if (['lis', 'lia', 'iptm_d0_matrix', 'ipsae_matrix'].includes(plotType)) {
+    const LIS_API = { lis: 'lis', lia: 'lia', iptm_d0_matrix: 'iptm_d0', ipsae_matrix: 'ipsae' };
     try {
-      const lisPayload = await api(`/api/lis?index=${state.selectedModel}`);
-      renderLisPlot(lisPayload, makeLisHandlers());
-    } catch (e) {
-      renderPlot(plddtPayload, makePlddtHandlers());
-      document.getElementById('plot-type').value = 'plddt';
-    }
-  } else if (plotType === 'lia') {
-    try {
-      const liaPayload = await api(`/api/lia?index=${state.selectedModel}`);
-      renderLisPlot(liaPayload, makeLisHandlers());
-    } catch (e) {
-      renderPlot(plddtPayload, makePlddtHandlers());
-      document.getElementById('plot-type').value = 'plddt';
-    }
-  } else if (plotType === 'iptm_d0_matrix') {
-    try {
-      const iptmPayload = await api(`/api/iptm_d0?index=${state.selectedModel}`);
-      renderLisPlot(iptmPayload, makeLisHandlers());
-    } catch (e) {
-      renderPlot(plddtPayload, makePlddtHandlers());
-      document.getElementById('plot-type').value = 'plddt';
-    }
-  } else if (plotType === 'ipsae_matrix') {
-    try {
-      const ipsaePayload = await api(`/api/ipsae?index=${state.selectedModel}`);
-      renderLisPlot(ipsaePayload, makeLisHandlers());
+      const payload = await api(`/api/${LIS_API[plotType]}?index=${state.selectedModel}`);
+      renderLisPlot(payload, makeLisHandlers());
     } catch (e) {
       renderPlot(plddtPayload, makePlddtHandlers());
       document.getElementById('plot-type').value = 'plddt';
@@ -168,12 +146,13 @@ function makePlddtHandlers() {
     onClick: (residue) => {
       state.selectedResidues = [residue];
       renderSelectedResidues();
-      highlightResidue(residue);
+      applyPaeColors([residue], []);
     },
     onSelect: (residues) => {
       state.selectedResidues = residues;
       renderSelectedResidues();
-      if (residues.length > 0) highlightResidues(residues);
+      if (residues.length > 0) applyPaeColors(residues, []);
+      else clearPaeColors();
     },
     onHover: (residues) => {
       hoverResidues(residues);

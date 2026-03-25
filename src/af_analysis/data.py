@@ -230,9 +230,28 @@ class Data:
         None
         """
         nuc_list = ["DA", "DC", "DT", "DG", "A", "C", "U", "G", "T"]
-        aa_list = ["ALA", "ARG", "ASN", "ASP", "CYS", "GLU", "GLN",
-                   "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE",
-                   "PRO", "SER", "THR", "TRP", "TYR", "VAL",]
+        aa_list = [
+            "ALA",
+            "ARG",
+            "ASN",
+            "ASP",
+            "CYS",
+            "GLU",
+            "GLN",
+            "GLY",
+            "HIS",
+            "ILE",
+            "LEU",
+            "LYS",
+            "MET",
+            "PHE",
+            "PRO",
+            "SER",
+            "THR",
+            "TRP",
+            "TYR",
+            "VAL",
+        ]
         aa_nuc_list = aa_list + nuc_list
 
         def get_type(resnames):
@@ -273,9 +292,7 @@ class Data:
                         len(np.unique(uniq_resid[chain_arr == chain]))
                     )
                 else:
-                    self.chain_length[querie].append(
-                        sum(chain_arr == chain)
-                    )
+                    self.chain_length[querie].append(sum(chain_arr == chain))
 
             self.chain_type[querie] = [
                 get_type(resname[chain_arr == chain]) for chain in self.chains[querie]
@@ -558,8 +575,30 @@ class Data:
             "massivefold",
         ]:
             model = pdb_cpp.Coor(row["pdb"])
-            name_arr = np.asarray(model.models[0].name_str)
-            beta_arr = _flatten_1d(model.models[0].beta)
+            m = model.models[0]
+            chain_arr = np.asarray(m.chain_str)
+            name_arr = np.asarray(m.name_str)
+            beta_arr = _flatten_1d(m.beta)
+
+            query = row["query"]
+            chains = self.chains.get(query, [])
+            chain_types = self.chain_type.get(query, [])
+
+            # For ligand chains PAE has one row per heavy atom, so pLDDT must match.
+            if chains and chain_types and "ligand" in chain_types:
+                parts = []
+                for chain_id, ctype in zip(chains, chain_types):
+                    c_mask = chain_arr == chain_id
+                    c_names = name_arr[c_mask]
+                    c_beta = beta_arr[c_mask]
+                    if ctype == "ligand":
+                        # All heavy atoms (no hydrogen)
+                        heavy = np.array([not n.startswith("H") for n in c_names])
+                        parts.append(c_beta[heavy])
+                    else:
+                        parts.append(c_beta[np.isin(c_names, plddt_main_atom_list)])
+                return np.concatenate(parts) if parts else np.array([])
+
             plddt_array = beta_arr[np.isin(name_arr, plddt_main_atom_list)]
             return plddt_array
 
@@ -752,9 +791,9 @@ class Data:
                         seq_dict[chain_list[i]] += 1
                     start += num
 
-            alignement_len[querie] = (
-                seq_dict  # [seq_dict[chain] for chain in self.chains[querie]]
-            )
+            alignement_len[
+                querie
+            ] = seq_dict  # [seq_dict[chain] for chain in self.chains[querie]]
         return alignement_len
 
     def show_plot_info(self, cmap=cm.vik):
