@@ -157,6 +157,21 @@ tr.active {
     background: #dce7ff;
 }
 
+tr.superpose-row {
+    background: #fff3cd;
+    border-left: 3px solid #ffa15a;
+}
+
+tr.active.superpose-row {
+    background: #ffe8a3;
+    border-left: 3px solid #ffa15a;
+}
+
+tr.hover-row {
+    outline: 2px solid #636efa;
+    outline-offset: -2px;
+}
+
 #plddt-plot {
     width: 100%;
     flex: 1;

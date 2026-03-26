@@ -1,7 +1,7 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
 import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay, getPlotZoom } from './plot.js';
-import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover, loadSuperpose, setClusterColor, getSuperposeState } from './molstar.js';
+import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover, subscribeToSuperposeHover, loadSuperpose, setClusterColor, getSuperposeState } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
 // Track the last rendered plot type so we only restore zoom when staying on the same type.
@@ -68,11 +68,72 @@ function collapseCard(cardId) {
   }
 }
 
+// Wire up superpose hover → highlight matching row in table and MDS plot.
+function _attachSuperposeHover() {
+  subscribeToSuperposeHover((rowIdx) => {
+    state.hoveredRow = rowIdx;
+    renderCurrentTable(_tableColumns, _tableRows);
+    const plotDiv = document.getElementById('cluster-main-plot');
+    if (!plotDiv?._fullLayout) return;
+    const view = document.getElementById('cluster-view-select')?.value ?? 'mds';
+    if (view === 'mds') {
+      // Highlight hovered point in MDS scatter plot.
+      if (rowIdx != null) {
+        const cp = _rowToCurveAndPoint(rowIdx);
+        if (cp) Plotly.Fx.hover(plotDiv, [{ curveNumber: cp.curve, pointNumber: cp.point }]);
+      } else {
+        Plotly.Fx.unhover(plotDiv);
+      }
+    } else {
+      // Highlight hovered leaf in dendrogram with a vertical line shape.
+      const leaves   = plotDiv._afDendroLeaves;
+      const tickvals = plotDiv._afDendroTickvals;
+      if (!leaves || !tickvals) return;
+      if (rowIdx != null) {
+        const leafIdx = leaves.indexOf(rowIdx);
+        if (leafIdx !== -1) {
+          const xVal = tickvals[leafIdx];
+          const yMax = plotDiv._fullLayout?.yaxis?.range?.[1] ?? 1;
+          Plotly.relayout(plotDiv, {
+            shapes: [{
+              type: 'line', xref: 'x', yref: 'y',
+              x0: xVal, x1: xVal, y0: 0, y1: yMax,
+              line: { color: '#636efa', width: 2.5, dash: 'dot' },
+            }],
+          });
+        }
+      } else {
+        Plotly.relayout(plotDiv, { shapes: [] });
+      }
+    }
+  });
+}
+
+// Map a dataset row index to { curve, point } indices in the current MDS Plotly chart.
+function _rowToCurveAndPoint(rowIdx) {
+  if (!_clusterData) return null;
+  const queryVal = document.getElementById('cluster-query-select')?.value;
+  const q = _clusterData.find(x => x.query === queryVal);
+  if (!q) return null;
+  const clusterNums = [...new Set(q.points.map(p => p.cluster))].sort((a, b) => a - b);
+  for (let ci = 0; ci < clusterNums.length; ci++) {
+    const pts = q.points.filter(p => p.cluster === clusterNums[ci]);
+    const pi = pts.findIndex(p => p.row === rowIdx);
+    if (pi !== -1) return { curve: ci, point: pi };
+  }
+  return null;
+}
+
 function renderCurrentTable(columns, rows) {
   _tableColumns = columns;
   _tableRows = rows;
   renderTable(columns, rows, async (selectedRow) => {
     state.selectedModel = Number(selectedRow);
+    state.selectedRows = new Set();  // clear superpose highlight on single-model click
+    state.hoveredRow = null;
+    // Switch away from cluster coloring when viewing a single model.
+    const schemeEl = document.getElementById('color-scheme');
+    if (schemeEl?.value === 'cluster') schemeEl.value = 'chain-id';
     renderCurrentTable(columns, rows);
     await refreshModelPanels();
   });
@@ -123,6 +184,7 @@ async function refreshModelPanels() {
   if (plotType === 'pae' && state.paeSelection) {
     await applyPaeColors(state.paeSelection.xResidues, state.paeSelection.yResidues);
   }
+  _renderClusterPlot();
   subscribeToMolstarHover((globalResidues) => {
     highlightPlotResidues(globalResidues);
   });
@@ -332,6 +394,7 @@ function initEvents() {
     if (sp) {
       // Re-render the active superpose with the new color scheme.
       await loadSuperpose(sp.rows, sp.query, sp.frameColors);
+      _attachSuperposeHover();
     } else if (state.selectedModel != null) {
       _applyClusterColorForRow(state.selectedModel);
       await loadStructure(state.selectedModel);
@@ -513,6 +576,22 @@ function _renderMdsPlot(plotDiv, q) {
     };
   });
 
+  // Add a star marker for the currently selected model (single-view mode).
+  if (state.selectedRows.size === 0) {
+    const selPt = q.points.find(p => p.row === state.selectedModel);
+    if (selPt) {
+      traces.push({
+        x: [selPt.x], y: [selPt.y],
+        mode: 'markers',
+        type: 'scatter',
+        name: 'Selected',
+        showlegend: false,
+        hoverinfo: 'skip',
+        marker: { size: 14, symbol: 'star', color: '#222', line: { color: '#fff', width: 1 } },
+      });
+    }
+  }
+
   Plotly.react(plotDiv, traces, {
     autosize: true,
     margin: { l: 50, r: 20, t: 20, b: 50 },
@@ -525,19 +604,29 @@ function _renderMdsPlot(plotDiv, q) {
   if (!plotDiv._afClusterClickAttached) {
     plotDiv._afClusterClickAttached = true;
     plotDiv.on('plotly_click', async (ev) => {
+      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
       if (!ev?.points?.length) return;
       const rowIdx = ev.points[0].customdata;
       state.selectedModel = rowIdx;
+      state.selectedRows = new Set();
+      state.hoveredRow = null;
+      // Switch away from cluster coloring when viewing a single model.
+      const schemeEl = document.getElementById('color-scheme');
+      if (schemeEl?.value === 'cluster') schemeEl.value = 'chain-id';
       renderCurrentTable(_tableColumns, _tableRows);
       await refreshModelPanels();
     });
     plotDiv.on('plotly_selected', async (ev) => {
+      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
       if (!ev?.points?.length) return;
       const rows = [...new Set(ev.points.map(p => p.customdata))];
       const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
       const schemeEl = document.getElementById('color-scheme');
       if (schemeEl) schemeEl.value = 'cluster';
+      state.selectedRows = new Set(rows);
+      renderCurrentTable(_tableColumns, _tableRows);
       await loadSuperpose(rows, queryVal, _frameColorsForRows(rows));
+      _attachSuperposeHover();
     });
   }
 }
@@ -651,7 +740,21 @@ function _renderDendrogram(plotDiv, q) {
     showlegend: false,
   };
 
-  Plotly.react(plotDiv, [...armTraces, threshTrace, clickTrace], {
+  // Selectable leaf markers at (tickval, 0) — invisible but hittable by lasso/box selection.
+  // customdata = row index so plotly_selected can collect the right rows.
+  const leafMarkerTrace = {
+    x: tickvals, y: tickvals.map(() => 0),
+    customdata: d.leaves,
+    mode: 'markers', type: 'scatter',
+    marker: { size: 10, opacity: 0, color: '#000' },
+    hoverinfo: 'skip', showlegend: false,
+  };
+
+  // Store leaf ordering so hover can look up x positions.
+  plotDiv._afDendroLeaves = d.leaves;
+  plotDiv._afDendroTickvals = tickvals;
+
+  Plotly.react(plotDiv, [...armTraces, threshTrace, clickTrace, leafMarkerTrace], {
     margin: { l: 50, r: 20, t: 20, b: 70 },
     xaxis: { tickvals, ticktext, tickangle: -45, showgrid: false },
     yaxis: { title: 'Distance', zeroline: false },
@@ -664,15 +767,38 @@ function _renderDendrogram(plotDiv, q) {
   if (!plotDiv._afDendroClickAttached) {
     plotDiv._afDendroClickAttached = true;
     plotDiv.on('plotly_click', async (ev) => {
+      if (document.getElementById('cluster-view-select')?.value !== 'dendrogram') return;
       if (!ev?.points?.length) return;
       const pt = ev.points[0];
       if (typeof pt.customdata !== 'number') return;
-      const leaves = [...(plotDiv._afArmLeaves?.[pt.customdata] ?? [])];
+      const leaves = [...(plotDiv._afArmLeaves?.[pt.customdata] ?? [])]
+        .filter(r => typeof r === 'number' && r >= 0);
       if (!leaves.length) return;
       const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
       const schemeEl = document.getElementById('color-scheme');
       if (schemeEl) schemeEl.value = 'cluster';
+      state.selectedRows = new Set(leaves);
+      renderCurrentTable(_tableColumns, _tableRows);
       await loadSuperpose(leaves, queryVal, _frameColorsForRows(leaves));
+      _attachSuperposeHover();
+    });
+    plotDiv.on('plotly_selected', async (ev) => {
+      if (document.getElementById('cluster-view-select')?.value !== 'dendrogram') return;
+      if (!ev?.points?.length) return;
+      // Collect row indices from the selectable leaf marker trace (customdata = rowIdx).
+      const rows = [...new Set(
+        ev.points
+          .filter(p => typeof p.customdata === 'number' && p.customdata >= 0)
+          .map(p => p.customdata)
+      )];
+      if (!rows.length) return;
+      const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
+      const schemeEl = document.getElementById('color-scheme');
+      if (schemeEl) schemeEl.value = 'cluster';
+      state.selectedRows = new Set(rows);
+      renderCurrentTable(_tableColumns, _tableRows);
+      await loadSuperpose(rows, queryVal, _frameColorsForRows(rows));
+      _attachSuperposeHover();
     });
   }
 }

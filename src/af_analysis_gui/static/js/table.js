@@ -1,5 +1,7 @@
 export const state = {
   selectedModel: 0,
+  selectedRows: new Set(),  // rows highlighted in superpose mode
+  hoveredRow: null,          // row index hovered in Mol* superpose view
   selectedResidues: [],
   paeSelection: null,   // { xResidues, yResidues } | null
   chainIds: [],
@@ -159,7 +161,10 @@ export function renderTable(columns, rows, onRowClick) {
   body.innerHTML = "";
   sorted.forEach((row) => {
     const tr = document.createElement("tr");
-    if (Number(row.row) === Number(state.selectedModel)) tr.classList.add("active");
+    const rowNum = Number(row.row);
+    if (rowNum === Number(state.selectedModel)) tr.classList.add("active");
+    if (state.selectedRows.size > 0 && state.selectedRows.has(rowNum)) tr.classList.add("superpose-row");
+    if (state.hoveredRow === rowNum) tr.classList.add("hover-row");
     tr.innerHTML = displayColumns.map((dc) => {
       if (typeof dc === 'object') {
         // Collapsed group: show max of member columns.

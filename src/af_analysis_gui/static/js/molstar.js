@@ -216,6 +216,40 @@ function buildResidueMapFromStructure(plugin) {
 }
 
 
+// Subscribe to Mol* hover events in superpose mode.
+// `callback(rowIndex)` is called with the dataset row index of the hovered model,
+// or `null` when the pointer leaves the structure.
+// Only used during superpose; calling this again replaces the previous subscriber.
+let _superposeHoverSub = null;
+export function subscribeToSuperposeHover(callback) {
+  if (_superposeHoverSub) { _superposeHoverSub.unsubscribe(); _superposeHoverSub = null; }
+  if (!state.plugin) return;
+  const hoverBehavior = state.plugin.behaviors?.interaction?.hover;
+  if (!hoverBehavior) return;
+  _superposeHoverSub = hoverBehavior.subscribe((hoverState) => {
+    if (_programmaticHighlight) return;
+    try {
+      const loci = hoverState?.current?.loci;
+      if (!loci || loci.kind === 'empty-loci') { callback(null); return; }
+      if (!_superposeState) { callback(null); return; }
+      // Extract the model number from the unit (Mol* uses 1-based MODEL numbers from PDB).
+      let unit = null;
+      if (loci.kind === 'element-loci' && loci.elements?.length) {
+        unit = loci.elements[0].unit;
+      } else if (loci.kind === 'bond-loci' && loci.bonds?.length) {
+        unit = loci.bonds[0].aUnit;
+      }
+      if (!unit) { callback(null); return; }
+      // modelNum is 1-based (from PDB MODEL record); map to 0-based frame index.
+      const modelNum = unit.model?.modelNum ?? unit.model?.header?.modelNum;
+      if (modelNum == null) { callback(null); return; }
+      const frameIdx = modelNum - 1;
+      const rowIdx = _superposeState.rows[frameIdx] ?? null;
+      callback(rowIdx);
+    } catch (_) { callback(null); }
+  });
+}
+
 // Subscribe to Mol* hover events.
 // `callback(globalResidues[])` is called on every pointer-move over the 3D viewer.
 // Passes [] when the pointer leaves a residue.
@@ -410,8 +444,10 @@ export function clearMolstarSelection() {
 // Rebuild the cartoon (polymer), spacefill (ion) and ball-and-stick (ligand)
 // representations using the given color theme name.
 async function _recolorRepr(colorName) {
-  // Translate the pseudo-scheme 'cluster' to the registered theme name.
-  const name = colorName === 'cluster' ? 'cluster-uniform' : colorName;
+  // 'cluster' uses the built-in uniform theme with the current cluster colour.
+  const colorParams = colorName === 'cluster'
+    ? { color: 'uniform', colorParams: { value: _clusterColor } }
+    : { color: colorName };
   if (!state.plugin) return;
   try {
     if (state.reprCell) {
@@ -420,7 +456,7 @@ async function _recolorRepr(colorName) {
     }
     if (state.polymerCell) {
       state.reprCell = await state.plugin.builders.structure.representation.addRepresentation(
-        state.polymerCell, { type: 'cartoon', color: name }
+        state.polymerCell, { type: 'cartoon', ...colorParams }
       );
     }
   } catch (e) {
@@ -433,7 +469,7 @@ async function _recolorRepr(colorName) {
     }
     if (state.ionCell) {
       state.ionReprCell = await state.plugin.builders.structure.representation.addRepresentation(
-        state.ionCell, { type: 'spacefill', color: name }
+        state.ionCell, { type: 'spacefill', ...colorParams }
       );
     }
   } catch (e) {
@@ -446,7 +482,7 @@ async function _recolorRepr(colorName) {
     }
     if (state.ligandCell) {
       state.ligandReprCell = await state.plugin.builders.structure.representation.addRepresentation(
-        state.ligandCell, { type: 'ball-and-stick', color: name }
+        state.ligandCell, { type: 'ball-and-stick', ...colorParams }
       );
     }
   } catch (e) {
@@ -503,7 +539,7 @@ export async function clearPaeColors() {
   _paeSelection = null;
   const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
   // 'cluster' scheme requires the current color to already be set via setClusterColor.
-  await _recolorRepr(colorScheme === 'cluster' ? 'cluster-uniform' : colorScheme);
+  await _recolorRepr(colorScheme);
 }
 
 // ── Cluster-uniform colour theme ─────────────────────────────────────────────
@@ -515,28 +551,6 @@ let _clusterColor = 0x636efa;  // default = first CLUSTER_PALETTE entry
 
 export function setClusterColor(hexInt) {
   _clusterColor = (typeof hexInt === 'number') ? hexInt : 0x636efa;
-}
-
-function registerClusterUniform(plugin) {
-  const provider = {
-    name: 'cluster-uniform',
-    label: 'Cluster',
-    category: 'Clustering',
-    isApplicable: () => true,
-    factory: (_ctx, props) => ({
-      granularity: 'structure',
-      color: () => _clusterColor,
-      props,
-      description: 'Cluster uniform coloring',
-    }),
-    defaultValues: {},
-    getParams: () => ({}),
-  };
-  try {
-    plugin.representation.structure.themes.colorThemeRegistry.add(provider);
-  } catch (e) {
-    console.warn('[molstar] Failed to register cluster-uniform theme:', e);
-  }
 }
 
 
@@ -661,7 +675,6 @@ export async function ensureViewer() {
   state.plugin = state.viewer.plugin;
   registerAfPlddt(state.plugin);
   registerPaeSelection(state.plugin);
-  registerClusterUniform(state.plugin);
 }
 
 export async function loadStructure(index) {
@@ -697,17 +710,19 @@ export async function loadStructure(index) {
 
   const model = await state.plugin.builders.structure.createModel(trajectory);
   const structure = await state.plugin.builders.structure.createStructure(model);
-  // Resolve the effective color theme name ('cluster' → 'cluster-uniform').
-  const _resolveScheme = () => {
+  // Resolve color params: 'cluster' uses built-in uniform theme with current cluster colour.
+  const _resolveColorParams = () => {
     const s = document.getElementById('color-scheme')?.value || 'chain-id';
-    return s === 'cluster' ? 'cluster-uniform' : s;
+    return s === 'cluster'
+      ? { color: 'uniform', colorParams: { value: _clusterColor } }
+      : { color: s };
   };
   const polymer = await state.plugin.builders.structure.tryCreateComponentStatic(structure, "polymer");
   if (polymer) {
     state.polymerCell = polymer;
     state.reprCell = await state.plugin.builders.structure.representation.addRepresentation(polymer, {
       type: "cartoon",
-      color: _resolveScheme()
+      ..._resolveColorParams()
     });
     state.plugin.managers.camera.reset();
   }
@@ -717,7 +732,7 @@ export async function loadStructure(index) {
     state.ionCell = ion;
     state.ionReprCell = await state.plugin.builders.structure.representation.addRepresentation(ion, {
       type: "spacefill",
-      color: _resolveScheme(),
+      ..._resolveColorParams(),
     });
   }
 
@@ -726,7 +741,7 @@ export async function loadStructure(index) {
     state.ligandCell = ligand;
     state.ligandReprCell = await state.plugin.builders.structure.representation.addRepresentation(ligand, {
       type: "ball-and-stick",
-      color: _resolveScheme(),
+      ..._resolveColorParams(),
     });
   }
 

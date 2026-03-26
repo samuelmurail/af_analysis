@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 import scipy.cluster.hierarchy as _sch
 import scipy.spatial.distance as _ssd
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 
 import af_analysis
 
@@ -157,6 +157,11 @@ def _preferred_table_columns(df) -> list[str]:
 @app.get("/")
 def index():
     return render_template("flask_index.html")
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return send_from_directory(str(APP_DIR / "static" / "img"), "favicon.ico", mimetype="image/x-icon")
 
 
 @app.post("/api/load")
