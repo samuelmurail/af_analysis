@@ -410,6 +410,8 @@ export function clearMolstarSelection() {
 // Rebuild the cartoon (polymer), spacefill (ion) and ball-and-stick (ligand)
 // representations using the given color theme name.
 async function _recolorRepr(colorName) {
+  // Translate the pseudo-scheme 'cluster' to the registered theme name.
+  const name = colorName === 'cluster' ? 'cluster-uniform' : colorName;
   if (!state.plugin) return;
   try {
     if (state.reprCell) {
@@ -418,7 +420,7 @@ async function _recolorRepr(colorName) {
     }
     if (state.polymerCell) {
       state.reprCell = await state.plugin.builders.structure.representation.addRepresentation(
-        state.polymerCell, { type: 'cartoon', color: colorName }
+        state.polymerCell, { type: 'cartoon', color: name }
       );
     }
   } catch (e) {
@@ -431,7 +433,7 @@ async function _recolorRepr(colorName) {
     }
     if (state.ionCell) {
       state.ionReprCell = await state.plugin.builders.structure.representation.addRepresentation(
-        state.ionCell, { type: 'spacefill', color: colorName }
+        state.ionCell, { type: 'spacefill', color: name }
       );
     }
   } catch (e) {
@@ -444,7 +446,7 @@ async function _recolorRepr(colorName) {
     }
     if (state.ligandCell) {
       state.ligandReprCell = await state.plugin.builders.structure.representation.addRepresentation(
-        state.ligandCell, { type: 'ball-and-stick', color: colorName }
+        state.ligandCell, { type: 'ball-and-stick', color: name }
       );
     }
   } catch (e) {
@@ -500,8 +502,43 @@ export async function clearPaeColors() {
   if (!_paeSelection) return;
   _paeSelection = null;
   const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
-  await _recolorRepr(colorScheme);
+  // 'cluster' scheme requires the current color to already be set via setClusterColor.
+  await _recolorRepr(colorScheme === 'cluster' ? 'cluster-uniform' : colorScheme);
 }
+
+// ── Cluster-uniform colour theme ─────────────────────────────────────────────
+// A solid-colour theme whose colour is set externally by setClusterColor().
+// Each row may belong to a different cluster, so main.js calls setClusterColor
+// with the correct palette entry before calling loadStructure.
+
+let _clusterColor = 0x636efa;  // default = first CLUSTER_PALETTE entry
+
+export function setClusterColor(hexInt) {
+  _clusterColor = (typeof hexInt === 'number') ? hexInt : 0x636efa;
+}
+
+function registerClusterUniform(plugin) {
+  const provider = {
+    name: 'cluster-uniform',
+    label: 'Cluster',
+    category: 'Clustering',
+    isApplicable: () => true,
+    factory: (_ctx, props) => ({
+      granularity: 'structure',
+      color: () => _clusterColor,
+      props,
+      description: 'Cluster uniform coloring',
+    }),
+    defaultValues: {},
+    getParams: () => ({}),
+  };
+  try {
+    plugin.representation.structure.themes.colorThemeRegistry.add(provider);
+  } catch (e) {
+    console.warn('[molstar] Failed to register cluster-uniform theme:', e);
+  }
+}
+
 
 // AlphaFold 3 pLDDT color scheme — reads B-factor (= pLDDT) from each atom.
 // Colors match the AF3 confidence legend: dark-blue / cyan / yellow / orange.
@@ -624,6 +661,7 @@ export async function ensureViewer() {
   state.plugin = state.viewer.plugin;
   registerAfPlddt(state.plugin);
   registerPaeSelection(state.plugin);
+  registerClusterUniform(state.plugin);
 }
 
 export async function loadStructure(index) {
@@ -631,6 +669,7 @@ export async function loadStructure(index) {
   await ensureViewer();
 
   _paeSelection = null;
+  _superposeState = null;  // leaving superpose mode
   state.residueMap = null;
   state._reverseResidueMap = null;
   state.polymerCell = null;
@@ -658,34 +697,36 @@ export async function loadStructure(index) {
 
   const model = await state.plugin.builders.structure.createModel(trajectory);
   const structure = await state.plugin.builders.structure.createStructure(model);
+  // Resolve the effective color theme name ('cluster' → 'cluster-uniform').
+  const _resolveScheme = () => {
+    const s = document.getElementById('color-scheme')?.value || 'chain-id';
+    return s === 'cluster' ? 'cluster-uniform' : s;
+  };
   const polymer = await state.plugin.builders.structure.tryCreateComponentStatic(structure, "polymer");
   if (polymer) {
-    const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
     state.polymerCell = polymer;
     state.reprCell = await state.plugin.builders.structure.representation.addRepresentation(polymer, {
       type: "cartoon",
-      color: colorScheme
+      color: _resolveScheme()
     });
     state.plugin.managers.camera.reset();
   }
 
   const ion = await state.plugin.builders.structure.tryCreateComponentStatic(structure, "ion");
   if (ion) {
-    const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
     state.ionCell = ion;
     state.ionReprCell = await state.plugin.builders.structure.representation.addRepresentation(ion, {
       type: "spacefill",
-      color: colorScheme,
+      color: _resolveScheme(),
     });
   }
 
   const ligand = await state.plugin.builders.structure.tryCreateComponentStatic(structure, "ligand");
   if (ligand) {
-    const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
     state.ligandCell = ligand;
     state.ligandReprCell = await state.plugin.builders.structure.representation.addRepresentation(ligand, {
       type: "ball-and-stick",
-      color: colorScheme,
+      color: _resolveScheme(),
     });
   }
 
@@ -773,8 +814,16 @@ const _SUPERPOSE_PALETTE = [
   0x19d3f3, 0xff6692, 0xb6e880, 0xff97ff, 0xfecb52,
 ];
 
-export async function loadSuperpose(rows, query) {
+// Remembers the last superpose call so re-coloring can replay it.
+let _superposeState = null;  // { rows, query, frameColors } | null
+
+export function getSuperposeState() { return _superposeState; }
+
+// frameColors: optional array of hex ints (one per frame) used when colorScheme === 'cluster'.
+export async function loadSuperpose(rows, query, frameColors = null) {
   if (!rows || !rows.length) return;
+  _superposeState = { rows, query, frameColors };
+
   const payload = await api(
     `/api/superpose?query=${encodeURIComponent(query)}&rows=${rows.join(',')}`
   );
@@ -802,28 +851,35 @@ export async function loadSuperpose(rows, query) {
     trajectory = await state.plugin.builders.structure.parseTrajectory(data, 'mmcif');
   }
 
+  const colorScheme = document.getElementById('color-scheme')?.value || 'chain-id';
+  // 'chain-id' and 'cluster' use a per-frame uniform colour so models are distinguishable
+  // even when all frames share identical chain IDs (as in MDAnalysis-written PDB files).
+  // 'cluster' uses a per-frame solid colour (Mol* built-in 'uniform' theme) so each model
+  // gets its cluster palette entry.  All other schemes (chain-id, af-plddt, …) are passed
+  // directly to Mol* — each model is loaded as an independent structure so chain-id, etc.
+  // work normally within each frame.
+  const useUniform = colorScheme === 'cluster';
+
   const nFrames = payload.n_frames ?? rows.length;
   for (let i = 0; i < nFrames; i++) {
     try {
       const model = await state.plugin.builders.structure.createModel(trajectory, { modelIndex: i });
       const structure = await state.plugin.builders.structure.createStructure(model);
+      // Cluster colour for this frame (only used when useUniform is true).
+      const frameHex = frameColors?.[i] ?? _SUPERPOSE_PALETTE[i % _SUPERPOSE_PALETTE.length];
       const polymer = await state.plugin.builders.structure.tryCreateComponentStatic(structure, 'polymer');
       if (polymer) {
-        const Color = window.molstar?.lib?.['mol-util/color']?.Color;
-        const colorVal = _SUPERPOSE_PALETTE[i % _SUPERPOSE_PALETTE.length];
-        const colorTheme = Color
-          ? { name: 'uniform', params: { value: Color(colorVal) } }
-          : { name: 'chain-id' };
-        await state.plugin.builders.structure.representation.addRepresentation(polymer, {
-          type: 'cartoon',
-          colorTheme,
-        });
+        const reprParams = useUniform
+          ? { type: 'cartoon', color: 'uniform', colorParams: { value: frameHex } }
+          : { type: 'cartoon', color: colorScheme };
+        await state.plugin.builders.structure.representation.addRepresentation(polymer, reprParams);
       }
       const ligand = await state.plugin.builders.structure.tryCreateComponentStatic(structure, 'ligand');
       if (ligand) {
-        await state.plugin.builders.structure.representation.addRepresentation(ligand, {
-          type: 'ball-and-stick',
-        });
+        const ligParams = useUniform
+          ? { type: 'ball-and-stick', color: 'uniform', colorParams: { value: frameHex } }
+          : { type: 'ball-and-stick', color: colorScheme };
+        await state.plugin.builders.structure.representation.addRepresentation(ligand, ligParams);
       }
     } catch (_) { /* skip frame if model index is out of range */ }
   }

@@ -1,11 +1,45 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
 import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay, getPlotZoom } from './plot.js';
-import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover, loadSuperpose } from './molstar.js';
+import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover, loadSuperpose, setClusterColor, getSuperposeState } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
 // Track the last rendered plot type so we only restore zoom when staying on the same type.
 let _lastPlotType = null;
+
+// Look up the CLUSTER_PALETTE hex integer for a given row index.
+// Returns null if clustering data is not available or the row has no cluster.
+function _clusterColorForRow(rowIdx) {
+  if (!_clusterData) return null;
+  for (const q of _clusterData) {
+    const pt = q.points.find(p => p.row === rowIdx);
+    if (pt && pt.cluster != null) {
+      const clusterNums = [...new Set(q.points.map(p => p.cluster))].sort((a, b) => a - b);
+      const ci = clusterNums.indexOf(pt.cluster);
+      const hex = CLUSTER_PALETTE[ci % CLUSTER_PALETTE.length];
+      return parseInt(hex.replace('#', ''), 16);
+    }
+  }
+  return null;
+}
+
+// Build a per-frame colour array (hex ints) for a set of rows based on cluster membership.
+function _frameColorsForRows(rows) {
+  return rows.map(r => _clusterColorForRow(r) ?? _SUPERPOSE_PALETTE_INT[r % _SUPERPOSE_PALETTE_INT.length]);
+}
+
+// Integer version of CLUSTER_PALETTE for fallback use in _frameColorsForRows.
+const _SUPERPOSE_PALETTE_INT = [
+  0x636efa, 0xef553b, 0x00cc96, 0xab63fa, 0xffa15a,
+  0x19d3f3, 0xff6692, 0xb6e880, 0xff97ff, 0xfecb52,
+];
+
+// Prepare molstar cluster coloring for the given row before loadStructure.
+function _applyClusterColorForRow(rowIdx) {
+  if (document.getElementById('color-scheme')?.value !== 'cluster') return;
+  const col = _clusterColorForRow(rowIdx);
+  setClusterColor(col ?? 0x636efa);
+}
 // Stored so cluster-plot clicks can re-render the table without refetching.
 let _tableColumns = [];
 let _tableRows = [];
@@ -84,6 +118,7 @@ async function refreshModelPanels() {
   }
 
   renderSelectedResidues();
+  _applyClusterColorForRow(state.selectedModel);
   await loadStructure(state.selectedModel);
   if (plotType === 'pae' && state.paeSelection) {
     await applyPaeColors(state.paeSelection.xResidues, state.paeSelection.yResidues);
@@ -293,7 +328,12 @@ function initEvents() {
   });
 
   document.getElementById('color-scheme')?.addEventListener('change', async () => {
-    if (state.selectedModel != null) {
+    const sp = getSuperposeState();
+    if (sp) {
+      // Re-render the active superpose with the new color scheme.
+      await loadSuperpose(sp.rows, sp.query, sp.frameColors);
+    } else if (state.selectedModel != null) {
+      _applyClusterColorForRow(state.selectedModel);
       await loadStructure(state.selectedModel);
     }
   });
@@ -495,9 +535,41 @@ function _renderMdsPlot(plotDiv, q) {
       if (!ev?.points?.length) return;
       const rows = [...new Set(ev.points.map(p => p.customdata))];
       const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
-      await loadSuperpose(rows, queryVal);
+      const schemeEl = document.getElementById('color-scheme');
+      if (schemeEl) schemeEl.value = 'cluster';
+      await loadSuperpose(rows, queryVal, _frameColorsForRows(rows));
     });
   }
+}
+
+// Returns an array (one entry per arm) of Sets of row indices under that arm.
+function _computeArmLeaves(d, tickvals) {
+  const n = d.icoord.length;
+  // Map arm x-center (×100, rounded) → arm index for fast lookup.
+  const byCenter = new Map();
+  for (let i = 0; i < n; i++) {
+    const key = Math.round((d.icoord[i][0] + d.icoord[i][3]) / 2 * 100);
+    byCenter.set(key, i);
+  }
+  const cache = new Array(n).fill(null);
+  function get(i) {
+    if (cache[i]) return cache[i];
+    const ic = d.icoord[i], dc = d.dcoord[i];
+    const s = new Set();
+    for (const [fx, fy] of [[ic[0], dc[0]], [ic[3], dc[3]]]) {
+      if (fy === 0) {
+        // Foot touches the baseline → this is a leaf.
+        const li = tickvals.findIndex(tv => Math.abs(tv - fx) < 1e-6);
+        if (li >= 0) s.add(d.leaves[li]);
+      } else {
+        // Foot connects to a child arm whose center is at fx.
+        const ci = byCenter.get(Math.round(fx * 100));
+        if (ci !== undefined) for (const r of get(ci)) s.add(r);
+      }
+    }
+    return (cache[i] = s);
+  }
+  return Array.from({ length: n }, (_, i) => get(i));
 }
 
 function _renderDendrogram(plotDiv, q) {
@@ -510,71 +582,97 @@ function _renderDendrogram(plotDiv, q) {
   }
   const d = q.dendrogram;
 
-  // Build single line trace from all dendrogram arms using null separators.
-  const xs = [];
-  const ys = [];
-  for (let i = 0; i < d.icoord.length; i++) {
-    xs.push(...d.icoord[i], null);
-    ys.push(...d.dcoord[i], null);
-  }
+  // x-axis tick labels at leaf positions (5, 15, 25, …).
+  const tickvals = d.leaves.map((_, i) => (2 * i + 1) * 5);
+  const ticktext = d.leaves.map(r => `M${r}`);
 
-  const armTrace = {
+  // Build row→cluster map (same sort order as MDS so palette colours match).
+  const clusterNums = [...new Set(q.points.map(p => p.cluster))].sort((a, b) => a - b);
+  const clusterColor = new Map(
+    clusterNums.map((c, ci) => [c, CLUSTER_PALETTE[ci % CLUSTER_PALETTE.length]])
+  );
+  const rowToCluster = new Map(q.points.map(p => [p.row, p.cluster]));
+
+  // Compute the set of row indices lying under each arm.
+  const armLeaves = _computeArmLeaves(d, tickvals);
+
+  // Colour each arm: single-cluster subtrees get the cluster colour, mixed → gray.
+  const GRAY = '#adb5bd';
+  const armColors = armLeaves.map(leaves => {
+    const clusters = new Set([...leaves].map(r => rowToCluster.get(r)));
+    clusters.delete(null); clusters.delete(undefined);
+    if (clusters.size === 1) return clusterColor.get([...clusters][0]) ?? GRAY;
+    return GRAY;
+  });
+
+  // One line trace per colour (null-separated polylines within each trace).
+  const colorSegs = new Map();
+  for (let i = 0; i < d.icoord.length; i++) {
+    const c = armColors[i];
+    if (!colorSegs.has(c)) colorSegs.set(c, { xs: [], ys: [] });
+    const seg = colorSegs.get(c);
+    seg.xs.push(...d.icoord[i], null);
+    seg.ys.push(...d.dcoord[i], null);
+  }
+  const armTraces = [...colorSegs.entries()].map(([col, { xs, ys }]) => ({
     x: xs, y: ys,
-    mode: 'lines',
-    type: 'scatter',
-    line: { color: '#1843bf', width: 1.5 },
-    hoverinfo: 'skip',
-    showlegend: false,
-  };
+    mode: 'lines', type: 'scatter',
+    line: { color: col, width: 2 },
+    hoverinfo: 'skip', showlegend: false,
+  }));
 
   // Threshold line.
   const xMax = d.n * 10;
   const threshTrace = {
     x: [0, xMax], y: [d.threshold, d.threshold],
-    mode: 'lines',
-    type: 'scatter',
+    mode: 'lines', type: 'scatter',
     line: { color: '#ef4444', width: 1.5, dash: 'dash' },
     name: `Threshold (${d.threshold.toFixed(2)})`,
     showlegend: true,
   };
 
-  // x-axis tick labels at leaf positions (5, 15, 25, ...).
-  const tickvals = d.leaves.map((_, i) => (2 * i + 1) * 5);
-  const ticktext = d.leaves.map(r => `M${r}`);
+  // Invisible click-target markers at the peak of every arm.
+  // customdata = arm index; hovertemplate shows the leaf count.
+  const ctX = [], ctY = [], ctCustom = [], ctText = [];
+  for (let i = 0; i < d.icoord.length; i++) {
+    ctX.push((d.icoord[i][0] + d.icoord[i][3]) / 2);
+    ctY.push(d.dcoord[i][1]);   // top of the U-shape
+    ctCustom.push(i);
+    const nLeaves = armLeaves[i].size;
+    ctText.push(`${nLeaves} model${nLeaves !== 1 ? 's' : ''} — click to superpose`);
+  }
+  const clickTrace = {
+    x: ctX, y: ctY,
+    customdata: ctCustom,
+    text: ctText,
+    mode: 'markers', type: 'scatter',
+    marker: { size: 14, opacity: 0, color: '#000' },
+    hovertemplate: '%{text}<extra></extra>',
+    showlegend: false,
+  };
 
-  Plotly.react(plotDiv, [armTrace, threshTrace], {
+  Plotly.react(plotDiv, [...armTraces, threshTrace, clickTrace], {
     margin: { l: 50, r: 20, t: 20, b: 70 },
     xaxis: { tickvals, ticktext, tickangle: -45, showgrid: false },
     yaxis: { title: 'Distance', zeroline: false },
     legend: { font: { size: 11 } },
   }, { responsive: true });
 
+  // Store arm leaves so the persistent click handler can look them up.
+  plotDiv._afArmLeaves = armLeaves;
+
   if (!plotDiv._afDendroClickAttached) {
     plotDiv._afDendroClickAttached = true;
     plotDiv.on('plotly_click', async (ev) => {
       if (!ev?.points?.length) return;
       const pt = ev.points[0];
-      if (pt.data === armTrace || pt.curveNumber === 0) {
-        // Find all leaves below the clicked y-height on the dendrogram.
-        const clickY = pt.y;
-        const clickX = pt.x;
-        // Collect leaf indices whose branch passes through or below the click height.
-        const rows = [];
-        for (let i = 0; i < d.icoord.length; i++) {
-          const ic = d.icoord[i];
-          const dc = d.dcoord[i];
-          const xMid = (ic[0] + ic[3]) / 2;
-          if (Math.abs(xMid - clickX) < (ic[3] - ic[0]) / 2 + 1e-6 && dc[1] >= clickY - 1e-6) {
-            // Collect all leaves under this arm by x-position.
-            tickvals.forEach((tv, li) => {
-              if (tv >= ic[0] - 1e-6 && tv <= ic[3] + 1e-6) rows.push(d.leaves[li]);
-            });
-          }
-        }
-        const unique = [...new Set(rows.length ? rows : d.leaves.slice(0, 1))];
-        const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
-        await loadSuperpose(unique, queryVal);
-      }
+      if (typeof pt.customdata !== 'number') return;
+      const leaves = [...(plotDiv._afArmLeaves?.[pt.customdata] ?? [])];
+      if (!leaves.length) return;
+      const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
+      const schemeEl = document.getElementById('color-scheme');
+      if (schemeEl) schemeEl.value = 'cluster';
+      await loadSuperpose(leaves, queryVal, _frameColorsForRows(leaves));
     });
   }
 }
