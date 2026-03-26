@@ -48,6 +48,7 @@ class AppState:
         self.lock = Lock()
         self.af_data: af_analysis.Data | None = None
         self.last_error = ""
+        self.cluster_universes: dict = {}  # {query: (universe, [pdb_files])}
 
 
 class _TqdmStream:
@@ -633,12 +634,15 @@ def api_cluster():
     threshold = float(payload.get("threshold") or 2.0)
 
     try:
-        _clust.hierarchical(
+        universes = _clust.hierarchical(
             data.df,
             threshold=threshold,
             show_dendrogram=False,
             MDS_coors=True,
+            return_universe=True,
         )
+        if isinstance(universes, dict):
+            STATE.cluster_universes = universes
     except Exception:
         return (
             jsonify({"error": "Clustering failed", "details": traceback.format_exc()}),
@@ -685,6 +689,77 @@ def api_cluster():
         queries.append({"query": str(query), "points": points, "n_clusters": n_clusters, "dendrogram": dendrogram_data})
 
     return jsonify({"queries": queries})
+
+
+@app.get("/api/superpose")
+def api_superpose():
+    """Return a multi-model PDB of selected rows, already aligned.
+
+    Query params: query=<str>  rows=<comma-separated int indices>
+    """
+    import pandas as pd
+    import MDAnalysis as mda
+
+    query = request.args.get("query", "")
+    rows_str = request.args.get("rows", "")
+    try:
+        row_indices = [int(r) for r in rows_str.split(",") if r.strip()]
+    except ValueError:
+        return jsonify({"error": "Invalid rows parameter"}), 400
+
+    if not row_indices:
+        return jsonify({"error": "No rows specified"}), 400
+
+    if query not in STATE.cluster_universes:
+        return jsonify({"error": "No clustering universe for this query. Run Clusterize first."}), 404
+
+    u, files = STATE.cluster_universes[query]
+
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    df = data.df.reset_index(drop=True)
+
+    # Map row indices → frame indices in the universe.
+    frame_indices = []
+    for row_idx in row_indices:
+        if row_idx >= len(df):
+            continue
+        pdb_path = df.iloc[row_idx].get("pdb")
+        if pd.isnull(pdb_path):
+            continue
+        try:
+            frame_indices.append(files.index(str(pdb_path)))
+        except ValueError:
+            pass
+
+    if not frame_indices:
+        return jsonify({"error": "No valid frames found for specified rows"}), 404
+
+    # Write aligned frames as a multi-model PDB via a temp file (MDAnalysis PDB
+    # writer requires a real filename path — it cannot write to a StringIO).
+    import tempfile, os
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.pdb')
+    os.close(tmp_fd)
+    try:
+        with mda.Writer(tmp_path, n_atoms=u.atoms.n_atoms, multiframe=True) as w:
+            for fi in frame_indices:
+                u.trajectory[fi]
+                w.write(u.atoms)
+        with open(tmp_path) as fh:
+            pdb_text = fh.read()
+    except Exception:
+        return jsonify({"error": "Failed to write superposed PDB", "details": traceback.format_exc()}), 500
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    return jsonify({"structure_text": pdb_text, "structure_format": "pdb",
+                    "n_frames": len(frame_indices)})
 
 
 def main(argv=None) -> int:

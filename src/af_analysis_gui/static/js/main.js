@@ -1,7 +1,7 @@
 import { api, setStatus } from './api.js';
 import { state, renderTable, renderSelectedResidues } from './table.js';
 import { renderPlot, renderPaePlot, renderLisPlot, highlightPlotResidues, clearPlotSelection, reapplyPaePlotOverlay, getPlotZoom } from './plot.js';
-import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover } from './molstar.js';
+import { loadStructure, highlightResidues, hoverResidues, unhoverResidues, applyPaeColors, clearPaeColors, clearMolstarSelection, subscribeToMolstarHover, loadSuperpose } from './molstar.js';
 import { initResizableLayout } from './resize.js';
 
 // Track the last rendered plot type so we only restore zoom when staying on the same type.
@@ -491,6 +491,12 @@ function _renderMdsPlot(plotDiv, q) {
       renderCurrentTable(_tableColumns, _tableRows);
       await refreshModelPanels();
     });
+    plotDiv.on('plotly_selected', async (ev) => {
+      if (!ev?.points?.length) return;
+      const rows = [...new Set(ev.points.map(p => p.customdata))];
+      const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
+      await loadSuperpose(rows, queryVal);
+    });
   }
 }
 
@@ -542,6 +548,35 @@ function _renderDendrogram(plotDiv, q) {
     yaxis: { title: 'Distance', zeroline: false },
     legend: { font: { size: 11 } },
   }, { responsive: true });
+
+  if (!plotDiv._afDendroClickAttached) {
+    plotDiv._afDendroClickAttached = true;
+    plotDiv.on('plotly_click', async (ev) => {
+      if (!ev?.points?.length) return;
+      const pt = ev.points[0];
+      if (pt.data === armTrace || pt.curveNumber === 0) {
+        // Find all leaves below the clicked y-height on the dendrogram.
+        const clickY = pt.y;
+        const clickX = pt.x;
+        // Collect leaf indices whose branch passes through or below the click height.
+        const rows = [];
+        for (let i = 0; i < d.icoord.length; i++) {
+          const ic = d.icoord[i];
+          const dc = d.dcoord[i];
+          const xMid = (ic[0] + ic[3]) / 2;
+          if (Math.abs(xMid - clickX) < (ic[3] - ic[0]) / 2 + 1e-6 && dc[1] >= clickY - 1e-6) {
+            // Collect all leaves under this arm by x-position.
+            tickvals.forEach((tv, li) => {
+              if (tv >= ic[0] - 1e-6 && tv <= ic[3] + 1e-6) rows.push(d.leaves[li]);
+            });
+          }
+        }
+        const unique = [...new Set(rows.length ? rows : d.leaves.slice(0, 1))];
+        const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
+        await loadSuperpose(unique, queryVal);
+      }
+    });
+  }
 }
 
 let _browseCurrent = null;

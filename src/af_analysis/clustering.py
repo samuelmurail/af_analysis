@@ -166,7 +166,7 @@ def compute_distance_matrix(
         select=distance_selection,
     ).run(verbose=True)
 
-    return matrix.results.dist_matrix
+    return matrix.results.dist_matrix, u
 
 
 def hierarchical(
@@ -177,6 +177,7 @@ def hierarchical(
     show_dendrogram=True,
     MDS_coors=True,
     rmsd_scale=False,
+    return_universe=False,
 ):
     """Clustering of AlphaFold models.
 
@@ -223,6 +224,7 @@ def hierarchical(
     cluster_list = []
     MDS_1 = []
     MDS_2 = []
+    universes = {} if return_universe else None
 
     query_list = df["query"].unique().tolist()
 
@@ -246,11 +248,14 @@ def hierarchical(
         ), f"Missing pdb data in the middle of the query {pdb}"
 
         logger.info("Read all structures")
-        dist_matrix = compute_distance_matrix(
+        dist_matrix, u = compute_distance_matrix(
             files,
             align_selection=align_selection[pdb],
             distance_selection=distance_selection[pdb],
         )
+
+        if return_universe:
+            universes[pdb] = (u, list(files))
 
         logger.info(f"Max RMSD is {np.max(dist_matrix):.2f} A")
         if rmsd_scale:
@@ -296,7 +301,9 @@ def hierarchical(
         df["MDS 1"] = MDS_1 + null_number * [None]
         df["MDS 2"] = MDS_2 + null_number * [None]
 
-    return
+    if return_universe:
+        return universes
+    return None
 
 
 def reorder_by_size(clust_list):

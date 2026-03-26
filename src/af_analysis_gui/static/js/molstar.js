@@ -765,3 +765,68 @@ export async function loadStructure(index) {
     highlightResidues(state.selectedResidues);
   }
 }
+
+// ── Superpose multiple aligned models ────────────────────────────────────────
+
+const _SUPERPOSE_PALETTE = [
+  0x636efa, 0xef553b, 0x00cc96, 0xab63fa, 0xffa15a,
+  0x19d3f3, 0xff6692, 0xb6e880, 0xff97ff, 0xfecb52,
+];
+
+export async function loadSuperpose(rows, query) {
+  if (!rows || !rows.length) return;
+  const payload = await api(
+    `/api/superpose?query=${encodeURIComponent(query)}&rows=${rows.join(',')}`
+  );
+  await ensureViewer();
+
+  _paeSelection = null;
+  state.residueMap = null;
+  state._reverseResidueMap = null;
+  state.polymerCell = null;
+  state.reprCell = null;
+  state.ionCell = null;
+  state.ionReprCell = null;
+  state.ligandCell = null;
+  state.ligandReprCell = null;
+  try { await state.plugin.clear(); } catch (_) {}
+
+  const data = await state.plugin.builders.data.rawData({
+    data: payload.structure_text,
+    label: 'superpose',
+  });
+  let trajectory;
+  try {
+    trajectory = await state.plugin.builders.structure.parseTrajectory(data, payload.structure_format);
+  } catch (_) {
+    trajectory = await state.plugin.builders.structure.parseTrajectory(data, 'mmcif');
+  }
+
+  const nFrames = payload.n_frames ?? rows.length;
+  for (let i = 0; i < nFrames; i++) {
+    try {
+      const model = await state.plugin.builders.structure.createModel(trajectory, { modelIndex: i });
+      const structure = await state.plugin.builders.structure.createStructure(model);
+      const polymer = await state.plugin.builders.structure.tryCreateComponentStatic(structure, 'polymer');
+      if (polymer) {
+        const Color = window.molstar?.lib?.['mol-util/color']?.Color;
+        const colorVal = _SUPERPOSE_PALETTE[i % _SUPERPOSE_PALETTE.length];
+        const colorTheme = Color
+          ? { name: 'uniform', params: { value: Color(colorVal) } }
+          : { name: 'chain-id' };
+        await state.plugin.builders.structure.representation.addRepresentation(polymer, {
+          type: 'cartoon',
+          colorTheme,
+        });
+      }
+      const ligand = await state.plugin.builders.structure.tryCreateComponentStatic(structure, 'ligand');
+      if (ligand) {
+        await state.plugin.builders.structure.representation.addRepresentation(ligand, {
+          type: 'ball-and-stick',
+        });
+      }
+    } catch (_) { /* skip frame if model index is out of range */ }
+  }
+  state.plugin.managers.camera.reset();
+  setMolstarNote(`Superposing ${nFrames} model${nFrames > 1 ? 's' : ''}`);
+}
