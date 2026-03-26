@@ -753,6 +753,8 @@ function _renderDendrogram(plotDiv, q) {
   // Store leaf ordering so hover can look up x positions.
   plotDiv._afDendroLeaves = d.leaves;
   plotDiv._afDendroTickvals = tickvals;
+  // Store leaf trace curve number so plotly_selected can filter out arm click targets.
+  plotDiv._afLeafTraceIdx = armTraces.length + 2;
 
   Plotly.react(plotDiv, [...armTraces, threshTrace, clickTrace, leafMarkerTrace], {
     margin: { l: 50, r: 20, t: 20, b: 70 },
@@ -785,10 +787,11 @@ function _renderDendrogram(plotDiv, q) {
     plotDiv.on('plotly_selected', async (ev) => {
       if (document.getElementById('cluster-view-select')?.value !== 'dendrogram') return;
       if (!ev?.points?.length) return;
-      // Collect row indices from the selectable leaf marker trace (customdata = rowIdx).
+      // Collect row indices strictly from the leaf marker trace (not arm click targets).
+      const leafIdx = plotDiv._afLeafTraceIdx;
       const rows = [...new Set(
         ev.points
-          .filter(p => typeof p.customdata === 'number' && p.customdata >= 0)
+          .filter(p => p.curveNumber === leafIdx && typeof p.customdata === 'number')
           .map(p => p.customdata)
       )];
       if (!rows.length) return;
