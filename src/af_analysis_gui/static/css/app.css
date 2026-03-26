@@ -160,7 +160,7 @@ tr.active {
 #plddt-plot {
     width: 100%;
     flex: 1;
-    min-height: 280px;
+    min-height: 0;
 }
 
 #molstar-viewer {

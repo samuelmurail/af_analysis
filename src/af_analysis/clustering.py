@@ -75,8 +75,8 @@ def read_numerous_pdb(pdb_files, batch_size=1000):
             assert (
                 model.len == local_model.len
             ), "Different number of atoms between the pdb files"
-            model.models.append(local_model.models[0])
-        model.write("tmp.pdb", overwrite=True)
+            model.add_Model(local_model.models[0])
+        model.write("tmp.pdb")
         return mda.Universe("tmp.pdb", "tmp.pdb")
 
     for i in range(0, len(pdb_files), batch_size):

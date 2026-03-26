@@ -11,9 +11,32 @@
   <script>
     window.toggleCard = function(titleEl) {
       const body = titleEl.nextElementSibling;
-      const collapsed = body.style.display === 'none';
-      body.style.display = collapsed ? '' : 'none';
-      titleEl.textContent = (collapsed ? '\u25BC ' : '\u25BA ') + titleEl.textContent.slice(2);
+      const expanding = body.style.display === 'none';
+      body.style.display = expanding ? '' : 'none';
+      titleEl.textContent = (expanding ? '\u25BC ' : '\u25BA ') + titleEl.textContent.slice(2);
+      const fc = titleEl.closest('[data-flex-collapsible]');
+      if (fc) {
+        fc.style.flex = expanding ? '1' : '0 0 auto';
+        const sibId = fc.dataset.toggleSibling;
+        if (sibId) {
+          const sib = document.getElementById(sibId);
+          if (sib && sib.style.display !== 'none') {
+            const sibBody = sib.querySelector('.card-body');
+            const sibTitle = sib.querySelector('.card-title');
+            if (expanding) {
+              // this expanded → collapse sibling
+              if (sibBody) sibBody.style.display = 'none';
+              if (sibTitle) sibTitle.textContent = '\u25BA ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
+              sib.style.flex = '0 0 auto';
+            } else {
+              // this collapsed → expand sibling
+              if (sibBody) sibBody.style.display = '';
+              if (sibTitle) sibTitle.textContent = '\u25BC ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
+              sib.style.flex = '1';
+            }
+          }
+        }
+      }
     };
     window.collapseCard = function(cardId) {
       const card = document.getElementById(cardId);
@@ -23,6 +46,20 @@
       if (!titleEl || !body) return;
       body.style.display = 'none';
       titleEl.textContent = '\u25BA ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
+      if ('flexCollapsible' in card.dataset) {
+        card.style.flex = '0 0 auto';
+        const sibId = card.dataset.toggleSibling;
+        if (sibId) {
+          const sib = document.getElementById(sibId);
+          if (sib && sib.style.display !== 'none') {
+            const sibBody = sib.querySelector('.card-body');
+            const sibTitle = sib.querySelector('.card-title');
+            if (sibBody) sibBody.style.display = '';
+            if (sibTitle) sibTitle.textContent = '\u25BC ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
+            sib.style.flex = '1';
+          }
+        }
+      }
     };
   </script>
 </head>
@@ -83,24 +120,13 @@
             </label>
             <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
               <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                <input type="checkbox" id="compute-LIS" /> LIS matrix
+                <input type="checkbox" id="compute-LIS_LIA" /> LIS &amp; LIA matrix
               </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIS">
+              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIS and LIA">
                 PAE:
                 <input type="range" id="lis-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
                   oninput="document.getElementById('lis-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
                 <span id="lis-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
-              </label>
-            </div>
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-              <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                <input type="checkbox" id="compute-LIA" /> cLIS/LIA matrix
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIA">
-                PAE:
-                <input type="range" id="lia-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
-                  oninput="document.getElementById('lia-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-                <span id="lia-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
               </label>
               <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="Distance cutoff for LIA">
                 Dist:
@@ -122,6 +148,15 @@
             </div>
             <div>
               <button id="compute-btn" type="button">Compute</button>
+            </div>
+            <div style="margin-top:4px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; border-top:1px solid #e5e7eb; padding-top:8px;">
+              <button id="cluster-btn" type="button">Clusterize</button>
+              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="RMSD threshold for hierarchical clustering">
+                Threshold:
+                <input type="range" id="cluster-threshold" min="0.5" max="10" step="0.1" value="2.0" style="width:70px; cursor:pointer;"
+                  oninput="document.getElementById('cluster-threshold-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
+                <span id="cluster-threshold-val" style="min-width:34px;">2.0 Å</span>
+              </label>
             </div>
           </div>
           <div class="status" id="compute-status"></div>
@@ -146,20 +181,47 @@
         </table>
       </div>
       <div class="splitter" data-split="1"></div>
-      <div class="card">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <strong>Plot</strong>
-          <select id="plot-type" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;">
-            <option value="plddt">pLDDT</option>
-            <option value="pae">PAE</option>
-            <option value="lis" id="opt-lis" style="display:none">LIS matrix</option>
-            <option value="lia" id="opt-lia" style="display:none">cLIS (LIA) matrix</option>
-            <option value="iptm_d0_matrix" id="opt-iptm-d0" style="display:none">ipTM d0 matrix</option>
-            <option value="ipsae_matrix" id="opt-ipsae" style="display:none">ipSAE matrix</option>
-          </select>
+      <div style="display:flex; flex-direction:column; gap:8px; min-height:0; overflow:hidden;">
+        <div class="card" id="plot-card" data-flex-collapsible data-toggle-sibling="cluster-panel" style="flex:1; min-height:0; overflow:hidden;">
+          <div class="card-title" onclick="toggleCard(this)">&#9660; Plot</div>
+          <div class="card-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;">
+            <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+              <select id="plot-type" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;">
+                <option value="plddt">pLDDT</option>
+                <option value="pae">PAE</option>
+                <option value="lis" id="opt-lis" style="display:none">LIS matrix</option>
+                <option value="lia" id="opt-lia" style="display:none">cLIS (LIA) matrix</option>
+                <option value="iptm_d0_matrix" id="opt-iptm-d0" style="display:none">ipTM d0 matrix</option>
+                <option value="ipsae_matrix" id="opt-ipsae" style="display:none">ipSAE matrix</option>
+              </select>
+            </div>
+            <div id="plddt-plot" style="flex:1; min-height:0;"></div>
+            <div id="selected-residues" class="mono" style="flex-shrink:0;"></div>
+          </div>
         </div>
-        <div id="plddt-plot"></div>
-        <div id="selected-residues" class="mono"></div>
+        <!-- Cluster panel (shown after Clusterize) -->
+        <div id="cluster-panel" style="display:none; flex:1; min-height:0; overflow:hidden; flex-direction:column;" data-flex-collapsible data-toggle-sibling="plot-card">
+          <div class="card" style="flex:1; min-height:0; display:flex; flex-direction:column;">
+            <div class="card-title" onclick="toggleCard(this)">&#9660; Clustering</div>
+            <div class="card-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;">
+              <div id="cluster-status" class="status" style="margin-bottom:6px; flex-shrink:0;"></div>
+              <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px; flex-wrap:wrap; flex-shrink:0;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+                  Query:
+                  <select id="cluster-query-select" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;"></select>
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
+                  View:
+                  <select id="cluster-view-select" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;">
+                    <option value="mds">MDS scatter</option>
+                    <option value="dendrogram">Dendrogram</option>
+                  </select>
+                </label>
+              </div>
+              <div id="cluster-main-plot" style="flex:1; min-height:0;"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="splitter" data-split="3"></div>
       <div class="card">

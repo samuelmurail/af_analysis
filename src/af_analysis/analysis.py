@@ -722,12 +722,12 @@ def LIS_matrix(data, pae_cutoff=12.0):
     data.df.loc[:, "LIS"] = LIS_matrix_list
 
 
-def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
-    """Compute the Local Interaction Area from the PAE matrix and pdb.
+def cLIS_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
+    """Compute the cLIS score from the PAE matrix and pdb file.
 
-        Implementation is based on the LIS/LIA from the IPSAE package
+        Implementation is based on the cLIS from the IPSAE package
         https://github.com/flyark/AFM-LIS
-    # apply cutoff
+
         Cite:
         .. [1] Dunbrack RL Jr. "Rēs ipSAE loquunt: What’s wrong with AlphaFold’s
         ipTM score and how to fix it" bioRxiv (2025).
@@ -760,7 +760,7 @@ def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
             logger.warning(f"No PAE matrix found for query {query}.")
             LIA_matrix_list.append(None)
             continue
-        LIA_matrix = compute_LIA_matrix(
+        LIA_matrix = compute_cLIS_matrix(
             pdb=pdb,
             pae_array=PAE_matrix,
             pae_cutoff=pae_cutoff,
@@ -773,10 +773,10 @@ def LIA_matrix(data, pae_cutoff=12.0, dist_cutoff=8.0):
 
     assert len(LIA_matrix_list) == len(data.df["query"])
 
-    data.df.loc[:, "LIA"] = LIA_matrix_list
+    data.df.loc[:, "cLIS"] = LIA_matrix_list
 
 
-def compute_LIA_matrix(
+def compute_cLIS_matrix(
     pdb: str,
     pae_array: np.ndarray,
     chain_ids: list,
@@ -784,7 +784,7 @@ def compute_LIA_matrix(
     pae_cutoff: float = 12.0,
     dist_cutoff: float = 8.0,
 ) -> np.ndarray:
-    """Compute the LIA score from the PAE matrix.
+    """Compute the cLIS score from the PAE matrix and pdb file.
 
     Parameters
     ----------

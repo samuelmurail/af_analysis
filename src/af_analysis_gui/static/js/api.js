@@ -1,7 +1,12 @@
 export async function api(path, options = {}) {
   const res = await fetch(path, options);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Request failed");
+  if (!res.ok) {
+    if (data.details) console.error(`[api] ${path} failed:\n`, data.details);
+    const err = new Error(data.error || "Request failed");
+    err.details = data.details || null;
+    throw err;
+  }
   return data;
 }
 

@@ -10,12 +10,18 @@ export const state = {
   tableRows: [],
   sortCol: null,  // column name currently sorted, or null
   sortDir: 1,     // 1 = ascending, -1 = descending
-  collapsedGroups: new Set(['iptm_d0', 'ipsae']),  // group ids collapsed by default
+  collapsedGroups: new Set(['pdockq2', 'iptm_d0', 'ipsae']),  // group ids collapsed by default
 };
 
 // Collapsible column groups: columns whose name starts with `prefix`
 // (and isn't in `exclude`) are folded into a single summary column.
 const COLUMN_GROUPS = [
+  {
+    id: 'pdockq2',
+    prefix: 'pdockq2_',
+    exclude: new Set(),
+    label: 'pdockq2',
+  },
   {
     id: 'iptm_d0',
     prefix: 'ipTM_d0_',

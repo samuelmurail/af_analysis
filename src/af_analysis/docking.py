@@ -301,12 +301,12 @@ def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max):
 
     """
 
-    analysis.LIA_matrix(my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff)
+    analysis.cLIS_matrix(my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff)
 
     pep_LIA_list = []
     pep_LIA2_list = []
 
-    for query, LIA in zip(my_data.df["query"], my_data.df["LIA"]):
+    for query, LIA in zip(my_data.df["query"], my_data.df["cLIS"]):
         if LIA is None:
             pep_LIA_list.append(None)
             pep_LIA2_list.append(None)

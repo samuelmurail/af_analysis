@@ -6,6 +6,9 @@ import { initResizableLayout } from './resize.js';
 
 // Track the last rendered plot type so we only restore zoom when staying on the same type.
 let _lastPlotType = null;
+// Stored so cluster-plot clicks can re-render the table without refetching.
+let _tableColumns = [];
+let _tableRows = [];
 
 function collapseCard(cardId) {
   const card = document.getElementById(cardId);
@@ -15,9 +18,25 @@ function collapseCard(cardId) {
   if (!titleEl || !body) return;
   body.style.display = 'none';
   titleEl.textContent = '\u25BA ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
+  if ('flexCollapsible' in card.dataset) {
+    card.style.flex = '0 0 auto';
+    const sibId = card.dataset.toggleSibling;
+    if (sibId) {
+      const sib = document.getElementById(sibId);
+      if (sib && sib.style.display !== 'none') {
+        const sibBody = sib.querySelector('.card-body');
+        const sibTitle = sib.querySelector('.card-title');
+        if (sibBody) sibBody.style.display = '';
+        if (sibTitle) sibTitle.textContent = '\u25BC ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
+        sib.style.flex = '1';
+      }
+    }
+  }
 }
 
 function renderCurrentTable(columns, rows) {
+  _tableColumns = columns;
+  _tableRows = rows;
   renderTable(columns, rows, async (selectedRow) => {
     state.selectedModel = Number(selectedRow);
     renderCurrentTable(columns, rows);
@@ -194,6 +213,23 @@ function initEvents() {
   const loadBtn = document.getElementById('load-btn');
   if (!loadBtn) return;
 
+  // Resize Plotly whenever the plot panel changes size (e.g. cluster panel expand/collapse).
+  const plotCardEl = document.getElementById('plot-card');
+  if (plotCardEl && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      const pEl = document.getElementById('plddt-plot');
+      if (pEl?._fullLayout) Plotly.Plots.resize(pEl);
+    }).observe(plotCardEl);
+  }
+  // Resize cluster Plotly whenever the cluster panel changes size.
+  const clusterPlotEl = document.getElementById('cluster-main-plot');
+  if (clusterPlotEl && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      if (clusterPlotEl._fullLayout) Plotly.Plots.resize(clusterPlotEl);
+    }).observe(clusterPlotEl);
+  }
+
+
   loadBtn.addEventListener('click', async () => {
     const directory = document.getElementById('directory').value.trim();
     const format = document.getElementById('format').value;
@@ -272,10 +308,10 @@ function initEvents() {
   });
 
   document.getElementById('compute-btn')?.addEventListener('click', async () => {
-    const scores = ['pdockq2', 'LIS', 'LIA', 'iptm_d0'].filter(
+    const scores = ['pdockq2', 'LIS_LIA', 'iptm_d0'].filter(
       id => document.getElementById(`compute-${id}`)?.checked
     );
-    // iptm_d0 implies ipSAE — handled server-side, no separate checkbox needed.
+    // LIS_LIA computes both LIS and LIA in one call; iptm_d0 also includes ipSAE server-side.
     if (!scores.length) return;
     const statusEl  = document.getElementById('compute-status');
     const progressEl = document.getElementById('compute-progress');
@@ -317,16 +353,13 @@ function initEvents() {
         es.onerror = () => { es.close(); sseResolve(); };
 
         const lisPaeCutoff   = parseFloat(document.getElementById('lis-pae-cutoff')?.value   ?? 12);
-        const liaPaeCutoff   = parseFloat(document.getElementById('lia-pae-cutoff')?.value   ?? 12);
         const liaDistCutoff  = parseFloat(document.getElementById('lia-dist-cutoff')?.value  ?? 8);
         const ipsaePaeCutoff = parseFloat(document.getElementById('ipsae-pae-cutoff')?.value ?? 10);
-        const extraParams = score === 'LIS'
-          ? { pae_cutoff: lisPaeCutoff }
-          : score === 'LIA'
-            ? { pae_cutoff: liaPaeCutoff, dist_cutoff: liaDistCutoff }
-            : score === 'iptm_d0'
-              ? { pae_cutoff: ipsaePaeCutoff }
-              : {};
+        const extraParams = score === 'LIS_LIA'
+          ? { pae_cutoff: lisPaeCutoff, dist_cutoff: liaDistCutoff }
+          : score === 'iptm_d0'
+            ? { pae_cutoff: ipsaePaeCutoff }
+            : {};
         const res = await api('/api/compute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -346,9 +379,170 @@ function initEvents() {
       if (statusEl) { statusEl.textContent = String(err); statusEl.style.color = '#a11927'; }
     }
   });
+
+  document.getElementById('cluster-btn')?.addEventListener('click', async () => {
+    const threshold = parseFloat(document.getElementById('cluster-threshold')?.value ?? 2.0);
+    const statusEl = document.getElementById('cluster-status');
+    const panel = document.getElementById('cluster-panel');
+    if (statusEl) { statusEl.textContent = 'Clustering…'; statusEl.style.color = '#2d3a57'; }
+    if (panel) panel.style.display = 'flex';
+    collapseCard('plot-card');
+    try {
+      const data = await api('/api/cluster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold }),
+      });
+      if (statusEl) statusEl.textContent = '';
+      renderClusterPanel(data.queries);
+      await refreshTableAndPanels();
+    } catch (err) {
+      if (statusEl) {
+        statusEl.style.color = '#a11927';
+        statusEl.title = err.details || '';
+        statusEl.textContent = String(err);
+      }
+    }
+  });
 }
 
-// ── Directory browser ────────────────────────────────────────────────────────
+// ── Cluster panel ────────────────────────────────────────────────────────────
+
+const CLUSTER_PALETTE = [
+  '#636EFA','#EF553B','#00CC96','#AB63FA','#FFA15A',
+  '#19D3F3','#FF6692','#B6E880','#FF97FF','#FECB52',
+];
+
+let _clusterData = null;
+let _clusterListenersAttached = false;
+
+function renderClusterPanel(queries) {
+  _clusterData = queries;
+
+  // Populate query dropdown.
+  const querySelect = document.getElementById('cluster-query-select');
+  if (querySelect) {
+    querySelect.innerHTML = '';
+    for (const q of queries) {
+      const opt = document.createElement('option');
+      opt.value = q.query;
+      opt.textContent = q.query;
+      querySelect.appendChild(opt);
+    }
+  }
+
+  // Attach dropdown change listeners once.
+  if (!_clusterListenersAttached) {
+    _clusterListenersAttached = true;
+    querySelect?.addEventListener('change', _renderClusterPlot);
+    document.getElementById('cluster-view-select')?.addEventListener('change', _renderClusterPlot);
+  }
+
+  _renderClusterPlot();
+}
+
+function _renderClusterPlot() {
+  if (!_clusterData) return;
+  const queryVal = document.getElementById('cluster-query-select')?.value;
+  const view = document.getElementById('cluster-view-select')?.value ?? 'mds';
+  const q = _clusterData.find(x => x.query === queryVal);
+  if (!q) return;
+  const plotDiv = document.getElementById('cluster-main-plot');
+  if (!plotDiv) return;
+  if (view === 'mds') {
+    _renderMdsPlot(plotDiv, q);
+  } else {
+    _renderDendrogram(plotDiv, q);
+  }
+}
+
+function _renderMdsPlot(plotDiv, q) {
+  const clusterNums = [...new Set(q.points.map(p => p.cluster))].sort((a, b) => a - b);
+  const traces = clusterNums.map((c, ci) => {
+    const pts = q.points.filter(p => p.cluster === c);
+    return {
+      x: pts.map(p => p.x),
+      y: pts.map(p => p.y),
+      customdata: pts.map(p => p.row),
+      text: pts.map(p => `Model ${p.row}<br>Cluster ${p.cluster}`),
+      mode: 'markers',
+      type: 'scatter',
+      name: `Cluster ${c}`,
+      marker: { size: 8, color: CLUSTER_PALETTE[ci % CLUSTER_PALETTE.length] },
+      hovertemplate: '%{text}<extra></extra>',
+    };
+  });
+
+  Plotly.react(plotDiv, traces, {
+    autosize: true,
+    margin: { l: 50, r: 20, t: 20, b: 50 },
+    xaxis: { title: 'MDS 1', zeroline: false },
+    yaxis: { title: 'MDS 2', zeroline: false },
+    legend: { font: { size: 11 } },
+    showlegend: q.n_clusters > 1,
+  }, { responsive: true });
+
+  if (!plotDiv._afClusterClickAttached) {
+    plotDiv._afClusterClickAttached = true;
+    plotDiv.on('plotly_click', async (ev) => {
+      if (!ev?.points?.length) return;
+      const rowIdx = ev.points[0].customdata;
+      state.selectedModel = rowIdx;
+      renderCurrentTable(_tableColumns, _tableRows);
+      await refreshModelPanels();
+    });
+  }
+}
+
+function _renderDendrogram(plotDiv, q) {
+  if (!q.dendrogram) {
+    Plotly.react(plotDiv, [], {
+      margin: { l: 50, r: 20, t: 30, b: 60 },
+      title: { text: 'No dendrogram data available' },
+    }, { responsive: true });
+    return;
+  }
+  const d = q.dendrogram;
+
+  // Build single line trace from all dendrogram arms using null separators.
+  const xs = [];
+  const ys = [];
+  for (let i = 0; i < d.icoord.length; i++) {
+    xs.push(...d.icoord[i], null);
+    ys.push(...d.dcoord[i], null);
+  }
+
+  const armTrace = {
+    x: xs, y: ys,
+    mode: 'lines',
+    type: 'scatter',
+    line: { color: '#1843bf', width: 1.5 },
+    hoverinfo: 'skip',
+    showlegend: false,
+  };
+
+  // Threshold line.
+  const xMax = d.n * 10;
+  const threshTrace = {
+    x: [0, xMax], y: [d.threshold, d.threshold],
+    mode: 'lines',
+    type: 'scatter',
+    line: { color: '#ef4444', width: 1.5, dash: 'dash' },
+    name: `Threshold (${d.threshold.toFixed(2)})`,
+    showlegend: true,
+  };
+
+  // x-axis tick labels at leaf positions (5, 15, 25, ...).
+  const tickvals = d.leaves.map((_, i) => (2 * i + 1) * 5);
+  const ticktext = d.leaves.map(r => `M${r}`);
+
+  Plotly.react(plotDiv, [armTrace, threshTrace], {
+    margin: { l: 50, r: 20, t: 20, b: 70 },
+    xaxis: { tickvals, ticktext, tickangle: -45, showgrid: false },
+    yaxis: { title: 'Distance', zeroline: false },
+    legend: { font: { size: 11 } },
+  }, { responsive: true });
+}
 
 let _browseCurrent = null;
 

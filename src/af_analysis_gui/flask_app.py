@@ -10,6 +10,8 @@ from threading import Lock, Thread
 from typing import Any
 
 import numpy as np
+import scipy.cluster.hierarchy as _sch
+import scipy.spatial.distance as _ssd
 from flask import Flask, Response, jsonify, render_template, request
 
 import af_analysis
@@ -543,7 +545,7 @@ def api_progress_stream():
 def api_compute():
     """Run one of the supported scoring functions on the loaded dataset.
 
-    Body JSON: { "score": "pdockq2" | "LIS" | "iptm_d0" }
+    Body JSON: { "score": "pdockq2" | "LIS_LIA" | "iptm_d0" }
     Returns:   { "ok": true, "columns_added": [...] }
     """
     import af_analysis.analysis as _ana_mod
@@ -560,7 +562,7 @@ def api_compute():
     pae_cutoff = float(payload.get("pae_cutoff", 12.0))
     dist_cutoff = float(payload.get("dist_cutoff", 8.0))
 
-    if score not in {"pdockq2", "LIS", "LIA", "iptm_d0"}:
+    if score not in {"pdockq2", "LIS_LIA", "iptm_d0"}:
         return jsonify({"error": f"Unknown score '{score}'"}), 400
 
     # Drain any stale events from a previous run.
@@ -586,10 +588,9 @@ def api_compute():
 
         if score == "pdockq2":
             ana.pdockq2(data)
-        elif score == "LIS":
+        elif score == "LIS_LIA":
             ana.LIS_matrix(data, pae_cutoff=pae_cutoff)
-        elif score == "LIA":
-            ana.LIA_matrix(data, pae_cutoff=pae_cutoff, dist_cutoff=dist_cutoff)
+            ana.cLIS_matrix(data, pae_cutoff=pae_cutoff, dist_cutoff=dist_cutoff)
         elif score == "iptm_d0":
             ana.ipTM_d0(data)
             ana.ipSAE(data, pae_cutoff=pae_cutoff)
@@ -610,6 +611,80 @@ def api_compute():
     # Signal the SSE stream that computation is finished.
     _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
     return jsonify({"ok": True, "columns_added": cols_added})
+
+
+@app.post("/api/cluster")
+def api_cluster():
+    """Run hierarchical clustering on all queries.
+
+    Body JSON: { "threshold": 2.0 }
+    Returns:   { "queries": [ { "query": str, "n_clusters": int,
+                                "points": [{"row", "x", "y", "cluster"}] } ] }
+    """
+    import pandas as pd
+    from af_analysis import clustering as _clust
+
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    payload = request.get_json(silent=True) or {}
+    threshold = float(payload.get("threshold") or 2.0)
+
+    try:
+        _clust.hierarchical(
+            data.df,
+            threshold=threshold,
+            show_dendrogram=False,
+            MDS_coors=True,
+        )
+    except Exception:
+        return (
+            jsonify({"error": "Clustering failed", "details": traceback.format_exc()}),
+            500,
+        )
+
+    # Build per-query response using positional (reset) row indices so they
+    # match the `row` field used by the table and structure endpoints.
+    df = data.df.reset_index(drop=True)
+    queries = []
+    for query in df["query"].unique():
+        qdf = df[df["query"] == query]
+        points = []
+        for pos_idx, row in qdf.iterrows():
+            mds1 = row.get("MDS 1")
+            mds2 = row.get("MDS 2")
+            clust = row.get("cluster")
+            if pd.isnull(mds1) or pd.isnull(mds2):
+                continue
+            points.append({
+                "row": int(pos_idx),
+                "x": float(mds1),
+                "y": float(mds2),
+                "cluster": int(clust) if not pd.isnull(clust) else None,
+            })
+        n_clusters = int(qdf["cluster"].dropna().nunique()) if "cluster" in qdf else 0
+        dendrogram_data = None
+        if len(points) >= 2:
+            try:
+                mds_xy = np.array([[p["x"], p["y"]] for p in points])
+                Y = _ssd.pdist(mds_xy)
+                Z = _sch.linkage(Y, method="average")
+                dend = _sch.dendrogram(Z, no_plot=True)
+                row_list = [p["row"] for p in points]
+                dendrogram_data = {
+                    "icoord": dend["icoord"],
+                    "dcoord": dend["dcoord"],
+                    "leaves": [int(row_list[i]) for i in dend["leaves"]],
+                    "n": len(dend["leaves"]),
+                    "threshold": threshold,
+                }
+            except Exception:
+                pass
+        queries.append({"query": str(query), "points": points, "n_clusters": n_clusters, "dendrogram": dendrogram_data})
+
+    return jsonify({"queries": queries})
 
 
 def main(argv=None) -> int:

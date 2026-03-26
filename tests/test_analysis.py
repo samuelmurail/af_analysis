@@ -312,8 +312,8 @@ def test_af3_webserver():
         np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
     )
 
-    analysis.LIA_matrix(my_data)
-    expected_LIA_0 = [
+    analysis.cLIS_matrix(my_data)
+    expected_cLIS_0 = [
         [0.92397, 0.93017, 0.92159, 0.93483, 0.91703, 0.91519],
         [0.92692, 0.93667, 0.0, 0.0, 0.0, 0.0],
         [0.91424, 0.0, 0.93667, 0.0, 0.0, 0.0],
@@ -321,8 +321,9 @@ def test_af3_webserver():
         [0.92359, 0.0, 0.0, 0.0, 0.92949, 0.0],
         [0.89712, 0.0, 0.0, 0.0, 0.0, 0.92788],
     ]
+    print(my_data.df.columns)
     np.testing.assert_allclose(
-        np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
+        np.array(my_data.df["cLIS"][0]), np.array(expected_cLIS_0), atol=precision
     )
 
     analysis.inter_chain_pae(my_data)
@@ -391,12 +392,12 @@ def test_af3_webserver_lis_lia_protein_rna_ligand_ion():
         np.array(my_data.df["LIS"][0]), np.array(expected_LIS_0), atol=precision
     )
 
-    analysis.LIA_matrix(my_data)
-    expected_LIA_0 = [[0.9260425101214576, 0.8877882599580713, 0.9118055555555555, 0.9048850574712645], [0.7360587002096438, 0.8533473389355741, 0.8308333333333333, 0], [0.8548611111111112, 0.8733333333333333, 0.9333333333333333, 0], [0.9028735632183907, 0, 0, 0.925]]
-    print(my_data.df["LIA"][0])
+    analysis.cLIS_matrix(my_data)
+    expected_cLIS_0 = [[0.9260425101214576, 0.8877882599580713, 0.9118055555555555, 0.9048850574712645], [0.7360587002096438, 0.8533473389355741, 0.8308333333333333, 0], [0.8548611111111112, 0.8733333333333333, 0.9333333333333333, 0], [0.9028735632183907, 0, 0, 0.925]]
+    print(my_data.df["cLIS"][0])
 
     np.testing.assert_allclose(
-        np.array(my_data.df["LIA"][0]), np.array(expected_LIA_0), atol=precision
+        np.array(my_data.df["cLIS"][0]), np.array(expected_cLIS_0), atol=precision
     )
 
 
