@@ -490,6 +490,7 @@ function initEvents() {
     if (statusEl) { statusEl.textContent = 'Clustering…'; statusEl.style.color = '#2d3a57'; }
     if (panel) panel.style.display = 'flex';
     collapseCard('plot-card');
+    collapseCard('compute-card');
     try {
       const data = await api('/api/cluster', {
         method: 'POST',
@@ -599,10 +600,23 @@ function _renderMdsPlot(plotDiv, q) {
     yaxis: { title: 'MDS 2', zeroline: false },
     legend: { font: { size: 11 } },
     showlegend: q.n_clusters > 1,
+    selections: [],
   }, { responsive: true });
 
   if (!plotDiv._afClusterClickAttached) {
     plotDiv._afClusterClickAttached = true;
+    plotDiv.on('plotly_hover', (ev) => {
+      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
+      const pt = ev?.points?.[0];
+      if (pt?.customdata == null) return;
+      state.hoveredRow = pt.customdata;
+      renderCurrentTable(_tableColumns, _tableRows);
+    });
+    plotDiv.on('plotly_unhover', () => {
+      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
+      state.hoveredRow = null;
+      renderCurrentTable(_tableColumns, _tableRows);
+    });
     plotDiv.on('plotly_click', async (ev) => {
       if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
       if (!ev?.points?.length) return;
@@ -760,7 +774,13 @@ function _renderDendrogram(plotDiv, q) {
     margin: { l: 50, r: 20, t: 20, b: 70 },
     xaxis: { tickvals, ticktext, tickangle: -45, showgrid: false },
     yaxis: { title: 'Distance', zeroline: false },
-    legend: { font: { size: 11 } },
+    legend: {
+      font: { size: 13 },
+      x: 1, xanchor: 'right',
+      y: 1, yanchor: 'top',
+      bgcolor: 'rgba(255,255,255,0.85)',
+      bordercolor: '#ccc', borderwidth: 1,
+    },
   }, { responsive: true });
 
   // Store arm leaves so the persistent click handler can look them up.
