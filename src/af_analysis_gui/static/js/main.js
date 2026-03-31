@@ -68,6 +68,27 @@ function collapseCard(cardId) {
   }
 }
 
+function expandCard(cardId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  const titleEl = card.querySelector('.card-title');
+  const body = card.querySelector('.card-body');
+  if (!titleEl || !body) return;
+  body.style.display = '';
+  titleEl.textContent = '\u25BC ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
+  if ('flexCollapsible' in card.dataset) {
+    card.style.flex = '1';
+  }
+}
+
+function _resetForNewDataset() {
+  _clusterData = null;
+  _lastPlotType = null;  // force plot zoom reset on next render
+  const clusterPanel = document.getElementById('cluster-panel');
+  if (clusterPanel) clusterPanel.style.display = 'none';
+  expandCard('plot-card');
+}
+
 // Wire up superpose hover → highlight matching row in table and MDS plot.
 function _attachSuperposeHover() {
   subscribeToSuperposeHover((rowIdx) => {
@@ -124,9 +145,35 @@ function _rowToCurveAndPoint(rowIdx) {
   return null;
 }
 
+// Returns a luminance-contrasted text color ('#000' or '#fff') for a hex bg color.
+function _contrastColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128 ? '#000' : '#fff';
+}
+
+// Returns a cellStyleFn for renderTable that colors the 'cluster' column with CLUSTER_PALETTE.
+function _makeClusterCellStyleFn() {
+  if (!_clusterData) return null;
+  return (colName, row) => {
+    if (colName !== 'cluster') return null;
+    const clust = row['cluster'];
+    if (clust == null || (typeof clust === 'number' && isNaN(clust))) return null;
+    const qData = _clusterData.find(q => q.query === row['query']);
+    if (!qData) return null;
+    const clusterNums = [...new Set(qData.points.map(p => p.cluster))].sort((a, b) => a - b);
+    const ci = clusterNums.indexOf(Number(clust));
+    if (ci === -1) return null;
+    const color = CLUSTER_PALETTE[ci % CLUSTER_PALETTE.length];
+    return `background-color: ${color}; color: ${_contrastColor(color)}; font-weight: bold;`;
+  };
+}
+
 function renderCurrentTable(columns, rows) {
   _tableColumns = columns;
   _tableRows = rows;
+  const cellStyleFn = _makeClusterCellStyleFn();
   renderTable(columns, rows, async (selectedRow) => {
     state.selectedModel = Number(selectedRow);
     state.selectedRows = new Set();  // clear superpose highlight on single-model click
@@ -136,7 +183,7 @@ function renderCurrentTable(columns, rows) {
     if (schemeEl?.value === 'cluster') schemeEl.value = 'chain-id';
     renderCurrentTable(columns, rows);
     await refreshModelPanels();
-  });
+  }, { cellStyleFn });
 }
 
 async function refreshModelPanels() {
@@ -375,6 +422,7 @@ function initEvents() {
       hideProgress();
       setStatus(`Dataset loaded (${payload.rows} rows)`);
       collapseCard('load-card');
+      _resetForNewDataset();
       await refreshTableAndPanels();
     } catch (err) {
       await sseDone;
@@ -399,6 +447,27 @@ function initEvents() {
       _applyClusterColorForRow(state.selectedModel);
       await loadStructure(state.selectedModel);
     }
+  });
+
+  document.getElementById('export-csv-btn')?.addEventListener('click', () => {
+    if (!_tableColumns.length || !_tableRows.length) return;
+    // Build header: exclude the synthetic 'row' index column, keep display columns order.
+    const cols = _tableColumns.filter(c => c !== 'row');
+    const escape = v => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [cols.map(escape).join(',')];
+    for (const row of _tableRows) {
+      lines.push(cols.map(c => escape(row[c])).join(','));
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'af_analysis.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
 
   document.getElementById('clear-selection-btn')?.addEventListener('click', () => {
@@ -487,6 +556,7 @@ function initEvents() {
     const threshold   = parseFloat(document.getElementById('cluster-threshold')?.value ?? 2.0);
     const alignSel    = document.getElementById('cluster-align-sel')?.value.trim() || 'backbone';
     const distSel     = document.getElementById('cluster-dist-sel')?.value.trim()  || 'backbone';
+    const rmsdScale = !!document.getElementById('cluster-rmsd-scale')?.checked;
     const statusEl = document.getElementById('cluster-status');
     const panel = document.getElementById('cluster-panel');
     if (statusEl) { statusEl.textContent = 'Clustering…'; statusEl.style.color = '#2d3a57'; }
@@ -497,7 +567,7 @@ function initEvents() {
       const data = await api('/api/cluster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threshold, align_selection: alignSel, distance_selection: distSel }),
+        body: JSON.stringify({ threshold, align_selection: alignSel, distance_selection: distSel, rmsd_scale: rmsdScale }),
       });
       if (statusEl) statusEl.textContent = '';
       renderClusterPanel(data.queries);

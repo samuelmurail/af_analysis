@@ -1,3 +1,49 @@
+import { api } from './api.js';
+
+// ── Row detail modal ────────────────────────────────────────────────────────
+function _openRowDetail(rowIdx) {
+  const modal = document.getElementById('row-detail-modal');
+  const title = document.getElementById('row-detail-title');
+  const tbody = document.getElementById('row-detail-body');
+  if (!modal || !tbody) return;
+  title.textContent = `Row ${rowIdx} — details`;
+  tbody.innerHTML = '<tr><td colspan="2" style="color:#888; padding:12px;">Loading…</td></tr>';
+  modal.style.display = 'flex';
+  api(`/api/row/${rowIdx}`).then(({ data }) => {
+    tbody.innerHTML = Object.entries(data)
+      .map(([k, v]) => {
+        const display = v === null ? '<em style="color:#aaa">null</em>'
+          : typeof v === 'string' && v.startsWith('[array,')
+            ? `<em style="color:#888">${_escHtml(v)}</em>`
+            : _escHtml(String(v));
+        return `<tr><th>${_escHtml(k)}</th><td>${display}</td></tr>`;
+      }).join('');
+  }).catch(() => {
+    tbody.innerHTML = '<tr><td colspan="2" style="color:#a11927;">Failed to load row data.</td></tr>';
+  });
+}
+
+function _escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _initRowDetailModal() {
+  const modal = document.getElementById('row-detail-modal');
+  if (!modal || modal._afDetailInited) return;
+  modal._afDetailInited = true;
+  document.getElementById('row-detail-close')?.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+}
+
+// Module-level storage for the current render options (cellStyleFn, etc.).
+// Kept up-to-date on every renderTable call so that sort/collapse re-renders
+// always use the latest options rather than stale closures.
+let _currentOptions = {};
+
 export const state = {
   selectedModel: 0,
   selectedRows: new Set(),  // rows highlighted in superpose mode
@@ -62,7 +108,9 @@ function _fmtCell(value) {
   return value ?? "";
 }
 
-export function renderTable(columns, rows, onRowClick) {
+export function renderTable(columns, rows, onRowClick, options = {}) {
+  _currentOptions = options;  // always keep the latest options available for re-renders
+  const { hiddenColumns = new Set(), cellStyleFn = null } = _currentOptions;
   const head = document.getElementById("table-head");
   const body = document.getElementById("table-body");
   if (!head || !body) return;
@@ -84,6 +132,7 @@ export function renderTable(columns, rows, onRowClick) {
   const displayColumns = [];
 
   for (const col of columns) {
+    if (hiddenColumns.has(col)) continue;
     const g = _groupFor(col);
     if (!g) {
       displayColumns.push(col);
@@ -95,16 +144,20 @@ export function renderTable(columns, rows, onRowClick) {
           displayColumns.push({ __group__: g.id, label: g.label, memberCols: groupCols[g.id] });
         } else {
           // All member columns individually.
-          for (const mc of groupCols[g.id]) displayColumns.push(mc);
+          for (const mc of groupCols[g.id]) {
+            if (!hiddenColumns.has(mc)) displayColumns.push(mc);
+          }
         }
       }
       // Collapsed members are intentionally skipped (seenGroupIds already set).
     }
   }
 
+  _initRowDetailModal();
+
   // ── header ────────────────────────────────────────────────────────────────
   const firstMemberSeen = new Set();
-  const headerCells = displayColumns.map((dc) => {
+  const headerCells = ['<th class="row-info-cell"></th>', ...displayColumns.map((dc) => {
     if (typeof dc === 'object') {
       // Collapsed group — single summary header with expand button.
       const btn = `<button class="group-toggle" data-group="${dc.__group__}" title="Expand">${dc.label} ▶</button>`;
@@ -124,7 +177,7 @@ export function renderTable(columns, rows, onRowClick) {
     }
 
     return `<th ${sortAttrs}>${dc}${arrow}</th>`;
-  });
+  })];
   head.innerHTML = `<tr>${headerCells.join("")}</tr>`;
 
   // Group-toggle click handlers.
@@ -134,7 +187,7 @@ export function renderTable(columns, rows, onRowClick) {
       const gid = btn.dataset.group;
       if (state.collapsedGroups.has(gid)) state.collapsedGroups.delete(gid);
       else state.collapsedGroups.add(gid);
-      renderTable(columns, rows, onRowClick);
+      renderTable(columns, rows, onRowClick, _currentOptions);
     });
   });
 
@@ -144,7 +197,7 @@ export function renderTable(columns, rows, onRowClick) {
       const col = th.dataset.col;
       if (state.sortCol === col) state.sortDir *= -1;
       else { state.sortCol = col; state.sortDir = 1; }
-      renderTable(columns, rows, onRowClick);
+      renderTable(columns, rows, onRowClick, _currentOptions);
     });
   });
 
@@ -165,7 +218,16 @@ export function renderTable(columns, rows, onRowClick) {
     if (rowNum === Number(state.selectedModel)) tr.classList.add("active");
     if (state.selectedRows.size > 0 && state.selectedRows.has(rowNum)) tr.classList.add("superpose-row");
     if (state.hoveredRow === rowNum) tr.classList.add("hover-row");
-    tr.innerHTML = displayColumns.map((dc) => {
+    const infoBtn = document.createElement('td');
+    infoBtn.className = 'row-info-cell';
+    infoBtn.innerHTML = `<button class="row-info-btn" title="Show all details">i</button>`;
+    infoBtn.querySelector('button').addEventListener('click', (e) => {
+      e.stopPropagation();
+      _openRowDetail(rowNum);
+    });
+    tr.appendChild(infoBtn);
+    const dataCells = document.createElement('template');
+    dataCells.innerHTML = displayColumns.map((dc) => {
       if (typeof dc === 'object') {
         // Collapsed group: show max of member columns.
         let maxVal = null;
@@ -175,11 +237,14 @@ export function renderTable(columns, rows, onRowClick) {
         }
         return `<td class="group-cell">${maxVal !== null ? _fmtCell(maxVal) : ''}</td>`;
       }
+      const style = cellStyleFn ? (cellStyleFn(dc, row) ?? '') : '';
+      const styleAttr = style ? ` style="${style}"` : '';
       const g = _groupFor(dc);
       return g
-        ? `<td class="group-cell">${_fmtCell(row[dc])}</td>`
-        : `<td>${_fmtCell(row[dc])}</td>`;
+        ? `<td class="group-cell"${styleAttr}>${_fmtCell(row[dc])}</td>`
+        : `<td${styleAttr}>${_fmtCell(row[dc])}</td>`;
     }).join("");
+    tr.appendChild(dataCells.content);
     tr.addEventListener("click", () => onRowClick(Number(row.row), columns, rows));
     body.appendChild(tr);
   });

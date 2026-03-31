@@ -178,6 +178,7 @@ def hierarchical(
     MDS_coors=True,
     rmsd_scale=False,
     return_universe=False,
+    return_distance_matrix=False,
 ):
     """Clustering of AlphaFold models.
 
@@ -193,7 +194,7 @@ def hierarchical(
     distance matrix. The threshold value is used to cut the dendrogram and define the clusters.
 
     Optionally, this function can also plot the dendrogram of each PDB and the clusters distribution
-    plot using the `clusters_distribution`.
+    plot using the `clusters_distribution`.clust.hierarchical
 
     Multidimensional scaling coordinates can be computed from the distance matrix if `MDS_coors` is set
     to `True`.
@@ -225,6 +226,7 @@ def hierarchical(
     MDS_1 = []
     MDS_2 = []
     universes = {} if return_universe else None
+    distance_matrices = {} if return_distance_matrix else None
 
     query_list = df["query"].unique().tolist()
 
@@ -254,12 +256,20 @@ def hierarchical(
             distance_selection=distance_selection[pdb],
         )
 
-        if return_universe:
-            universes[pdb] = (u, list(files))
-
-        logger.info(f"Max RMSD is {np.max(dist_matrix):.2f} A")
         if rmsd_scale:
             dist_matrix = 1 - scale(dist_matrix)
+            # Ensure a valid distance matrix for clustering:
+            np.fill_diagonal(dist_matrix, 0.0)
+            dist_matrix = np.clip(dist_matrix, 0.0, None)
+            dist_matrix = 0.5 * (dist_matrix + dist_matrix.T)
+        
+        if return_universe:
+            universes[pdb] = (u, list(files))
+        if return_distance_matrix:
+            distance_matrices[pdb] = dist_matrix.copy()
+
+        logger.info(f"Max RMSD is {np.max(dist_matrix):.2f} A")
+
 
         logger.info("Compute Linkage clustering")
         h, _ = dist_matrix.shape
@@ -301,8 +311,12 @@ def hierarchical(
         df["MDS 1"] = MDS_1 + null_number * [None]
         df["MDS 2"] = MDS_2 + null_number * [None]
 
+    if return_universe and return_distance_matrix:
+        return universes, distance_matrices
     if return_universe:
         return universes
+    if return_distance_matrix:
+        return distance_matrices
     return None
 
 

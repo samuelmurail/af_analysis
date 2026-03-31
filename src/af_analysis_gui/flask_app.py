@@ -145,12 +145,18 @@ def _require_data() -> af_analysis.Data:
 def _preferred_table_columns(df) -> list[str]:
     # Always keep these identifier columns when present.
     id_cols = ["query", "model", "seed"]
+    # MDS coordinate columns are only for the scatter plot, not the table.
+    excluded = {"MDS 1", "MDS 2"}
     # Add every column whose dtype is numeric (int or float).
     numeric_cols = list(df.select_dtypes(include="number").columns)
-    # Preserve id_cols first (in order), then numeric cols not already included.
+    # Also include 'cluster' explicitly (stored as category dtype, not numeric).
+    extra_cols = ["cluster"]
+    # Preserve id_cols first (in order), then numeric cols, then extras.
     seen = set(id_cols)
     columns = [c for c in id_cols if c in df.columns]
-    columns += [c for c in numeric_cols if c not in seen]
+    columns += [c for c in numeric_cols if c not in seen and c not in excluded]
+    seen.update(columns)
+    columns += [c for c in extra_cols if c in df.columns and c not in seen]
     return columns
 
 
@@ -281,6 +287,35 @@ def api_table():
             "has_ipsae_matrix": has_ipsae_matrix,
         }
     )
+
+
+@app.get("/api/row/<int:idx>")
+def api_row(idx):
+    """Return all columns for a single row (including hidden ones like MDS coords)."""
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    df = data.df.reset_index(drop=True)
+    if idx < 0 or idx >= len(df):
+        return jsonify({"error": "Row index out of range"}), 404
+
+    row = df.iloc[idx]
+    result = {}
+    for col in df.columns:
+        val = row[col]
+        # For large array-like values, return a compact summary string.
+        if hasattr(val, "__len__") and not isinstance(val, str):
+            try:
+                length = len(val)
+                if length > 8:
+                    result[col] = f"[array, {length} elements]"
+                    continue
+            except Exception:
+                pass
+        result[col] = _normalize_for_json(val)
+    return jsonify({"row": idx, "data": result})
 
 
 @app.get("/api/plddt")
@@ -639,17 +674,27 @@ def api_cluster():
     threshold = float(payload.get("threshold") or 2.0)
     align_selection    = payload.get("align_selection")    or "backbone"
     distance_selection = payload.get("distance_selection") or "backbone"
+    rmsd_scale = bool(payload.get("rmsd_scale", False))
 
     try:
-        universes = _clust.hierarchical(
+        cluster_result = _clust.hierarchical(
             data.df,
             threshold=threshold,
             align_selection=align_selection,
             distance_selection=distance_selection,
             show_dendrogram=False,
             MDS_coors=True,
+            rmsd_scale=rmsd_scale,
             return_universe=True,
+            return_distance_matrix=True,
         )
+
+        universes, distance_matrices = None, None
+        if isinstance(cluster_result, tuple) and len(cluster_result) == 2:
+            universes, distance_matrices = cluster_result
+        elif isinstance(cluster_result, dict):
+            universes = cluster_result
+
         if isinstance(universes, dict):
             STATE.cluster_universes = universes
     except Exception:
@@ -679,10 +724,51 @@ def api_cluster():
             })
         n_clusters = int(qdf["cluster"].dropna().nunique()) if "cluster" in qdf else 0
         dendrogram_data = None
+        distmat_list = None
+        if distance_matrices and query in distance_matrices:
+            # Keep the exact distance matrix for this query so client-side can reuse it.
+            #distmat_list = distance_matrices[query].tolist()
+            dm = np.array(distance_matrices[query])   # shape (n_valid, n_valid)
+            distmat_list = dm.tolist()
+
         if len(points) >= 2:
             try:
-                mds_xy = np.array([[p["x"], p["y"]] for p in points])
-                Y = _ssd.pdist(mds_xy)
+                # dm already covers exactly the valid (non-null pdb) rows,
+                # in the same order — no index remapping needed.
+                Y = _ssd.squareform(dm, checks=False)
+                Z = _sch.linkage(Y, method="average")
+                dend = _sch.dendrogram(Z, no_plot=True)
+
+                row_list = [p["row"] for p in points]
+                dendrogram_data = {
+                    "icoord":    dend["icoord"],
+                    "dcoord":    dend["dcoord"],
+                    # Map leaf positions back to the original positional row index.
+                    "leaves":    [int(row_list[i]) for i in dend["leaves"]],
+                    "n":         len(dend["leaves"]),
+                    "threshold": threshold,
+                }
+                """
+                if distmat_list is not None:
+                    # Use the same distance matrix used for clustering to generate dendrogram.
+                    valid_mask = (
+                        qdf.get("MDS 1", pd.Series(dtype=float)).notnull()
+                        & qdf.get("MDS 2", pd.Series(dtype=float)).notnull()
+                    )
+                    valid_idx = valid_mask[valid_mask].index.tolist()
+                    # Convert to integer indices in query group (0..n-1) for matrix slicing:
+                    valid_idx = [int(i) for i in range(len(qdf)) if valid_mask.iloc[i]]
+                    if len(valid_idx) == len(points):
+                        dm = np.array(distance_matrices[query])
+                        dm = dm[np.ix_(valid_idx, valid_idx)]
+                        Y = _ssd.squareform(dm, checks=False)
+                    else:
+                        mds_xy = np.array([[p["x"], p["y"]] for p in points])
+                        Y = _ssd.pdist(mds_xy)
+                else:
+                    mds_xy = np.array([[p["x"], p["y"]] for p in points])
+                    Y = _ssd.pdist(mds_xy)
+
                 Z = _sch.linkage(Y, method="average")
                 dend = _sch.dendrogram(Z, no_plot=True)
                 row_list = [p["row"] for p in points]
@@ -693,9 +779,17 @@ def api_cluster():
                     "n": len(dend["leaves"]),
                     "threshold": threshold,
                 }
+                """
             except Exception:
                 pass
-        queries.append({"query": str(query), "points": points, "n_clusters": n_clusters, "dendrogram": dendrogram_data})
+
+        queries.append({
+            "query": str(query),
+            "points": points,
+            "n_clusters": n_clusters,
+            "dendrogram": dendrogram_data,
+            "distance_matrix": distmat_list,
+        })
 
     return jsonify({"queries": queries})
 

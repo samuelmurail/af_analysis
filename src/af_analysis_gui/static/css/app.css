@@ -192,3 +192,57 @@ tr.hover-row {
 #selected-residues, #molstar-note {
     display: none;;
 }
+
+/* ── Row detail info button ─────────────────────────────────────────────── */
+.row-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1843bf;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: italic;
+  font-family: Georgia, serif;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+.row-info-btn:hover {
+  opacity: 1;
+}
+td.row-info-cell {
+  width: 22px;
+  padding: 4px 2px 4px 6px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── Row detail modal table ─────────────────────────────────────────────── */
+#row-detail-table th,
+#row-detail-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #e8ebf4;
+  vertical-align: top;
+}
+#row-detail-table th {
+  color: #2d3a57;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 38%;
+}
+#row-detail-table td {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+#row-detail-table tr:last-child th,
+#row-detail-table tr:last-child td {
+  border-bottom: none;
+}
