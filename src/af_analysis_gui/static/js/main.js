@@ -484,7 +484,9 @@ function initEvents() {
   });
 
   document.getElementById('cluster-btn')?.addEventListener('click', async () => {
-    const threshold = parseFloat(document.getElementById('cluster-threshold')?.value ?? 2.0);
+    const threshold   = parseFloat(document.getElementById('cluster-threshold')?.value ?? 2.0);
+    const alignSel    = document.getElementById('cluster-align-sel')?.value.trim() || 'backbone';
+    const distSel     = document.getElementById('cluster-dist-sel')?.value.trim()  || 'backbone';
     const statusEl = document.getElementById('cluster-status');
     const panel = document.getElementById('cluster-panel');
     if (statusEl) { statusEl.textContent = 'Clustering…'; statusEl.style.color = '#2d3a57'; }
@@ -495,7 +497,7 @@ function initEvents() {
       const data = await api('/api/cluster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threshold }),
+        body: JSON.stringify({ threshold, align_selection: alignSel, distance_selection: distSel }),
       });
       if (statusEl) statusEl.textContent = '';
       renderClusterPanel(data.queries);

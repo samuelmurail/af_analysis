@@ -637,11 +637,15 @@ def api_cluster():
 
     payload = request.get_json(silent=True) or {}
     threshold = float(payload.get("threshold") or 2.0)
+    align_selection    = payload.get("align_selection")    or "backbone"
+    distance_selection = payload.get("distance_selection") or "backbone"
 
     try:
         universes = _clust.hierarchical(
             data.df,
             threshold=threshold,
+            align_selection=align_selection,
+            distance_selection=distance_selection,
             show_dendrogram=False,
             MDS_coors=True,
             return_universe=True,
