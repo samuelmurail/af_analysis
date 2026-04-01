@@ -44,49 +44,38 @@ function _applyClusterColorForRow(rowIdx) {
 let _tableColumns = [];
 let _tableRows = [];
 
-function collapseCard(cardId) {
-  const card = document.getElementById(cardId);
-  if (!card) return;
-  const titleEl = card.querySelector('.card-title');
-  const body = card.querySelector('.card-body');
-  if (!titleEl || !body) return;
-  body.style.display = 'none';
-  titleEl.textContent = '\u25BA ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
-  if ('flexCollapsible' in card.dataset) {
-    card.style.flex = '0 0 auto';
-    const sibId = card.dataset.toggleSibling;
-    if (sibId) {
-      const sib = document.getElementById(sibId);
-      if (sib && sib.style.display !== 'none') {
-        const sibBody = sib.querySelector('.card-body');
-        const sibTitle = sib.querySelector('.card-title');
-        if (sibBody) sibBody.style.display = '';
-        if (sibTitle) sibTitle.textContent = '\u25BC ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
-        sib.style.flex = '1';
-      }
-    }
-  }
+// Return 'mds' | 'dendrogram' | null based on plot-type dropdown.
+function getClusterView() {
+  const v = document.getElementById('plot-type')?.value;
+  return (v === 'mds' || v === 'dendrogram') ? v : null;
 }
 
-function expandCard(cardId) {
-  const card = document.getElementById(cardId);
-  if (!card) return;
-  const titleEl = card.querySelector('.card-title');
-  const body = card.querySelector('.card-body');
-  if (!titleEl || !body) return;
-  body.style.display = '';
-  titleEl.textContent = '\u25BC ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
-  if ('flexCollapsible' in card.dataset) {
-    card.style.flex = '1';
-  }
+function enableToolbarButtons() {
+  document.getElementById('toolbar-compute-btn')?.removeAttribute('disabled');
+  document.getElementById('toolbar-cluster-btn')?.removeAttribute('disabled');
+}
+
+function _hideDialog(id) {
+  const el = document.getElementById(id);
+  if (el && typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(el)?.hide();
 }
 
 function _resetForNewDataset() {
   _clusterData = null;
-  _lastPlotType = null;  // force plot zoom reset on next render
-  const clusterPanel = document.getElementById('cluster-panel');
-  if (clusterPanel) clusterPanel.style.display = 'none';
-  expandCard('plot-card');
+  _lastPlotType = null;
+  state.filters = {};
+  state.hiddenColumns.clear();
+  // Hide cluster plot types
+  const optMds = document.getElementById('opt-mds');
+  const optDendro = document.getElementById('opt-dendro');
+  if (optMds) optMds.style.display = 'none';
+  if (optDendro) optDendro.style.display = 'none';
+  // Reset to pLDDT view
+  const plotType = document.getElementById('plot-type');
+  if (plotType) plotType.value = 'plddt';
+  document.getElementById('plddt-plot').style.display = '';
+  document.getElementById('cluster-main-plot').style.display = 'none';
+  document.getElementById('cluster-controls').style.display = 'none';
 }
 
 // Wire up superpose hover → highlight matching row in table and MDS plot.
@@ -96,7 +85,7 @@ function _attachSuperposeHover() {
     renderCurrentTable(_tableColumns, _tableRows);
     const plotDiv = document.getElementById('cluster-main-plot');
     if (!plotDiv?._fullLayout) return;
-    const view = document.getElementById('cluster-view-select')?.value ?? 'mds';
+    const view = getClusterView() ?? 'mds';
     if (view === 'mds') {
       // Highlight hovered point in MDS scatter plot.
       if (rowIdx != null) {
@@ -221,13 +210,19 @@ async function refreshModelPanels() {
       renderPlot(plddtPayload, makePlddtHandlers());
       document.getElementById('plot-type').value = 'plddt';
     }
-  } else {
+  } else if (plotType !== 'mds' && plotType !== 'dendrogram') {
     renderPlot(plddtPayload, makePlddtHandlers(), savedZoom);
   }
 
-  renderSelectedResidues();
+  if (plotType !== 'mds' && plotType !== 'dendrogram') renderSelectedResidues();
   _applyClusterColorForRow(state.selectedModel);
-  await loadStructure(state.selectedModel);
+  const molSpinner = document.getElementById('molstar-spinner');
+  if (molSpinner) molSpinner.style.display = '';
+  try {
+    await loadStructure(state.selectedModel);
+  } finally {
+    if (molSpinner) molSpinner.style.display = 'none';
+  }
   if (plotType === 'pae' && state.paeSelection) {
     await applyPaeColors(state.paeSelection.xResidues, state.paeSelection.yResidues);
   }
@@ -345,11 +340,17 @@ function _updateLisOption(hasLis, hasLia, hasIptmD0, hasIpsae) {
 }
 
 async function refreshTableAndPanels() {
-  const table = await api('/api/table');
-  state.tableRows = table.rows;
-  state.selectedModel = 0;
-  _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix, !!table.has_ipsae_matrix);
-  renderCurrentTable(table.columns, table.rows);
+  const tableSpinner = document.getElementById('table-spinner');
+  if (tableSpinner) tableSpinner.style.display = '';
+  try {
+    const table = await api('/api/table');
+    state.tableRows = table.rows;
+    state.selectedModel = 0;
+    _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix, !!table.has_ipsae_matrix);
+    renderCurrentTable(table.columns, table.rows);
+  } finally {
+    if (tableSpinner) tableSpinner.style.display = 'none';
+  }
   await refreshModelPanels();
 }
 
@@ -357,20 +358,15 @@ function initEvents() {
   const loadBtn = document.getElementById('load-btn');
   if (!loadBtn) return;
 
-  // Resize Plotly whenever the plot panel changes size (e.g. cluster panel expand/collapse).
-  const plotCardEl = document.getElementById('plot-card');
-  if (plotCardEl && typeof ResizeObserver !== 'undefined') {
+  // Resize Plotly whenever the plot panel changes size.
+  const plotPanelEl = document.getElementById('plot-panel');
+  if (plotPanelEl && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
       const pEl = document.getElementById('plddt-plot');
       if (pEl?._fullLayout) Plotly.Plots.resize(pEl);
-    }).observe(plotCardEl);
-  }
-  // Resize cluster Plotly whenever the cluster panel changes size.
-  const clusterPlotEl = document.getElementById('cluster-main-plot');
-  if (clusterPlotEl && typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(() => {
-      if (clusterPlotEl._fullLayout) Plotly.Plots.resize(clusterPlotEl);
-    }).observe(clusterPlotEl);
+      const cEl = document.getElementById('cluster-main-plot');
+      if (cEl?._fullLayout) Plotly.Plots.resize(cEl);
+    }).observe(plotPanelEl);
   }
 
 
@@ -423,7 +419,8 @@ function initEvents() {
       await sseDone;
       hideProgress();
       setStatus(`Dataset loaded (${payload.rows} rows)`);
-      collapseCard('load-card');
+      _hideDialog('load-dialog');
+      enableToolbarButtons();
       _resetForNewDataset();
       await refreshTableAndPanels();
     } catch (err) {
@@ -434,20 +431,63 @@ function initEvents() {
   });
 
   document.getElementById('plot-type')?.addEventListener('change', async () => {
-    if (state.selectedModel != null) {
+    const pt = document.getElementById('plot-type')?.value;
+    const isCluster = pt === 'mds' || pt === 'dendrogram';
+    document.getElementById('plddt-plot').style.display = isCluster ? 'none' : '';
+    document.getElementById('cluster-main-plot').style.display = isCluster ? '' : 'none';
+    document.getElementById('cluster-controls').style.display = isCluster ? '' : 'none';
+    if (isCluster) {
+      _renderClusterPlot();
+    } else if (state.selectedModel != null) {
       await refreshModelPanels();
+    }
+  });
+
+  // Toggle plot panel visibility.
+  document.getElementById('toggle-plot-btn')?.addEventListener('click', () => {
+    const plotPanel = document.getElementById('plot-panel');
+    const splitterV = document.getElementById('splitter-v');
+    const molstarPanel = document.getElementById('molstar-panel');
+    const btn = document.getElementById('toggle-plot-btn');
+    if (plotPanel.classList.contains('plot-hidden')) {
+      plotPanel.classList.remove('plot-hidden');
+      if (splitterV) splitterV.style.display = '';
+      molstarPanel.style.flex = '';
+      if (btn) btn.innerHTML = '<i class="bi bi-bar-chart-line"></i> Plot';
+      // Resize plots after showing
+      setTimeout(() => {
+        const p = document.getElementById('plddt-plot');
+        if (p?._fullLayout) Plotly.Plots.resize(p);
+        const c = document.getElementById('cluster-main-plot');
+        if (c?._fullLayout) Plotly.Plots.resize(c);
+      }, 50);
+    } else {
+      plotPanel.classList.add('plot-hidden');
+      if (splitterV) splitterV.style.display = 'none';
+      molstarPanel.style.flex = '1';
+      if (btn) btn.innerHTML = '<i class="bi bi-bar-chart-line"></i> Plot';
     }
   });
 
   document.getElementById('color-scheme')?.addEventListener('change', async () => {
     const sp = getSuperposeState();
+    const molSpinner = document.getElementById('molstar-spinner');
     if (sp) {
-      // Re-render the active superpose with the new color scheme.
-      await loadSuperpose(sp.rows, sp.query, sp.frameColors);
+      if (molSpinner) molSpinner.style.display = '';
+      try {
+        await loadSuperpose(sp.rows, sp.query, sp.frameColors);
+      } finally {
+        if (molSpinner) molSpinner.style.display = 'none';
+      }
       _attachSuperposeHover();
     } else if (state.selectedModel != null) {
       _applyClusterColorForRow(state.selectedModel);
-      await loadStructure(state.selectedModel);
+      if (molSpinner) molSpinner.style.display = '';
+      try {
+        await loadStructure(state.selectedModel);
+      } finally {
+        if (molSpinner) molSpinner.style.display = 'none';
+      }
     }
   });
 
@@ -532,7 +572,7 @@ function initEvents() {
       if (statusEl) statusEl.textContent = added.length
         ? `Done. New columns: ${added.join(', ')}`
         : 'Done (no new columns added).';
-      collapseCard('compute-card');
+      _hideDialog('compute-dialog');
       await refreshTableAndPanels();
     } catch (err) {
       hideProgress();
@@ -546,11 +586,8 @@ function initEvents() {
     const distSel     = document.getElementById('cluster-dist-sel')?.value.trim()  || 'backbone';
     const rmsdScale = !!document.getElementById('cluster-rmsd-scale')?.checked;
     const statusEl = document.getElementById('cluster-status');
-    const panel = document.getElementById('cluster-panel');
     if (statusEl) { statusEl.textContent = 'Clustering…'; statusEl.style.color = '#2d3a57'; }
-    if (panel) panel.style.display = 'flex';
-    collapseCard('plot-card');
-    collapseCard('compute-card');
+    _hideDialog('cluster-dialog');
     try {
       const data = await api('/api/cluster', {
         method: 'POST',
@@ -583,6 +620,12 @@ let _clusterListenersAttached = false;
 function renderClusterPanel(queries) {
   _clusterData = queries;
 
+  // Show cluster plot type options.
+  const optMds = document.getElementById('opt-mds');
+  const optDendro = document.getElementById('opt-dendro');
+  if (optMds) optMds.style.display = '';
+  if (optDendro) optDendro.style.display = '';
+
   // Populate query dropdown.
   const querySelect = document.getElementById('cluster-query-select');
   if (querySelect) {
@@ -595,20 +638,27 @@ function renderClusterPanel(queries) {
     }
   }
 
-  // Attach dropdown change listeners once.
+  // Attach query dropdown change listener once.
   if (!_clusterListenersAttached) {
     _clusterListenersAttached = true;
     querySelect?.addEventListener('change', _renderClusterPlot);
-    document.getElementById('cluster-view-select')?.addEventListener('change', _renderClusterPlot);
   }
+
+  // Switch to MDS view.
+  const plotType = document.getElementById('plot-type');
+  if (plotType) plotType.value = 'mds';
+  document.getElementById('plddt-plot').style.display = 'none';
+  document.getElementById('cluster-main-plot').style.display = '';
+  document.getElementById('cluster-controls').style.display = '';
 
   _renderClusterPlot();
 }
 
 function _renderClusterPlot() {
   if (!_clusterData) return;
+  const view = getClusterView();
+  if (!view) return;
   const queryVal = document.getElementById('cluster-query-select')?.value;
-  const view = document.getElementById('cluster-view-select')?.value ?? 'mds';
   const q = _clusterData.find(x => x.query === queryVal);
   if (!q) return;
   const plotDiv = document.getElementById('cluster-main-plot');
@@ -666,19 +716,19 @@ function _renderMdsPlot(plotDiv, q) {
   if (!plotDiv._afClusterClickAttached) {
     plotDiv._afClusterClickAttached = true;
     plotDiv.on('plotly_hover', (ev) => {
-      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
+      if (getClusterView() !== 'mds') return;
       const pt = ev?.points?.[0];
       if (pt?.customdata == null) return;
       state.hoveredRow = pt.customdata;
       renderCurrentTable(_tableColumns, _tableRows);
     });
     plotDiv.on('plotly_unhover', () => {
-      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
+      if (getClusterView() !== 'mds') return;
       state.hoveredRow = null;
       renderCurrentTable(_tableColumns, _tableRows);
     });
     plotDiv.on('plotly_click', async (ev) => {
-      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
+      if (getClusterView() !== 'mds') return;
       if (!ev?.points?.length) return;
       const rowIdx = ev.points[0].customdata;
       state.selectedModel = rowIdx;
@@ -691,7 +741,7 @@ function _renderMdsPlot(plotDiv, q) {
       await refreshModelPanels();
     });
     plotDiv.on('plotly_selected', async (ev) => {
-      if (document.getElementById('cluster-view-select')?.value !== 'mds') return;
+      if (getClusterView() !== 'mds') return;
       if (!ev?.points?.length) return;
       const rows = [...new Set(ev.points.map(p => p.customdata))];
       const queryVal = document.getElementById('cluster-query-select')?.value ?? '';
@@ -849,7 +899,7 @@ function _renderDendrogram(plotDiv, q) {
   if (!plotDiv._afDendroClickAttached) {
     plotDiv._afDendroClickAttached = true;
     plotDiv.on('plotly_click', async (ev) => {
-      if (document.getElementById('cluster-view-select')?.value !== 'dendrogram') return;
+      if (getClusterView() !== 'dendrogram') return;
       if (!ev?.points?.length) return;
       const pt = ev.points[0];
       if (typeof pt.customdata !== 'number') return;
@@ -865,7 +915,7 @@ function _renderDendrogram(plotDiv, q) {
       _attachSuperposeHover();
     });
     plotDiv.on('plotly_selected', async (ev) => {
-      if (document.getElementById('cluster-view-select')?.value !== 'dendrogram') return;
+      if (getClusterView() !== 'dendrogram') return;
       if (!ev?.points?.length) return;
       // Collect row indices strictly from the leaf marker trace (not arm click targets).
       const leafIdx = plotDiv._afLeafTraceIdx;
@@ -984,7 +1034,7 @@ async function main() {
         if (dirInput) dirInput.value = health.directory;
       }
       setStatus(`Dataset loaded — ${health.rows} models.`);
-      collapseCard('load-card');
+      enableToolbarButtons();
       await refreshTableAndPanels();
     }
   } catch (_) { /* server not ready yet, ignore */ }

@@ -1,54 +1,85 @@
 import { resizePlot } from "./plot.js";
 
-export function initResizableLayout() {
-  const layout = document.getElementById("layout");
-  if (!layout) return;
+function _resizeAll() {
+  resizePlot();
+  const cluster = document.getElementById('cluster-main-plot');
+  if (cluster && cluster._fullLayout && typeof Plotly !== 'undefined') {
+    Plotly.Plots.resize(cluster);
+  }
+}
 
-  const splitters = Array.from(document.querySelectorAll(".splitter"));
-  let dragging = null;
-  let startX = 0;
-  let startWidths = [];
+function _initHorizontalSplitter() {
+  const splitter = document.getElementById('splitter-h');
+  const tableSection = document.getElementById('table-section');
+  if (!splitter || !tableSection) return;
 
-  const getWidths = () => Array.from(layout.children).map((el) => el.getBoundingClientRect().width);
+  let startY, startH;
 
-  splitters.forEach((splitter, idx) => {
-    splitter.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      dragging = { idx };
-      startX = e.clientX;
-      startWidths = getWidths();
-      document.body.style.cursor = "col-resize";
-    });
+  splitter.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startY = e.clientY;
+    startH = tableSection.getBoundingClientRect().height;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
+  function onMove(e) {
+    const delta = e.clientY - startY;
+    const newH = Math.max(120, Math.min(window.innerHeight - 280, startH + delta));
+    tableSection.style.height = newH + 'px';
+    _resizeAll();
+  }
 
+  function onUp() {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    _resizeAll();
+  }
+}
+
+function _initVerticalSplitter() {
+  const splitter = document.getElementById('splitter-v');
+  const molstarPanel = document.getElementById('molstar-panel');
+  const plotPanel = document.getElementById('plot-panel');
+  if (!splitter || !molstarPanel || !plotPanel) return;
+
+  let startX, startMolW, startPlotW;
+
+  splitter.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startX = e.clientX;
+    startMolW = molstarPanel.getBoundingClientRect().width;
+    startPlotW = plotPanel.getBoundingClientRect().width;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  function onMove(e) {
+    const totalW = startMolW + startPlotW;
     const delta = e.clientX - startX;
-    const leftMin = 220;
-    const midMin = 260;
-    const rightMin = 200;
+    const newMolW = Math.max(200, Math.min(totalW - 200, startMolW + delta));
+    const newPlotW = totalW - newMolW;
+    molstarPanel.style.flex = '0 0 ' + newMolW + 'px';
+    plotPanel.style.flex = '0 0 ' + newPlotW + 'px';
+    _resizeAll();
+  }
 
-    let left = startWidths[0];
-    let mid = startWidths[2];
-    let right = startWidths[4];
+  function onUp() {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    _resizeAll();
+  }
+}
 
-    if (dragging.idx === 0) {
-      left = Math.max(leftMin, left + delta);
-      mid = Math.max(midMin, mid - delta);
-    } else {
-      mid = Math.max(midMin, mid + delta);
-      right = Math.max(rightMin, right - delta);
-    }
-
-    layout.style.gridTemplateColumns = `${left}px 8px ${mid}px 8px ${right}px`;
-    resizePlot();
-  });
-
-  window.addEventListener("mouseup", () => {
-    if (!dragging) return;
-    dragging = null;
-    document.body.style.cursor = "";
-    resizePlot();
-  });
+export function initResizableLayout() {
+  _initHorizontalSplitter();
+  _initVerticalSplitter();
 }

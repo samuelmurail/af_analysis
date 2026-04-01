@@ -3,290 +3,311 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>af_analysis Flask GUI</title>
+  <title>af_analysis GUI</title>
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <!-- Plotly -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <!-- Mol* -->
   <link rel="stylesheet" href="https://unpkg.com/molstar/build/viewer/molstar.css" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
   <script src="https://unpkg.com/molstar/build/viewer/molstar.js"></script>
-  <script>
-    window.toggleCard = function(titleEl) {
-      const body = titleEl.nextElementSibling;
-      const expanding = body.style.display === 'none';
-      body.style.display = expanding ? '' : 'none';
-      titleEl.textContent = (expanding ? '\u25BC ' : '\u25BA ') + titleEl.textContent.slice(2);
-      const fc = titleEl.closest('[data-flex-collapsible]');
-      if (fc) {
-        fc.style.flex = expanding ? '1' : '0 0 auto';
-        const sibId = fc.dataset.toggleSibling;
-        if (sibId) {
-          const sib = document.getElementById(sibId);
-          if (sib && sib.style.display !== 'none') {
-            const sibBody = sib.querySelector('.card-body');
-            const sibTitle = sib.querySelector('.card-title');
-            if (expanding) {
-              // this expanded → collapse sibling
-              if (sibBody) sibBody.style.display = 'none';
-              if (sibTitle) sibTitle.textContent = '\u25BA ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
-              sib.style.flex = '0 0 auto';
-            } else {
-              // this collapsed → expand sibling
-              if (sibBody) sibBody.style.display = '';
-              if (sibTitle) sibTitle.textContent = '\u25BC ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
-              sib.style.flex = '1';
-            }
-          }
-        }
-      }
-    };
-    window.collapseCard = function(cardId) {
-      const card = document.getElementById(cardId);
-      if (!card) return;
-      const titleEl = card.querySelector('.card-title');
-      const body = card.querySelector('.card-body');
-      if (!titleEl || !body) return;
-      body.style.display = 'none';
-      titleEl.textContent = '\u25BA ' + titleEl.textContent.replace(/^[\u25BC\u25BA] /, '');
-      if ('flexCollapsible' in card.dataset) {
-        card.style.flex = '0 0 auto';
-        const sibId = card.dataset.toggleSibling;
-        if (sibId) {
-          const sib = document.getElementById(sibId);
-          if (sib && sib.style.display !== 'none') {
-            const sibBody = sib.querySelector('.card-body');
-            const sibTitle = sib.querySelector('.card-title');
-            if (sibBody) sibBody.style.display = '';
-            if (sibTitle) sibTitle.textContent = '\u25BC ' + sibTitle.textContent.replace(/^[\u25BC\u25BA] /, '');
-            sib.style.flex = '1';
-          }
-        }
-      }
-    };
-  </script>
+  <!-- App (after Bootstrap & Molstar) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
 </head>
 <body>
   <div class="page">
-    
-    <h2>
-      <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logo" style="height:60px;vertical-align: middle;" />
-      Af_analysis GUI
-    </h2>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-
-      <div class="card" id="load-card">
-        <div class="card-title" onclick="toggleCard(this)">&#9658; Load dataset</div>
-        <div class="card-body" style="display:none">
-          <div class="toolbar" style="margin-top: 6px; display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:1 1 300px; min-width:0;">
-              <label for="directory">Directory or CSV file</label>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                <input id="directory" type="text" placeholder="/path/to/results or file.csv" style="flex:1 1 180px; min-width:0;" />
-                <button id="browse-btn" type="button" style="background:#4b5563; min-width:100px;">Browse…</button>
-              </div>
-            </div>
-            <div id="format-block" style="flex: 1 1 120px; min-width:130px;">
-              <label for="format">Format</label>
-              <select id="format" style="width: 100%; min-width:120px;">
-                <option value="auto">auto</option>
-                <option value="default">default</option>
-                <option value="colabfold_1.5">colabfold_1.5</option>
-                <option value="AF3_local">AF3_local</option>
-                <option value="AF3_webserver">AF3_webserver</option>
-                <option value="alphapulldown">alphapulldown</option>
-                <option value="alphapulldown_full">alphapulldown_full</option>
-                <option value="boltz1">boltz1</option>
-                <option value="chai1">chai1</option>
-                <option value="massivefold">massivefold</option>
-                <option value="full_massivefold">full_massivefold</option>
-              </select>
-            </div>
-            <button id="load-btn" type="button">Load dataset</button>
-          </div>
-          <div id="load-progress" style="display:none; margin-top:6px;">
-            <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="load-progress-label"></div>
-            <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
-              <div id="load-progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
-            </div>
-          </div>
-        </div>
+    <!-- ═══ Top toolbar ═══ -->
+    <nav class="app-toolbar">
+      <div class="toolbar-brand">
+        <img src="{{ url_for('static', filename='img/logo.jpeg') }}" alt="Logo" class="toolbar-logo" />
+        <span class="toolbar-title">af_analysis</span>
       </div>
-
-      <div class="card" id="compute-card">
-        <div class="card-title" onclick="toggleCard(this)">&#9658; Compute scores</div>
-        <div class="card-body" style="display:none">
-          <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
-            <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-              <input type="checkbox" id="compute-pdockq2" /> pdockq2
-            </label>
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-              <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                <input type="checkbox" id="compute-LIS_LIA" /> LIS &amp; LIA matrix
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for LIS and LIA">
-                PAE:
-                <input type="range" id="lis-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:70px; cursor:pointer;"
-                  oninput="document.getElementById('lis-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-                <span id="lis-pae-cutoff-val" style="min-width:34px;">12.0 Å</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="Distance cutoff for LIA">
-                Dist:
-                <input type="range" id="lia-dist-cutoff" min="4" max="20" step="0.5" value="8" style="width:70px; cursor:pointer;"
-                  oninput="document.getElementById('lia-dist-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-                <span id="lia-dist-cutoff-val" style="min-width:34px;">8.0 Å</span>
-              </label>
-            </div>
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-              <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                <input type="checkbox" id="compute-iptm_d0" /> ipSAE
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="PAE cutoff for ipSAE">
-                PAE:
-                <input type="range" id="ipsae-pae-cutoff" min="5" max="30" step="0.5" value="10" style="width:70px; cursor:pointer;"
-                  oninput="document.getElementById('ipsae-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' \u00c5'">
-                <span id="ipsae-pae-cutoff-val" style="min-width:34px;">10.0 Å</span>
-              </label>
-            </div>
-            <div>
-              <button id="compute-btn" type="button">Compute</button>
-            </div>
-            <div style="margin-top:4px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; border-top:1px solid #e5e7eb; padding-top:8px;">
-              <button id="cluster-btn" type="button">Clusterize</button>
-              <label style="display:flex; align-items:center; gap:6px; font-size:13px;" title="Use normalized RMSD for clustering">
-                <input type="checkbox" id="cluster-rmsd-scale" style="margin-right:4px;"> Normalized RMSD
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="RMSD threshold for hierarchical clustering">
-                Threshold:
-                <input type="range" id="cluster-threshold" min="0.5" max="10" step="0.1" value="2.0" style="width:70px; cursor:pointer;"
-                  oninput="document.getElementById('cluster-threshold-val').textContent = parseFloat(this.value).toFixed(1) + ' Å'">
-                <span id="cluster-threshold-val" style="min-width:34px;">2.0 Å</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="MDAnalysis selection string used to align structures before clustering">
-                Align:
-                <input type="text" id="cluster-align-sel" value="backbone" style="width:110px; font-size:12px; padding:2px 5px;">
-              </label>
-              <label style="display:flex; align-items:center; gap:4px; font-size:12px; color:#555;" title="MDAnalysis selection string used to compute the RMSD distance matrix">
-                Distance:
-                <input type="text" id="cluster-dist-sel" value="backbone" style="width:110px; font-size:12px; padding:2px 5px;">
-              </label>
-            </div>
-          </div>
-          <div class="status" id="compute-status"></div>
-          <div id="compute-progress" style="display:none; margin-top:6px;">
-            <div style="font-size:12px; color:#2d3a57; margin-bottom:3px;" id="progress-label"></div>
-            <div style="background:#e5e7eb; border-radius:6px; overflow:hidden; height:10px;">
-              <div id="progress-bar" style="height:10px; width:0%; background:#1843bf; border-radius:6px; transition:width 0.1s;"></div>
-            </div>
-          </div>
-        </div>
+      <div class="toolbar-status" id="status">Load a dataset to begin.</div>
+      <div class="toolbar-actions">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#load-dialog">Load</button>
+        <button class="btn btn-sm btn-outline-secondary" id="toolbar-compute-btn" data-bs-toggle="modal" data-bs-target="#compute-dialog" disabled>Compute</button>
+        <button class="btn btn-sm btn-outline-secondary" id="toolbar-cluster-btn" data-bs-toggle="modal" data-bs-target="#cluster-dialog" disabled>Cluster</button>
       </div>
+    </nav>
 
-    </div>
-    <div class="status" id="status">Load a dataset to begin.</div>
+    <!-- ═══ Workspace ═══ -->
+    <div class="workspace" id="layout">
 
-    <div class="layout" id="layout">
-      <div class="card table-wrap">
-        <div style="display:flex; align-items:center; justify-content:space-between; flex-shrink:0; margin-bottom:4px;">
+      <!-- ── Table section (top, full width) ── -->
+      <div class="table-section" id="table-section">
+        <div class="table-toolbar">
           <strong>Dataset</strong>
-          <button id="export-csv-btn" type="button" style="font-size:11px; padding:2px 8px; border:1px solid #bfc7dc; border-radius:6px; background:#f3f4f6; cursor:pointer;" title="Export visible table to CSV">&#8595; CSV</button>
+          <span class="table-info" id="table-info"></span>
+          <div class="dropdown" id="col-picker-wrap" style="display:none;">
+            <button class="btn btn-outline-secondary btn-xs dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="Choose visible columns">
+              <i class="bi bi-layout-three-columns"></i> Columns
+            </button>
+            <div class="dropdown-menu col-picker-dropdown" id="col-picker-menu"></div>
+          </div>
+          <button id="export-csv-btn" class="btn btn-outline-secondary btn-xs" title="Export visible table to CSV"><i class="bi bi-download"></i> CSV</button>
         </div>
-        <table id="dataset-table">
-          <thead id="table-head"></thead>
-          <tbody id="table-body"></tbody>
-        </table>
+        <div class="table-scroll" id="table-scroll">
+          <div id="table-spinner" class="panel-spinner" style="display:none;">
+            <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+            <span>Processing data&hellip;</span>
+          </div>
+          <table id="dataset-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="splitter" data-split="1"></div>
-      <div style="display:flex; flex-direction:column; gap:8px; min-height:0; overflow:hidden;">
-        <div class="card" id="plot-card" data-flex-collapsible data-toggle-sibling="cluster-panel" style="flex:1; min-height:0; overflow:hidden;">
-          <div class="card-title" onclick="toggleCard(this)">&#9660; Plot</div>
-          <div class="card-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;">
-            <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
-              <select id="plot-type" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;">
-                <option value="plddt">pLDDT</option>
-                <option value="pae">PAE</option>
-                <option value="lis" id="opt-lis" style="display:none">LIS matrix</option>
-                <option value="lia" id="opt-lia" style="display:none">cLIS (LIA) matrix</option>
-                <option value="iptm_d0_matrix" id="opt-iptm-d0" style="display:none">ipTM d0 matrix</option>
-                <option value="ipsae_matrix" id="opt-ipsae" style="display:none">ipSAE matrix</option>
+
+      <!-- Horizontal splitter (between table and bottom panels) -->
+      <div class="splitter splitter-h" id="splitter-h"></div>
+
+      <!-- ── Bottom section (Mol* + Plot side-by-side) ── -->
+      <div class="bottom-section" id="bottom-section">
+
+        <!-- Mol* panel -->
+        <div class="panel" id="molstar-panel">
+          <div class="panel-header">
+            <strong>Mol*</strong>
+            <label class="panel-control">
+              <input type="checkbox" id="auto-focus" checked />
+              Auto-focus
+            </label>
+            <label class="panel-control">
+              Color
+              <select id="color-scheme" class="panel-select">
+                <option value="chain-id">Chain</option>
+                <option selected value="af-plddt">pLDDT</option>
+                <option value="cluster">Cluster</option>
+                <option value="sequence-id">Sequence ID</option>
+                <option value="element-symbol">Element</option>
+                <option value="secondary-structure">Secondary structure</option>
               </select>
-            </div>
-            <div id="plddt-plot" style="flex:1; min-height:0;"></div>
-            <div id="selected-residues" class="mono" style="flex-shrink:0;"></div>
+            </label>
+            <button id="clear-selection-btn" class="btn btn-outline-secondary btn-xs">Clear</button>
+            <button id="toggle-plot-btn" class="btn btn-outline-secondary btn-xs ms-auto" title="Toggle plot panel"><i class="bi bi-bar-chart-line"></i> Plot</button>
           </div>
-        </div>
-        <!-- Cluster panel (shown after Clusterize) -->
-        <div id="cluster-panel" style="display:none; flex:1; min-height:0; overflow:hidden; flex-direction:column;" data-flex-collapsible data-toggle-sibling="plot-card">
-          <div class="card" style="flex:1; min-height:0; display:flex; flex-direction:column;">
-            <div class="card-title" onclick="toggleCard(this)">&#9660; Clustering</div>
-            <div class="card-body" style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden;">
-              <div id="cluster-status" class="status" style="margin-bottom:6px; flex-shrink:0;"></div>
-              <div style="display:flex; align-items:center; gap:16px; margin-bottom:8px; flex-wrap:wrap; flex-shrink:0;">
-                <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                  Query:
-                  <select id="cluster-query-select" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;"></select>
-                </label>
-                <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                  View:
-                  <select id="cluster-view-select" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;">
-                    <option value="mds">MDS scatter</option>
-                    <option value="dendrogram">Dendrogram</option>
-                  </select>
-                </label>
-              </div>
-              <label style="display:flex; align-items:center; gap:6px; font-size:13px;">
-                <!-- Normalized RMSD checkbox moved to compute scores panel -->
-              <div id="cluster-main-plot" style="flex:1; min-height:0;"></div>
-            </div>
+          <div id="molstar-viewer"></div>
+          <div id="molstar-spinner" class="panel-spinner" style="display:none;">
+            <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+            <span>Loading structure&hellip;</span>
           </div>
+          <div id="molstar-note" class="panel-note mono"></div>
         </div>
-      </div>
-      <div class="splitter" data-split="3"></div>
-      <div class="card">
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-          <strong>Mol*</strong>
-          <label style="font-size:12px; font-weight:normal; display:flex; align-items:center; gap:4px;">
-            <input type="checkbox" id="auto-focus" checked />
-            Auto-focus selection
-          </label>
-          <label style="font-size:12px; font-weight:normal; display:flex; align-items:center; gap:4px;">
-            Color:
-            <select id="color-scheme" style="font-size:12px; padding:2px 4px; border:1px solid #bfc7dc; border-radius:6px;">
-              <option value="chain-id">Chain</option>
-              <option selected="selected" value="af-plddt">pLDDT</option>
-              <option value="cluster">Cluster</option>
-              <option value="sequence-id">Sequence ID</option>
-              <option value="element-symbol">Element</option>
-              <option value="secondary-structure">Secondary structure</option>
+
+        <!-- Vertical splitter (between Mol* and Plot) -->
+        <div class="splitter splitter-v" id="splitter-v"></div>
+
+        <!-- Plot panel -->
+        <div class="panel" id="plot-panel">
+          <div class="panel-header">
+            <select id="plot-type" class="panel-select">
+              <option value="plddt">pLDDT</option>
+              <option value="pae">PAE</option>
+              <option value="lis" id="opt-lis" style="display:none">LIS matrix</option>
+              <option value="lia" id="opt-lia" style="display:none">cLIS (LIA) matrix</option>
+              <option value="iptm_d0_matrix" id="opt-iptm-d0" style="display:none">ipTM d0 matrix</option>
+              <option value="ipsae_matrix" id="opt-ipsae" style="display:none">ipSAE matrix</option>
+              <option value="mds" id="opt-mds" style="display:none">MDS scatter</option>
+              <option value="dendrogram" id="opt-dendro" style="display:none">Dendrogram</option>
             </select>
-          </label>
-          <button id="clear-selection-btn" type="button" style="font-size:12px; padding:2px 8px; border:1px solid #bfc7dc; border-radius:6px; background:#f3f4f6; cursor:pointer;">Clear selection</button>
+            <span id="cluster-controls" style="display:none;">
+              <label class="d-inline-flex align-items-center gap-1" style="font-size:12px;">
+                Query:
+                <select id="cluster-query-select" class="panel-select"></select>
+              </label>
+            </span>
+          </div>
+          <div id="plddt-plot"></div>
+          <div id="cluster-main-plot" style="display:none;"></div>
+          <div id="selected-residues" class="mono"></div>
+          <div id="cluster-status" class="panel-note"></div>
         </div>
-        <div id="molstar-viewer"></div>
-        <div id="molstar-note" class="status mono"></div>
+
       </div>
     </div>
   </div>
 
-  <!-- Directory browser modal -->
-  <div id="browse-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
+  <!-- ═══ Load Dialog (Bootstrap modal) ═══ -->
+  <div class="modal fade" id="load-dialog" tabindex="-1" aria-labelledby="load-dialog-label" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="load-dialog-label">Load dataset</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="directory" class="form-label">Directory or CSV file</label>
+            <div class="input-group">
+              <input id="directory" type="text" class="form-control" placeholder="/path/to/results or file.csv" />
+              <button id="browse-btn" type="button" class="btn btn-outline-secondary">Browse&#8230;</button>
+            </div>
+          </div>
+          <div class="mb-3" id="format-block">
+            <label for="format" class="form-label">Format</label>
+            <select id="format" class="form-select">
+              <option value="auto">auto</option>
+              <option value="default">default</option>
+              <option value="colabfold_1.5">colabfold_1.5</option>
+              <option value="AF3_local">AF3_local</option>
+              <option value="AF3_webserver">AF3_webserver</option>
+              <option value="alphapulldown">alphapulldown</option>
+              <option value="alphapulldown_full">alphapulldown_full</option>
+              <option value="boltz1">boltz1</option>
+              <option value="chai1">chai1</option>
+              <option value="massivefold">massivefold</option>
+              <option value="full_massivefold">full_massivefold</option>
+            </select>
+          </div>
+          <div id="load-progress" style="display:none;">
+            <div class="small text-muted mb-1" id="load-progress-label"></div>
+            <div class="progress" style="height:8px;">
+              <div id="load-progress-bar" class="progress-bar" role="progressbar" style="width:0%;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button id="load-btn" type="button" class="btn btn-primary btn-sm">Load dataset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Compute Dialog (Bootstrap modal) ═══ -->
+  <div class="modal fade" id="compute-dialog" tabindex="-1" aria-labelledby="compute-dialog-label" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="compute-dialog-label">Compute scores</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="compute-pdockq2" />
+              <label class="form-check-label" for="compute-pdockq2">pdockq2</label>
+            </div>
+          </div>
+          <div class="mb-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="compute-LIS_LIA" />
+              <label class="form-check-label" for="compute-LIS_LIA">LIS &amp; LIA matrix</label>
+            </div>
+            <div class="ms-4 mt-1 d-flex gap-3 flex-wrap">
+              <label class="d-flex align-items-center gap-1 small text-muted" title="PAE cutoff for LIS and LIA">
+                PAE:
+                <input type="range" id="lis-pae-cutoff" min="5" max="30" step="0.5" value="12" style="width:80px;"
+                  oninput="document.getElementById('lis-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' \u00c5'">
+                <span id="lis-pae-cutoff-val" style="min-width:40px;">12.0 &#197;</span>
+              </label>
+              <label class="d-flex align-items-center gap-1 small text-muted" title="Distance cutoff for LIA">
+                Dist:
+                <input type="range" id="lia-dist-cutoff" min="4" max="20" step="0.5" value="8" style="width:80px;"
+                  oninput="document.getElementById('lia-dist-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' \u00c5'">
+                <span id="lia-dist-cutoff-val" style="min-width:40px;">8.0 &#197;</span>
+              </label>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="compute-iptm_d0" />
+              <label class="form-check-label" for="compute-iptm_d0">ipSAE</label>
+            </div>
+            <div class="ms-4 mt-1 d-flex gap-3 flex-wrap">
+              <label class="d-flex align-items-center gap-1 small text-muted" title="PAE cutoff for ipSAE">
+                PAE:
+                <input type="range" id="ipsae-pae-cutoff" min="5" max="30" step="0.5" value="10" style="width:80px;"
+                  oninput="document.getElementById('ipsae-pae-cutoff-val').textContent = parseFloat(this.value).toFixed(1) + ' \u00c5'">
+                <span id="ipsae-pae-cutoff-val" style="min-width:40px;">10.0 &#197;</span>
+              </label>
+            </div>
+          </div>
+          <div class="status" id="compute-status"></div>
+          <div id="compute-progress" style="display:none;">
+            <div class="small text-muted mb-1" id="progress-label"></div>
+            <div class="progress" style="height:8px;">
+              <div id="progress-bar" class="progress-bar" role="progressbar" style="width:0%;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button id="compute-btn" type="button" class="btn btn-primary btn-sm">Compute</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Cluster Dialog (Bootstrap modal) ═══ -->
+  <div class="modal fade" id="cluster-dialog" tabindex="-1" aria-labelledby="cluster-dialog-label" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="cluster-dialog-label">Clustering</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="cluster-rmsd-scale" />
+              <label class="form-check-label" for="cluster-rmsd-scale">Normalized RMSD</label>
+            </div>
+          </div>
+          <div class="d-flex gap-3 flex-wrap">
+            <div>
+              <label class="form-label small" title="RMSD threshold for hierarchical clustering">Threshold:</label>
+              <div class="d-flex align-items-center gap-1">
+                <input type="range" id="cluster-threshold" min="0.5" max="10" step="0.1" value="2.0" style="width:80px;"
+                  oninput="document.getElementById('cluster-threshold-val').textContent = parseFloat(this.value).toFixed(1) + ' \u00c5'">
+                <span id="cluster-threshold-val" class="small text-muted" style="min-width:40px;">2.0 &#197;</span>
+              </div>
+            </div>
+            <div>
+              <label for="cluster-align-sel" class="form-label small" title="MDAnalysis selection string for alignment">Align:</label>
+              <input type="text" class="form-control form-control-sm" id="cluster-align-sel" value="backbone" style="width:120px;">
+            </div>
+            <div>
+              <label for="cluster-dist-sel" class="form-label small" title="MDAnalysis selection string for distance matrix">Distance:</label>
+              <input type="text" class="form-control form-control-sm" id="cluster-dist-sel" value="backbone" style="width:120px;">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button id="cluster-btn" type="button" class="btn btn-primary btn-sm">Clusterize</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Directory Browser (custom modal) ═══ -->
+  <div id="browse-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1065; align-items:center; justify-content:center;">
     <div style="background:#fff; border-radius:12px; padding:20px; width:560px; max-width:92vw; max-height:80vh; display:flex; flex-direction:column; gap:10px; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
       <div style="display:flex; align-items:center; justify-content:space-between;">
         <strong>Select directory or CSV file</strong>
         <button id="browse-cancel" type="button" style="background:none; border:none; font-size:18px; cursor:pointer; color:#666">&times;</button>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
-        <button id="browse-up" type="button" style="background:#4b5563; color:#fff; border:none; border-radius:6px; padding:4px 10px; cursor:pointer;">&#x2191; Up</button>
+        <button id="browse-up" type="button" class="btn btn-secondary btn-sm">&#x2191; Up</button>
         <code id="browse-path" style="font-size:12px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></code>
       </div>
       <ul id="browse-list" style="list-style:none; margin:0; padding:0; flex:1; overflow-y:auto; border:1px solid #d7dceb; border-radius:8px; max-height:40vh;"></ul>
       <div style="display:flex; gap:8px; justify-content:flex-end;">
-        <button id="browse-select" type="button" style="background:#1843bf; color:#fff; border:none; border-radius:8px; padding:8px 18px; cursor:pointer; font-weight:600;">Select</button>
-        <button id="browse-cancel2" type="button" style="background:#e5e7eb; border:none; border-radius:8px; padding:8px 14px; cursor:pointer;">Cancel</button>
+        <button id="browse-select" type="button" class="btn btn-primary btn-sm">Select</button>
+        <button id="browse-cancel2" type="button" class="btn btn-secondary btn-sm">Cancel</button>
       </div>
     </div>
   </div>
 
-  <!-- Row detail modal -->
+  <!-- ═══ Row Detail (custom modal) ═══ -->
   <div id="row-detail-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1100; align-items:center; justify-content:center;">
     <div style="background:#fff; border-radius:12px; padding:24px; width:540px; max-width:92vw; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-shrink:0;">
@@ -301,6 +322,9 @@
     </div>
   </div>
 
+  <!-- Bootstrap JS bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- App JS -->
   <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

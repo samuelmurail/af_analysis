@@ -59,6 +59,8 @@ export const state = {
   sortCol: null,  // column name currently sorted, or null
   sortDir: 1,     // 1 = ascending, -1 = descending
   collapsedGroups: new Set(['pdockq2', 'iptm_d0', 'ipsae']),  // group ids collapsed by default
+  filters: {},  // { columnName: { min, max } | string }
+  hiddenColumns: new Set(),  // user-hidden columns
 };
 
 // Collapsible column groups: columns whose name starts with `prefix`
@@ -108,12 +110,62 @@ function _fmtCell(value) {
   return value ?? "";
 }
 
+function _escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _matchesFilter(value, filter) {
+  if (!filter) return true;
+  if (typeof filter === 'string') {
+    if (!filter.trim()) return true;
+    return String(value ?? '').toLowerCase().includes(filter.trim().toLowerCase());
+  }
+  // Object: { min, max } for numeric range
+  const { min, max } = filter;
+  if ((!min || !min.trim()) && (!max || !max.trim())) return true;
+  const numVal = parseFloat(value);
+  if (isNaN(numVal)) return false;
+  if (min && min.trim()) { const n = parseFloat(min); if (!isNaN(n) && numVal < n) return false; }
+  if (max && max.trim()) { const n = parseFloat(max); if (!isNaN(n) && numVal > n) return false; }
+  return true;
+}
+
+// Column type detection cache (reset when rows array reference changes).
+let _colTypeCache = {};
+let _colTypeCacheRows = null;
+
+function _getColumnType(colName, rows) {
+  if (_colTypeCacheRows !== rows) {
+    _colTypeCache = {};
+    _colTypeCacheRows = rows;
+  }
+  if (colName in _colTypeCache) return _colTypeCache[colName];
+  let numCount = 0, total = 0;
+  for (const row of rows) {
+    const v = row[colName];
+    if (v === null || v === undefined || v === '') continue;
+    total++;
+    if (typeof v === 'number' && isFinite(v)) numCount++;
+  }
+  const type = total > 0 && numCount / total > 0.5 ? 'numeric' : 'string';
+  _colTypeCache[colName] = type;
+  return type;
+}
+
+let _filterDebounce = null;
+
 export function renderTable(columns, rows, onRowClick, options = {}) {
   _currentOptions = options;  // always keep the latest options available for re-renders
-  const { hiddenColumns = new Set(), cellStyleFn = null } = _currentOptions;
+  const { cellStyleFn = null } = _currentOptions;
+  const hiddenColumns = state.hiddenColumns;
   const head = document.getElementById("table-head");
   const body = document.getElementById("table-body");
   if (!head || !body) return;
+
+  // Save focus state for filter restore.
+  const focusedFilterCol = document.activeElement?.dataset?.filterCol;
+  const focusedFilterBound = document.activeElement?.dataset?.filterBound;
+  const focusedCursorPos = document.activeElement?.selectionStart;
 
   // ── collect group member columns present in this dataset ─────────────────
   const groupCols = {};   // groupId → [colName, ...]
@@ -201,6 +253,73 @@ export function renderTable(columns, rows, onRowClick, options = {}) {
     });
   });
 
+  // ── filter row ────────────────────────────────────────────────────────────
+  const filterCells = ['<th></th>', ...displayColumns.map((dc) => {
+    const colName = typeof dc === 'object' ? dc.__group__ : dc;
+    const colType = _getColumnType(colName, rows);
+    if (colType === 'numeric') {
+      const filter = state.filters[colName];
+      const minVal = (filter && typeof filter === 'object') ? (filter.min || '') : '';
+      const maxVal = (filter && typeof filter === 'object') ? (filter.max || '') : '';
+      return `<th><div class="filter-range"><input type="text" class="filter-min" data-filter-col="${_escAttr(colName)}" data-filter-bound="min" value="${_escAttr(minVal)}" placeholder="Min"><span class="filter-sep">&ndash;</span><input type="text" class="filter-max" data-filter-col="${_escAttr(colName)}" data-filter-bound="max" value="${_escAttr(maxVal)}" placeholder="Max"></div></th>`;
+    } else {
+      const val = typeof state.filters[colName] === 'string' ? state.filters[colName] : '';
+      return `<th><input type="text" class="filter-input" data-filter-col="${_escAttr(colName)}" value="${_escAttr(val)}" placeholder="Search\u2026"></th>`;
+    }
+  })];
+  const filterRow = document.createElement('tr');
+  filterRow.className = 'filter-row';
+  filterRow.innerHTML = filterCells.join('');
+  head.appendChild(filterRow);
+
+  // Text filter handlers.
+  filterRow.querySelectorAll('.filter-input').forEach(input => {
+    input.addEventListener('input', () => {
+      state.filters[input.dataset.filterCol] = input.value;
+      clearTimeout(_filterDebounce);
+      _filterDebounce = setTimeout(() => {
+        renderTable(columns, rows, onRowClick, _currentOptions);
+      }, 200);
+    });
+  });
+
+  // Numeric min/max filter handlers.
+  filterRow.querySelectorAll('.filter-min, .filter-max').forEach(input => {
+    input.addEventListener('input', () => {
+      const col = input.dataset.filterCol;
+      const bound = input.dataset.filterBound;
+      let filter = state.filters[col];
+      if (!filter || typeof filter !== 'object') filter = { min: '', max: '' };
+      filter[bound] = input.value;
+      state.filters[col] = filter;
+      clearTimeout(_filterDebounce);
+      _filterDebounce = setTimeout(() => {
+        renderTable(columns, rows, onRowClick, _currentOptions);
+      }, 200);
+    });
+  });
+
+  // ── column picker ─────────────────────────────────────────────────────────
+  const pickerMenu = document.getElementById('col-picker-menu');
+  const pickerWrap = document.getElementById('col-picker-wrap');
+  if (pickerMenu && pickerWrap) {
+    pickerWrap.style.display = '';
+    pickerMenu.innerHTML = columns
+      .filter(c => c !== 'row')
+      .map(c => {
+        const checked = !state.hiddenColumns.has(c) ? 'checked' : '';
+        const id = `pick-${_escAttr(c)}`;
+        return `<div class="form-check"><input class="form-check-input" type="checkbox" ${checked} data-pick-col="${_escAttr(c)}" id="${id}"><label class="form-check-label" for="${id}">${_escHtml(c)}</label></div>`;
+      }).join('');
+    pickerMenu.querySelectorAll('.form-check-input').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) state.hiddenColumns.delete(cb.dataset.pickCol);
+        else state.hiddenColumns.add(cb.dataset.pickCol);
+        renderTable(columns, rows, onRowClick, _currentOptions);
+      });
+    });
+  }
+
   // ── body ──────────────────────────────────────────────────────────────────
   const sorted = state.sortCol
     ? [...rows].sort((a, b) => {
@@ -211,8 +330,27 @@ export function renderTable(columns, rows, onRowClick, options = {}) {
       })
     : rows;
 
+  // Apply filters.
+  let filtered = sorted;
+  for (const [col, expr] of Object.entries(state.filters)) {
+    const hasFilter = typeof expr === 'string'
+      ? expr.trim()
+      : (expr && (expr.min?.trim() || expr.max?.trim()));
+    if (hasFilter) {
+      filtered = filtered.filter(row => _matchesFilter(row[col], expr));
+    }
+  }
+
+  // Update table info.
+  const infoEl = document.getElementById('table-info');
+  if (infoEl) {
+    const total = rows.length;
+    const shown = filtered.length;
+    infoEl.textContent = total === shown ? `${total} models` : `Showing ${shown} of ${total} models`;
+  }
+
   body.innerHTML = "";
-  sorted.forEach((row) => {
+  filtered.forEach((row) => {
     const tr = document.createElement("tr");
     const rowNum = Number(row.row);
     if (rowNum === Number(state.selectedModel)) tr.classList.add("active");
@@ -248,4 +386,18 @@ export function renderTable(columns, rows, onRowClick, options = {}) {
     tr.addEventListener("click", () => onRowClick(Number(row.row), columns, rows));
     body.appendChild(tr);
   });
+
+  // Restore filter focus.
+  if (focusedFilterCol) {
+    let input;
+    if (focusedFilterBound) {
+      input = head.querySelector(`.filter-${focusedFilterBound}[data-filter-col="${CSS.escape(focusedFilterCol)}"]`);
+    } else {
+      input = head.querySelector(`.filter-input[data-filter-col="${CSS.escape(focusedFilterCol)}"]`);
+    }
+    if (input) {
+      input.focus();
+      if (focusedCursorPos != null) input.setSelectionRange(focusedCursorPos, focusedCursorPos);
+    }
+  }
 }

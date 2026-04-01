@@ -371,10 +371,11 @@ export function renderLisPlot(lisPayload, handlers) {
 }
 
 export function resizePlot() {
+  if (typeof Plotly === "undefined" || !Plotly.Plots?.resize) return;
   const plotDiv = document.getElementById("plddt-plot");
-  if (plotDiv && typeof Plotly !== "undefined" && Plotly.Plots?.resize) {
-    Plotly.Plots.resize(plotDiv);
-  }
+  if (plotDiv && plotDiv._fullLayout) Plotly.Plots.resize(plotDiv);
+  const clusterDiv = document.getElementById("cluster-main-plot");
+  if (clusterDiv && clusterDiv._fullLayout) Plotly.Plots.resize(clusterDiv);
 }
 
 /**
