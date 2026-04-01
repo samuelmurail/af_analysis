@@ -35,8 +35,18 @@ AA_RESNAMES = [
     "TYR",
     "VAL",
 ]
+NON_CANONICAL_RESNAMES = ['PTR']
+DNA_RESNAMES = ["DA", "DC", "DG", "DT", "A", "T", "G", "C", "U"]
 
-DNA_RESNAMES = ["DA", "DC", "DG", "DT"]
+PROTEIN_SEL = "resname " + " ".join(AA_RESNAMES + NON_CANONICAL_RESNAMES)
+NA_SEL = "resname " + " ".join(DNA_RESNAMES)
+
+TOKEN_SEL = f"({PROTEIN_SEL} and name CA) or ({NA_SEL} and name P) or ions or (not {PROTEIN_SEL} and not {NA_SEL} and noh)"
+
+TOKEN_SEL_CB = f"name CB C3' or (resname GLY and name CA) or (not {PROTEIN_SEL} and not {NA_SEL} and noh)"
+
+PDOCKQ_SEL = f"({PROTEIN_SEL} and name CB) or (resname GLY and name CA) or ({NA_SEL} and name P)"
+
 
 # Autorship information
 __author__ = "Alaa Reguei"
@@ -239,8 +249,8 @@ def compute_pdockQ(
     k=0.052,
     b=0.018,
 ):
-    coor_prot_na = coor.select_atoms("protein or dna")
-    chain_lengths = _infer_chain_lengths(coor_prot_na)
+    coor_cb = coor.select_atoms(PDOCKQ_SEL)
+    chain_lengths = _infer_chain_lengths(coor_cb)
 
     if lig_chains is None:
         lig_chains = [min(chain_lengths.items(), key=lambda x: x[1])[0]]
@@ -259,21 +269,12 @@ def compute_pdockQ(
 
     pdockq_list = []
 
-    for frame_index in range(coor.model_num):
-        model = coor.models[frame_index]
+    for frame_index in range(coor_cb.model_num):
+        model = coor_cb.models[frame_index]
         chain_arr = np.asarray(model.chain_str)
-        name_arr = np.asarray(model.name_str)
-        resname_arr = np.asarray(model.resname_str)
 
-        protein_mask = np.isin(resname_arr, AA_RESNAMES)
-        dna_mask = np.isin(resname_arr, DNA_RESNAMES)
-        sel_mask = (
-            protein_mask
-            & ((name_arr == "CB") | ((resname_arr == "GLY") & (name_arr == "CA")))
-        ) | (dna_mask & (name_arr == "P"))
-
-        rec_mask = sel_mask & np.isin(chain_arr, rec_chains)
-        lig_mask = sel_mask & np.isin(chain_arr, lig_chains)
+        rec_mask = np.isin(chain_arr, rec_chains)
+        lig_mask = np.isin(chain_arr, lig_chains)
 
         if not np.any(rec_mask) or not np.any(lig_mask):
             pdockq_list.append(0.0)
@@ -318,7 +319,7 @@ def compute_pdockQ2(
     k=7.47157696e-02,
     b=5.01886443e-03,
     d0=10.0,
-    sel="(protein and name CA) or (dna and name P) or ions or (not protein and not dna and noh)",
+    sel=TOKEN_SEL,
 ):
     models_CA = coor.select_atoms(sel)
     models_chains = np.unique(np.asarray(models_CA.chain_str))
@@ -783,6 +784,7 @@ def compute_cLIS_matrix(
     chain_length: dict,
     pae_cutoff: float = 12.0,
     dist_cutoff: float = 8.0,
+    sel: str = TOKEN_SEL_CB,
 ) -> np.ndarray:
     """Compute the cLIS score from the PAE matrix and pdb file.
 
@@ -800,6 +802,8 @@ def compute_cLIS_matrix(
         list of chain IDs
     chain_length : list
         list of chain lengths
+    sel : str
+        selection string for the atoms to consider in the distance calculation, default is TOKEN_SEL_CB
 
     Returns
     -------
@@ -810,9 +814,7 @@ def compute_cLIS_matrix(
     chain_len_sums = np.cumsum([0] + chain_length)
 
     model = pdb_cpp.Coor(pdb)
-    model_cb = model.select_atoms(
-        "name CB C3' or (resname GLY and name CA) or (not protein and not dna and noh)"
-    )
+    model_cb = model.select_atoms(sel)
     distance = distance_matrix(model_cb.xyz, model_cb.xyz)
     if model_cb.len == pae_array.shape[0]:
         contact_map = (distance < dist_cutoff).astype(int)
@@ -1629,7 +1631,7 @@ def ipTM_d0_interface(data):
 
 
 def compute_iptm_d0_interface_values(
-    pdb, pae_array, chain_ids, chain_length, chain_type
+    pdb, pae_array, chain_ids, chain_length, chain_type, sel=TOKEN_SEL_CB
 ):
     """Compute the ipTM_d0 score from the PAE matrix.
 
@@ -1645,6 +1647,9 @@ def compute_iptm_d0_interface_values(
         list of chain lengths
     chain_type : list
         list of chain types (e.g. "protein", "nucleic_acid")
+    sel : str
+        selection string for the atoms to consider in the distance calculation, default is TOKEN_SEL_CB
+
 
     Returns
     -------
@@ -1687,7 +1692,7 @@ def compute_iptm_d0_interface_values(
     chain_len_sums = np.cumsum([0] + chain_length)
 
     model = pdb_cpp.Coor(pdb)
-    model_cb = model.select_atoms("name CB C3 or (resname GLY and name CA)")
+    model_cb = model.select_atoms(sel)
     assert model_cb.len == sum(
         chain_length
     ), "Number of CB atoms does not match the sum of chain lengths."
