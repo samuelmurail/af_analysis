@@ -15,6 +15,8 @@ import pickle
 import logging
 import ipywidgets as widgets
 
+logger = logging.getLogger(__name__)
+
 from .format import (
     colabfold_1_5,
     af3_webserver,
@@ -270,9 +272,21 @@ class Data:
 
         for querie in self.df["query"].unique():
             # print(querie, self.df[self.df['query'] == querie])
-            first_model = pdb_cpp.Coor(
-                self.df[self.df["query"] == querie].iloc[0]["pdb"]
-            )
+            query_rows = self.df[self.df["query"] == querie]
+            first_model = None
+            for _, qrow in query_rows.iterrows():
+                pdb_path = qrow["pdb"]
+                if pdb_path and os.path.isfile(pdb_path):
+                    coor = pdb_cpp.Coor(pdb_path)
+                    if coor.models:
+                        first_model = coor
+                        break
+            if first_model is None or not first_model.models:
+                logger.warning(f"No valid PDB found for query {querie}, skipping chain info")
+                self.chains[querie] = []
+                self.chain_length[querie] = []
+                self.chain_type[querie] = []
+                continue
             model = first_model.models[0]
             chain_arr = np.asarray(model.chain_str)
             uniq_resid = _flatten_1d(model.uniq_resid)

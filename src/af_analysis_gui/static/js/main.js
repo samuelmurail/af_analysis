@@ -63,6 +63,8 @@ function _hideDialog(id) {
 function _resetForNewDataset() {
   _clusterData = null;
   _lastPlotType = null;
+  state.filters = {};
+  state.hiddenColumns.clear();
   // Hide cluster plot types
   const optMds = document.getElementById('opt-mds');
   const optDendro = document.getElementById('opt-dendro');
@@ -214,7 +216,13 @@ async function refreshModelPanels() {
 
   if (plotType !== 'mds' && plotType !== 'dendrogram') renderSelectedResidues();
   _applyClusterColorForRow(state.selectedModel);
-  await loadStructure(state.selectedModel);
+  const molSpinner = document.getElementById('molstar-spinner');
+  if (molSpinner) molSpinner.style.display = '';
+  try {
+    await loadStructure(state.selectedModel);
+  } finally {
+    if (molSpinner) molSpinner.style.display = 'none';
+  }
   if (plotType === 'pae' && state.paeSelection) {
     await applyPaeColors(state.paeSelection.xResidues, state.paeSelection.yResidues);
   }
@@ -332,11 +340,17 @@ function _updateLisOption(hasLis, hasLia, hasIptmD0, hasIpsae) {
 }
 
 async function refreshTableAndPanels() {
-  const table = await api('/api/table');
-  state.tableRows = table.rows;
-  state.selectedModel = 0;
-  _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix, !!table.has_ipsae_matrix);
-  renderCurrentTable(table.columns, table.rows);
+  const tableSpinner = document.getElementById('table-spinner');
+  if (tableSpinner) tableSpinner.style.display = '';
+  try {
+    const table = await api('/api/table');
+    state.tableRows = table.rows;
+    state.selectedModel = 0;
+    _updateLisOption(!!table.has_lis, !!table.has_lia, !!table.has_iptm_d0_matrix, !!table.has_ipsae_matrix);
+    renderCurrentTable(table.columns, table.rows);
+  } finally {
+    if (tableSpinner) tableSpinner.style.display = 'none';
+  }
   await refreshModelPanels();
 }
 
@@ -439,7 +453,7 @@ function initEvents() {
       plotPanel.classList.remove('plot-hidden');
       if (splitterV) splitterV.style.display = '';
       molstarPanel.style.flex = '';
-      if (btn) btn.innerHTML = 'Plot &#9654;';
+      if (btn) btn.innerHTML = '<i class="bi bi-bar-chart-line"></i> Plot';
       // Resize plots after showing
       setTimeout(() => {
         const p = document.getElementById('plddt-plot');
@@ -451,19 +465,29 @@ function initEvents() {
       plotPanel.classList.add('plot-hidden');
       if (splitterV) splitterV.style.display = 'none';
       molstarPanel.style.flex = '1';
-      if (btn) btn.innerHTML = '&#9664; Plot';
+      if (btn) btn.innerHTML = '<i class="bi bi-bar-chart-line"></i> Plot';
     }
   });
 
   document.getElementById('color-scheme')?.addEventListener('change', async () => {
     const sp = getSuperposeState();
+    const molSpinner = document.getElementById('molstar-spinner');
     if (sp) {
-      // Re-render the active superpose with the new color scheme.
-      await loadSuperpose(sp.rows, sp.query, sp.frameColors);
+      if (molSpinner) molSpinner.style.display = '';
+      try {
+        await loadSuperpose(sp.rows, sp.query, sp.frameColors);
+      } finally {
+        if (molSpinner) molSpinner.style.display = 'none';
+      }
       _attachSuperposeHover();
     } else if (state.selectedModel != null) {
       _applyClusterColorForRow(state.selectedModel);
-      await loadStructure(state.selectedModel);
+      if (molSpinner) molSpinner.style.display = '';
+      try {
+        await loadStructure(state.selectedModel);
+      } finally {
+        if (molSpinner) molSpinner.style.display = 'none';
+      }
     }
   });
 
