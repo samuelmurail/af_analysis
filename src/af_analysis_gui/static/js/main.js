@@ -375,10 +375,12 @@ function initEvents() {
 
 
   loadBtn.addEventListener('click', async () => {
-    const directory = document.getElementById('directory').value.trim();
+    const path = document.getElementById('directory').value.trim();
     const format = document.getElementById('format').value;
-    if (!directory) {
-      setStatus('Please provide a directory path', true);
+    const csvMode = path.toLowerCase().endsWith('.csv');
+    const directory = csvMode ? '' : path;
+    if (!path) {
+      setStatus('Please provide a directory or CSV file path', true);
       return;
     }
 
@@ -416,7 +418,7 @@ function initEvents() {
       const payload = await api('/api/load', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory, format })
+        body: JSON.stringify(csvMode ? { csv: path } : { directory, format }),
       });
       await sseDone;
       hideProgress();
@@ -450,24 +452,10 @@ function initEvents() {
   });
 
   document.getElementById('export-csv-btn')?.addEventListener('click', () => {
-    if (!_tableColumns.length || !_tableRows.length) return;
-    // Build header: exclude the synthetic 'row' index column, keep display columns order.
-    const cols = _tableColumns.filter(c => c !== 'row');
-    const escape = v => {
-      const s = v === null || v === undefined ? '' : String(v);
-      return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const lines = [cols.map(escape).join(',')];
-    for (const row of _tableRows) {
-      lines.push(cols.map(c => escape(row[c])).join(','));
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = '/api/export_csv';
     a.download = 'af_analysis.csv';
     a.click();
-    URL.revokeObjectURL(a.href);
   });
 
   document.getElementById('clear-selection-btn')?.addEventListener('click', () => {
@@ -907,18 +895,35 @@ async function _browseLoad(path) {
   document.getElementById('browse-up').disabled = !data.parent;
   const list = document.getElementById('browse-list');
   list.innerHTML = '';
-  for (const dir of data.dirs) {
+
+  const addItem = (icon, name, onClick, isSelected) => {
     const li = document.createElement('li');
-    li.textContent = '📁 ' + dir;
-    li.style.cssText = 'padding:7px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f0f2f7;';
+    li.textContent = icon + ' ' + name;
+    li.style.cssText = `padding:7px 12px; cursor:pointer; font-size:13px; border-bottom:1px solid #f0f2f7;${isSelected ? 'background:#e8eeff; font-weight:600;' : ''}`;
     li.addEventListener('mouseover', () => li.style.background = '#f0f4ff');
-    li.addEventListener('mouseout',  () => li.style.background = '');
-    li.addEventListener('click', () => _browseLoad(data.path + '/' + dir));
+    li.addEventListener('mouseout',  () => li.style.background = isSelected ? '#e8eeff' : '');
+    li.addEventListener('click', onClick);
     list.appendChild(li);
+  };
+
+  for (const dir of (data.dirs || [])) {
+    addItem('📁', dir, () => _browseLoad(data.path + '/' + dir), false);
   }
-  if (!data.dirs.length) {
+  for (const csv of (data.csvs || [])) {
+    const fullPath = data.path + '/' + csv;
+    addItem('📄', csv, () => {
+      _browseCurrent = fullPath;
+      // Highlight the selected CSV and update the select button label.
+      for (const el of list.querySelectorAll('li')) {
+        el.style.background = el.textContent.trim() === '📄 ' + csv ? '#e8eeff' : '';
+        el.style.fontWeight  = el.textContent.trim() === '📄 ' + csv ? '600' : '';
+      }
+    }, false);
+  }
+
+  if (!data.dirs?.length && !data.csvs?.length) {
     const li = document.createElement('li');
-    li.textContent = '(no subdirectories)';
+    li.textContent = '(empty)';
     li.style.cssText = 'padding:10px 12px; color:#888; font-size:13px;';
     list.appendChild(li);
   }
@@ -930,8 +935,18 @@ function initBrowser() {
 
   document.getElementById('browse-btn').addEventListener('click', async () => {
     modal.style.display = 'flex';
-    const current = document.getElementById('directory').value.trim() || '~';
-    await _browseLoad(current);
+    const current = document.getElementById('directory').value.trim();
+    if (current) {
+      await _browseLoad(current);
+    } else {
+      // Default to server launch cwd.
+      try {
+        const h = await api('/api/health');
+        await _browseLoad(h.cwd || '');
+      } catch (_) {
+        await _browseLoad('');
+      }
+    }
   });
 
   document.getElementById('browse-up').addEventListener('click', async () => {

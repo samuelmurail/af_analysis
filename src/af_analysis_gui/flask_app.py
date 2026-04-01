@@ -177,10 +177,11 @@ def api_load_dataset():
 
     payload = request.get_json(silent=True) or {}
     directory = str(payload.get("directory", "")).strip()
+    csv_path  = str(payload.get("csv", "")).strip()
     format_name = str(payload.get("format", "auto")).strip() or "auto"
 
-    if not directory:
-        return jsonify({"error": "Results directory is required"}), 400
+    if not directory and not csv_path:
+        return jsonify({"error": "Results directory or CSV file path is required"}), 400
 
     # Drain stale progress events from any previous operation.
     while not _PROGRESS_QUEUE.empty():
@@ -200,8 +201,11 @@ def api_load_dataset():
     _tqdm_mod.auto.tqdm = _TqdmStream
 
     try:
-        format_arg = None if format_name == "auto" else format_name
-        data = af_analysis.Data(directory=directory, format=format_arg, verbose=True)
+        if csv_path:
+            data = af_analysis.Data(csv=csv_path, verbose=True)
+        else:
+            format_arg = None if format_name == "auto" else format_name
+            data = af_analysis.Data(directory=directory, format=format_arg, verbose=True)
         with STATE.lock:
             STATE.af_data = data
             STATE.last_error = ""
@@ -227,21 +231,23 @@ def api_load_dataset():
 
 @app.get("/api/browse")
 def api_browse():
-    import os
-
-    raw = request.args.get("path", "~")
+    raw = request.args.get("path", "")
     try:
-        p = Path(raw).expanduser().resolve()
+        p = Path(raw).expanduser().resolve() if raw else Path.cwd()
         if not p.is_dir():
             p = p.parent
-        entries = sorted(
+        dirs = sorted(
             [e.name for e in p.iterdir() if e.is_dir() and not e.name.startswith(".")]
+        )
+        csvs = sorted(
+            [e.name for e in p.iterdir() if e.is_file() and e.suffix.lower() == ".csv"]
         )
         return jsonify(
             {
                 "path": str(p),
                 "parent": str(p.parent) if p != p.parent else None,
-                "dirs": entries,
+                "dirs": dirs,
+                "csvs": csvs,
             }
         )
     except Exception as exc:
@@ -555,7 +561,26 @@ def api_health():
     directory = (
         str(STATE.af_data.dir) if loaded and getattr(STATE.af_data, "dir", None) else ""
     )
-    return jsonify({"loaded": loaded, "rows": rows, "directory": directory})
+    return jsonify({"loaded": loaded, "rows": rows, "directory": directory, "cwd": str(Path.cwd())})
+
+
+@app.get("/api/export_csv")
+def api_export_csv():
+    """Export the full dataframe as CSV using Data.export_csv()."""
+    import io
+    try:
+        data = _require_data()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+    buf = io.StringIO()
+    data.df.to_csv(buf, index=False)
+    csv_bytes = buf.getvalue().encode("utf-8")
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=af_analysis.csv"},
+    )
 
 
 @app.get("/api/progress/stream")
@@ -893,19 +918,34 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     if args.directory:
-        directory = str(Path(args.directory).expanduser().resolve())
+        path = Path(args.directory).expanduser().resolve()
         try:
-            data = af_analysis.Data(directory=directory, format=args.fmt, verbose=True)
+            if path.suffix.lower() == ".csv":
+                data = af_analysis.Data(csv=str(path), verbose=True)
+            else:
+                data = af_analysis.Data(directory=str(path), format=args.fmt, verbose=True)
             with STATE.lock:
                 STATE.af_data = data
                 STATE.last_error = ""
-            print(f"Loaded {len(data.df)} models from {directory}")
+            print(f"Loaded {len(data.df)} models from {path}")
         except Exception:
             print(
-                f"Warning: could not load directory '{directory}':\n{traceback.format_exc()}"
+                f"Warning: could not load '{path}':\n{traceback.format_exc()}"
             )
 
-    app.run(host=args.host, port=args.port, debug=False, threaded=True)
+    port = args.port
+    max_tries = 10
+    for attempt in range(max_tries):
+        try:
+            app.run(host=args.host, port=port, debug=False, threaded=True)
+            break
+        except OSError as exc:
+            if "address already in use" in str(exc).lower() and attempt < max_tries - 1:
+                print(f"Port {port} in use, trying {port + 1}...")
+                port += 1
+                continue
+            raise
+
     return 0
 
 

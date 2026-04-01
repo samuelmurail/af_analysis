@@ -325,9 +325,25 @@ class Data:
         -------
         None
         """
+        import ast
 
         self.df = pd.read_csv(path)
         self.dir = os.path.dirname(self.df["pdb"][0])
+
+        # Restore array/list columns that were serialized as strings by export_csv.
+        _array_cols = ["LIS", "LIA", "ipTM_d0_matrix", "ipSAE_matrix"]
+        for col in _array_cols:
+            if col in self.df.columns:
+                def _parse(v):
+                    if isinstance(v, str):
+                        try:
+                            parsed = ast.literal_eval(v)
+                            if isinstance(parsed, list):
+                                return np.array(parsed)
+                        except (ValueError, SyntaxError):
+                            pass
+                    return v
+                self.df[col] = self.df[col].apply(_parse)
 
         self.set_chain_length()
 

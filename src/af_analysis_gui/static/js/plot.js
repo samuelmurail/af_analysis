@@ -198,13 +198,17 @@ export function renderPaePlot(paePayload, handlers, savedZoom = null) {
     y: paePayload.residues,
     type: "heatmap",
     colorscale: [
-      [0,   "#0053D6"],
-      [0.1, "#0053D6"],
-      [0.3, "#65CBF3"],
-      [0.5, "#FFDB13"],
-      [1.0, "#FF7D45"],
+      [0.000, "#7E1A00"],
+      [0.125, "#AE4A1A"],
+      [0.250, "#D4896A"],
+      [0.375, "#EED8C0"],
+      [0.500, "#FAFAF8"],
+      [0.625, "#C0CEDF"],
+      [0.750, "#6898C8"],
+      [0.875, "#2860A0"],
+      [1.000, "#001880"],
     ],
-    reversescale: false,
+    reversescale: true,
     zmin: 0,
     zmax: 30,
     colorbar: { title: "PAE (Å)", thickness: 14, len: 0.8 },
@@ -222,7 +226,7 @@ export function renderPaePlot(paePayload, handlers, savedZoom = null) {
   }
 
   // Compute strip width once and store it so _applyPaeOverlay uses the same value.
-  _paeStrip = Math.max(2, Math.ceil(n * 0.013));
+  _paeStrip = Math.max(3, Math.ceil(n * 0.025));
   const PAE_OUTER = -(_paeStrip + 0.5);
 
   const layout = {
