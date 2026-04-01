@@ -1,209 +1,272 @@
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    margin: 0;
-}
+/* ── Base & Overrides ─────────────────────────────────────────────────────── */
+html, body { margin: 0; padding: 0; height: 100%; }
 
 body {
-    font-family: ui-sans-serif, system-ui, sans-serif;
-    background: #f5f7fb;
-    color: #182033;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: #f5f7fb;
+  color: #182033;
+  font-size: 13px;
 }
 
+/* ── Page container ───────────────────────────────────────────────────────── */
 .page {
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.card {
-    background: #fff;
-    border: 1px solid #d7dceb;
-    border-radius: 10px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+.app-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #fff;
+  border-bottom: 1px solid #d7dceb;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 38px;
 }
-.toolbar {
-    display: grid;
-    grid-template-columns: 1fr 180px 130px;
-    gap: 10px;
-    align-items: end;
+.toolbar-brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.toolbar-logo  { height: 26px; }
+.toolbar-title { font-weight: 700; font-size: 14px; white-space: nowrap; }
+.toolbar-status {
+  flex: 1;
+  font-size: 12px;
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+.toolbar-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Workspace ────────────────────────────────────────────────────────────── */
+.workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  min-height: 0;
+  gap: 0;
 }
 
-.toolbar input, .toolbar select, .toolbar button {
-    padding: 8px;
-    border: 1px solid #bfc7dc;
-    border-radius: 8px;
+/* ── Table section (top) ─────────────────────────────────────────────────── */
+.table-section {
+  display: flex;
+  flex-direction: column;
+  height: 35vh;
+  min-height: 120px;
+  background: #fff;
+  border: 1px solid #d7dceb;
+  border-radius: 8px;
+  overflow: hidden;
 }
-
-.toolbar button {
-    background: #1843bf;
-    color: #fff;
-    cursor: pointer;
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-bottom: 1px solid #e8ebf4;
+  flex-shrink: 0;
 }
+.table-info { flex: 1; font-size: 11px; color: #888; }
+.table-scroll { flex: 1; overflow: auto; min-height: 0; }
 
-.status {
-    margin-top: 8px;
-    font-size: 13px;
-}
-
-.layout {
-    margin-top: 12px;
-    display: grid;
-    grid-template-columns: minmax(320px, 380px) 8px 1fr 8px 1fr;
-    gap: 0;
-    flex: 1;
-    align-items: stretch;
-    min-height: 0;
-}
-
+/* ── Splitters ────────────────────────────────────────────────────────────── */
 .splitter {
-    width: 8px;
-    cursor: col-resize;
-    background: rgba(0,0,0,0.08);
+  flex-shrink: 0;
+  background: transparent;
+  position: relative;
+  user-select: none;
+  z-index: 2;
+}
+.splitter:hover, .splitter:active { background: rgba(24, 67, 191, 0.06); }
+
+.splitter-h { height: 7px; cursor: row-resize; margin: 1px 0; }
+.splitter-h::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px; height: 3px;
+  background: #bfc7dc;
+  border-radius: 2px;
 }
 
-.table-wrap {
-    flex: 1;
-    overflow: auto;
-    min-height: 0;
+.splitter-v { width: 7px; cursor: col-resize; margin: 0 1px; }
+.splitter-v::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px; height: 48px;
+  background: #bfc7dc;
+  border-radius: 2px;
 }
 
-.card-title {
-    cursor: pointer;
-    font-weight: 600;
-    padding: 2px 0 6px 0;
-    user-select: none;
+/* ── Bottom section ───────────────────────────────────────────────────────── */
+.bottom-section {
+  flex: 1;
+  display: flex;
+  min-height: 200px;
+  overflow: hidden;
 }
 
-.card-body {
-    overflow: hidden;
+/* ── Panels ───────────────────────────────────────────────────────────────── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #d7dceb;
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid #e8ebf4;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.panel-note {
+  font-size: 11px;
+  padding: 2px 10px;
+  flex-shrink: 0;
+  color: #555;
 }
 
-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 12px;
-}
+#molstar-panel { flex: 1; min-width: 200px; }
+#plot-panel    { flex: 1; min-width: 200px; }
+#plot-panel.plot-hidden { display: none; }
 
-th, td {
-    border-bottom: 1px solid #e8ebf4;
-    padding: 6px;
-    text-align: left;
-}
-
-th.sortable {
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-}
-
-th.sortable:hover {
-    background: #eef3ff;
-}
-
-th.sort-active {
-    color: #1843bf;
-}
-
-th.group-header {
-    background: #eef3ff;
-    color: #2d3a57;
-    font-style: italic;
-    white-space: nowrap;
-    text-align: center;
-    border-left: 2px solid #b8c7f0;
-    border-right: 2px solid #b8c7f0;
-}
-
-td.group-cell {
-    background: #f5f7ff;
-    border-left: 2px solid #b8c7f0;
-    border-right: 2px solid #b8c7f0;
-}
-
-button.group-toggle {
-    background: none;
-    border: 1px solid #b8c7f0;
-    border-radius: 3px;
-    color: #1843bf;
-    cursor: pointer;
-    font-size: 11px;
-    line-height: 1;
-    padding: 1px 4px;
-    margin-left: 4px;
-    vertical-align: middle;
-}
-
-button.group-toggle:hover {
-    background: #dce7ff;
-}
-
-tr:hover {
-    background: #eef3ff;
-    cursor: pointer;
-}
-
-tr.active {
-    background: #dce7ff;
-}
-
-tr.superpose-row {
-    background: #fff3cd;
-    border-left: 3px solid #ffa15a;
-}
-
-tr.active.superpose-row {
-    background: #ffe8a3;
-    border-left: 3px solid #ffa15a;
-}
-
-tr.hover-row {
-    outline: 2px solid #636efa;
-    outline-offset: -2px;
+#molstar-viewer {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 #plddt-plot {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+#cluster-main-plot {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
-#molstar-viewer {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
-    position: relative;
+/* ── Small button variant ─────────────────────────────────────────────────── */
+.btn-xs {
+  font-size: 11px;
+  padding: 1px 8px;
+  line-height: 1.6;
 }
 
-.mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+/* ── Status text ──────────────────────────────────────────────────────────── */
+.status { font-size: 12px; color: #2d3a57; }
+
+/* ── Data table ───────────────────────────────────────────────────────────── */
+#dataset-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+}
+#dataset-table th,
+#dataset-table td {
+  border-bottom: 1px solid #e8ebf4;
+  padding: 4px 6px;
+  text-align: left;
+}
+#dataset-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
 }
 
-#selected-residues, #molstar-note {
-    display: none;;
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+th.sortable:hover { background: #eef3ff; }
+th.sort-active    { color: #1843bf; }
+
+th.group-header {
+  background: #eef3ff;
+  color: #2d3a57;
+  font-style: italic;
+  white-space: nowrap;
+  text-align: center;
+  border-left: 2px solid #b8c7f0;
+  border-right: 2px solid #b8c7f0;
+}
+td.group-cell {
+  background: #f5f7ff;
+  border-left: 2px solid #b8c7f0;
+  border-right: 2px solid #b8c7f0;
 }
 
-/* ── Row detail info button ─────────────────────────────────────────────── */
+button.group-toggle {
+  background: none;
+  border: 1px solid #b8c7f0;
+  border-radius: 3px;
+  color: #1843bf;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 1px 3px;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+button.group-toggle:hover { background: #dce7ff; }
+
+#dataset-table tbody tr:hover { background: #eef3ff; cursor: pointer; }
+tr.active            { background: #dce7ff; }
+tr.superpose-row     { background: #fff3cd; border-left: 3px solid #ffa15a; }
+tr.active.superpose-row { background: #ffe8a3; border-left: 3px solid #ffa15a; }
+tr.hover-row         { outline: 2px solid #636efa; outline-offset: -2px; }
+
+/* ── Filter row ───────────────────────────────────────────────────────────── */
+tr.filter-row th {
+  padding: 2px 3px;
+  background: #f8f9fc;
+  border-bottom: 2px solid #d7dceb;
+}
+.filter-input {
+  width: 100%;
+  border: 1px solid #d7dceb;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 10px;
+  box-sizing: border-box;
+  background: #fff;
+}
+.filter-input:focus {
+  outline: none;
+  border-color: #1843bf;
+  box-shadow: 0 0 0 1px rgba(24, 67, 191, 0.15);
+}
+.filter-input::placeholder { color: #bbb; }
+
+/* ── Row info button ──────────────────────────────────────────────────────── */
 .row-info-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 15px; height: 15px;
   border-radius: 50%;
   background: #1843bf;
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   font-style: italic;
   font-family: Georgia, serif;
@@ -211,21 +274,18 @@ tr.hover-row {
   cursor: pointer;
   flex-shrink: 0;
   line-height: 1;
-  opacity: 0.55;
+  opacity: 0.5;
   transition: opacity 0.15s;
-  vertical-align: middle;
 }
-.row-info-btn:hover {
-  opacity: 1;
-}
+.row-info-btn:hover { opacity: 1; }
 td.row-info-cell {
-  width: 22px;
-  padding: 4px 2px 4px 6px;
+  width: 20px;
+  padding: 3px 2px 3px 5px;
   text-align: center;
   white-space: nowrap;
 }
 
-/* ── Row detail modal table ─────────────────────────────────────────────── */
+/* ── Row detail modal table ───────────────────────────────────────────────── */
 #row-detail-table th,
 #row-detail-table td {
   padding: 5px 10px;
@@ -243,6 +303,28 @@ td.row-info-cell {
   word-break: break-all;
 }
 #row-detail-table tr:last-child th,
-#row-detail-table tr:last-child td {
-  border-bottom: none;
+#row-detail-table tr:last-child td { border-bottom: none; }
+
+/* ── Utility ──────────────────────────────────────────────────────────────── */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+#selected-residues, #molstar-note { display: none; }
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-height: 699px) {
+  .table-section { height: 25vh; min-height: 100px; }
+  .app-toolbar { padding: 2px 10px; min-height: 32px; }
+}
+
+@media (max-width: 1023px) {
+  .bottom-section { flex-direction: column; }
+  .splitter-v {
+    width: auto;
+    height: 7px;
+    cursor: row-resize;
+    margin: 1px 0;
+  }
+  .splitter-v::after {
+    width: 48px; height: 3px;
+  }
+  #molstar-panel, #plot-panel { min-width: 0; min-height: 150px; }
 }
