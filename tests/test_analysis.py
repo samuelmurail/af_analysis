@@ -321,7 +321,7 @@ def test_af3_webserver():
         [0.92359, 0.0, 0.0, 0.0, 0.92949, 0.0],
         [0.89712, 0.0, 0.0, 0.0, 0.0, 0.92788],
     ]
-    print(my_data.df.columns)
+    # print(my_data.df.columns)
     np.testing.assert_allclose(
         np.array(my_data.df["cLIS"][0]), np.array(expected_cLIS_0), atol=precision
     )
@@ -349,6 +349,7 @@ def test_af3_webserver():
     )
 
     analysis.iplddt(my_data)
+    # print([round(i, 4) for i in my_data.df["iplddt_A_B"]])
     expected_iplddt = [98.5322, 98.5467, 98.3444, 98.0133, 97.9341]
     precision = 0.01
     assert np.all(
@@ -359,6 +360,7 @@ def test_af3_webserver():
         ]
     )
     expected_iplddt = [96.235, 96.435, 95.995, 96.0, 96.095]
+    print([round(i, 4) for i in my_data.df["iplddt_B_E"]])
     precision = 0.01
     assert np.all(
         [

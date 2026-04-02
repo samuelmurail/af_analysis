@@ -40,13 +40,10 @@ DNA_RESNAMES = ["DA", "DC", "DG", "DT", "A", "T", "G", "C", "U"]
 
 PROTEIN_SEL = "resname " + " ".join(AA_RESNAMES + NON_CANONICAL_RESNAMES)
 NA_SEL = "resname " + " ".join(DNA_RESNAMES)
-
 TOKEN_SEL = f"({PROTEIN_SEL} and name CA) or ({NA_SEL} and name P) or ions or (not {PROTEIN_SEL} and not {NA_SEL} and noh)"
-
 TOKEN_SEL_CB = f"name CB C3' or (resname GLY and name CA) or (not {PROTEIN_SEL} and not {NA_SEL} and noh)"
-
-PDOCKQ_SEL = f"({PROTEIN_SEL} and name CB) or (resname GLY and name CA) or ({NA_SEL} and name P)"
-
+TOKEN_SEL_PDOCKQ = f"({PROTEIN_SEL} and name CB) or (resname GLY and name CA) or ({NA_SEL} and name P)"
+TOKEN_SEL_IPLDDT = f"({PROTEIN_SEL} and name CB) or (resname GLY and name CA) or ({NA_SEL} and name P)  or ions or (not {PROTEIN_SEL} and not {NA_SEL} and noh)"
 
 # Autorship information
 __author__ = "Alaa Reguei"
@@ -249,7 +246,7 @@ def compute_pdockQ(
     k=0.052,
     b=0.018,
 ):
-    coor_cb = coor.select_atoms(PDOCKQ_SEL)
+    coor_cb = coor.select_atoms(TOKEN_SEL_PDOCKQ)
     chain_lengths = _infer_chain_lengths(coor_cb)
 
     if lig_chains is None:
@@ -1736,13 +1733,15 @@ def compute_iptm_d0_interface_values(
     return iptm_d0_dict
 
 
-def iplddt(data, cutoff=10.0):
+def iplddt(data, sel=TOKEN_SEL_IPLDDT, cutoff=10.0):
     r"""Compute the iplddt from the pdb file.
 
     Parameters
     ----------
     data : AFData
         object containing the data
+    sel : str
+        selection string for the atoms to consider in the distance calculation, default is TOKEN_SEL_IPLDDT
     cutoff : float
         distance cutoff to define interface residues, default is 10.0 A
 
@@ -1776,14 +1775,15 @@ def iplddt(data, cutoff=10.0):
             continue
 
         model = pdb_cpp.Coor(pdb)
-        if getattr(data, "format", None) in {"AF3_webserver", "AF3_local", "boltz1"}:
-            coor_CA_CB = model.select_atoms(
-                "protein or (dna and name P) or (not protein and not dna and noh)"
-            )
-        else:
-            coor_CA_CB = model.select_atoms(
-                "(protein and (name CB or (resname GLY and name CA))) or (dna and name P) or (not protein and not dna and noh)"
-            )
+        # if getattr(data, "format", None) in {"AF3_webserver", "AF3_local", "boltz1"}:
+        #     coor_CA_CB = model.select_atoms(
+        #         "protein or (dna and name P) or (not protein and not dna and noh)"
+        #     )
+        # else:
+        #     coor_CA_CB = model.select_atoms(
+        #         "(protein and (name CB or (resname GLY and name CA))) or (dna and name P) or (not protein and not dna and noh)"
+        #     )
+        coor_CA_CB = model.select_atoms(sel)
         model_chains = data.chains.get(
             query, np.unique(np.asarray(coor_CA_CB.chain_str))
         )
