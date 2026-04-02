@@ -53,6 +53,35 @@ body {
   gap: 0;
 }
 
+/* Table-left layout: table panel becomes a left sidebar */
+.workspace--table-left {
+  flex-direction: row;
+}
+.workspace--table-left .table-section {
+  height: auto;
+  width: 35vw;
+  min-width: 200px;
+  max-width: 60vw;
+  flex-shrink: 0;
+  border-radius: 10px;
+}
+.workspace--table-left .splitter-h {
+  height: auto;
+  width: 8px;
+  cursor: col-resize;
+  margin: 0 2px;
+}
+.workspace--table-left .splitter-h::after {
+  width: 3px;
+  height: 36px;
+}
+.workspace--table-left .bottom-section {
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+
 /* ── Table section ────────────────────────────────────────────────────────── */
 .table-section {
   display: flex;

@@ -1018,8 +1018,48 @@ function initBrowser() {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
+function initTableLayoutToggle() {
+  const btn = document.getElementById('table-layout-btn');
+  const workspace = document.getElementById('layout');
+  const splitterH = document.getElementById('splitter-h');
+  const tableSection = document.getElementById('table-section');
+  if (!btn || !workspace) return;
+
+  let isLeft = false;
+
+  btn.addEventListener('click', () => {
+    isLeft = !isLeft;
+    workspace.classList.toggle('workspace--table-left', isLeft);
+
+    if (isLeft) {
+      btn.title = 'Move table to the top';
+      btn.querySelector('i').className = 'bi bi-layout-sidebar-reverse';
+      // Reset any inline height set by the horizontal splitter and apply width.
+      tableSection.style.height = '';
+      tableSection.style.width = tableSection.style.width || '35vw';
+      // Switch splitter cursor hint visually (CSS handles it, but also update aria).
+      if (splitterH) splitterH.setAttribute('data-orient', 'vertical');
+    } else {
+      btn.title = 'Move table to the left';
+      btn.querySelector('i').className = 'bi bi-layout-sidebar';
+      tableSection.style.width = '';
+      tableSection.style.height = tableSection.style.height || '35vh';
+      if (splitterH) splitterH.removeAttribute('data-orient');
+    }
+
+    // Let Plotly repaint for the new dimensions.
+    setTimeout(() => {
+      const pEl = document.getElementById('plddt-plot');
+      const cEl = document.getElementById('cluster-main-plot');
+      if (pEl?._fullLayout) Plotly.Plots.resize(pEl);
+      if (cEl?._fullLayout) Plotly.Plots.resize(cEl);
+    }, 50);
+  });
+}
+
 async function main() {
   initResizableLayout();
+  initTableLayoutToggle();
   initEvents();
   initBrowser();
   renderSelectedResidues();

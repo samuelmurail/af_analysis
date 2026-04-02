@@ -11,24 +11,39 @@ function _resizeAll() {
 function _initHorizontalSplitter() {
   const splitter = document.getElementById('splitter-h');
   const tableSection = document.getElementById('table-section');
+  const workspace = document.getElementById('layout');
   if (!splitter || !tableSection) return;
 
-  let startY, startH;
+  let startPos, startSize;
 
   splitter.addEventListener('mousedown', (e) => {
     e.preventDefault();
-    startY = e.clientY;
-    startH = tableSection.getBoundingClientRect().height;
-    document.body.style.cursor = 'row-resize';
+    const isLeft = workspace && workspace.classList.contains('workspace--table-left');
+    if (isLeft) {
+      startPos = e.clientX;
+      startSize = tableSection.getBoundingClientRect().width;
+      document.body.style.cursor = 'col-resize';
+    } else {
+      startPos = e.clientY;
+      startSize = tableSection.getBoundingClientRect().height;
+      document.body.style.cursor = 'row-resize';
+    }
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
 
   function onMove(e) {
-    const delta = e.clientY - startY;
-    const newH = Math.max(120, Math.min(window.innerHeight - 280, startH + delta));
-    tableSection.style.height = newH + 'px';
+    const isLeft = workspace && workspace.classList.contains('workspace--table-left');
+    if (isLeft) {
+      const delta = e.clientX - startPos;
+      const newW = Math.max(200, Math.min(window.innerWidth - 400, startSize + delta));
+      tableSection.style.width = newW + 'px';
+    } else {
+      const delta = e.clientY - startPos;
+      const newH = Math.max(120, Math.min(window.innerHeight - 280, startSize + delta));
+      tableSection.style.height = newH + 'px';
+    }
     _resizeAll();
   }
 
