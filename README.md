@@ -175,6 +175,21 @@ my_data.plot_pae(best_model_index)
 my_data.show_3d(my_data.df['ranking_confidence'].idxmax())
 ```
 
+## GUI
+
+`af-analysis` includes an optional web-based graphical user interface (GUI) built with Flask. It allows you to load result folders, browse model tables, select models, and plot pLDDT and PAE interactively — without writing any code.
+
+<img src="https://raw.githubusercontent.com/samuelmurail/af_analysis/master/docs/source/af_analysis_GUI.png" alt="AF Analysis GUI" width="100%" style="display: block; margin: auto;"/>
+
+Install and launch the GUI with:
+
+```bash
+pip install "af-analysis[gui]"
+af_analysis_gui
+```
+
+Then open `http://127.0.0.1:5000` in your browser.
+
 ## Dependencies
 
 `af_analysis` requires the following dependencies:
