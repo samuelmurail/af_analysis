@@ -23,6 +23,7 @@ Welcome to AlphaFold Analysis's documentation!
    installation
    contributing
    analysis
+   af_analysis_gui
    notebooks/basic_example.ipynb
    modules
 
