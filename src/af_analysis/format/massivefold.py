@@ -71,7 +71,8 @@ def read_dir(directory):
 
     pkl_not_found = []
     for file in os.listdir(pred_dir):
-        if file.endswith(".pdb") or file.endswith(".cif"):
+        # We only consider .cif/.pdb files that do not start with a dot (hidden files)
+        if (file.endswith(".pdb") or file.endswith(".cif")) and not file.startswith("."):
             is_pkl = True
             logger.info(f"Processing file: {file}")
 
