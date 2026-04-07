@@ -179,6 +179,11 @@ my_data.show_3d(my_data.df['ranking_confidence'].idxmax())
 
 `af-analysis` includes an optional web-based graphical user interface (GUI) built with Flask. It allows you to load result folders, browse model tables, select models, and plot pLDDT and PAE interactively — without writing any code.
 
+Model structures can also be visualized in 3D using `Mol*` directly in the browser. The GUI is designed to be user-friendly and accessible to researchers who may not be comfortable with command-line tools.
+
+pdockq2, LIS score, and ipSAE can also be calculated directly from the GUI, allowing users to quickly assess the quality of their models and make informed decisions about which ones to focus on for further analysis.
+
+
 <img src="https://raw.githubusercontent.com/samuelmurail/af_analysis/master/docs/source/af_analysis_GUI.png" alt="AF Analysis GUI" width="100%" style="display: block; margin: auto;"/>
 
 Install and launch the GUI with:
@@ -203,6 +208,11 @@ Then open `http://127.0.0.1:5000` in your browser.
 * `nglview`
 * `ipywidgets`
 * `mdanalysis`
+
+as well as the optional dependencies for the GUI:
+
+* `Flask`
+* `plotly`
 
 ## Contributing
 
