@@ -34,7 +34,8 @@ def read_dir(directory):
     pred_dir = os.path.join(directory)
 
     for file in os.listdir(pred_dir):
-        if file.endswith(".cif"):
+        # We only consider .cif files that do not start with a dot (hidden files)
+        if file.endswith(".cif") and not file.startswith("."):
             token = file[4:-4].split("_")[-1]
             model = int(token)
 

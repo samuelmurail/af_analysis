@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">af_analysis_gui workflow placeholder</title>
+  <desc id="desc">Placeholder figure for an af_analysis_gui workflow screenshot.</desc>
+  <rect width="1440" height="900" fill="#f7f1e8" />
+  <rect x="90" y="90" width="1260" height="720" rx="28" fill="#fffdf9" stroke="#d7c2a4" stroke-width="6" />
+  <rect x="140" y="160" width="360" height="520" rx="20" fill="#fff4dd" stroke="#e7cfac" stroke-width="4" />
+  <rect x="540" y="160" width="320" height="220" rx="20" fill="#fff4dd" stroke="#e7cfac" stroke-width="4" />
+  <rect x="900" y="160" width="320" height="220" rx="20" fill="#fff4dd" stroke="#e7cfac" stroke-width="4" />
+  <rect x="540" y="460" width="680" height="220" rx="20" fill="#fff4dd" stroke="#e7cfac" stroke-width="4" />
+  <text x="720" y="125" text-anchor="middle" fill="#6c4b24" font-size="42" font-family="Arial, Helvetica, sans-serif" font-weight="700">Replace with a workflow screenshot</text>
+  <text x="180" y="220" fill="#6c4b24" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Load dialog</text>
+  <text x="580" y="220" fill="#6c4b24" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Compute dialog</text>
+  <text x="940" y="220" fill="#6c4b24" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Cluster dialog</text>
+  <text x="580" y="520" fill="#6c4b24" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Suggested capture: score computation or clustering result</text>
+  <text x="720" y="745" text-anchor="middle" fill="#8a6a43" font-size="28" font-family="Arial, Helvetica, sans-serif">You can replace this file directly with a PNG or keep the same path and overwrite it with a new SVG.</text>
+</svg>

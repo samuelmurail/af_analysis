@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">af_analysis_gui overview placeholder</title>
+  <desc id="desc">Placeholder figure for an af_analysis_gui overview screenshot.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f4f7fb" />
+      <stop offset="100%" stop-color="#e7eef8" />
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)" />
+  <rect x="70" y="70" width="1300" height="760" rx="24" fill="#ffffff" stroke="#c9d6e8" stroke-width="6" />
+  <rect x="110" y="110" width="1220" height="76" rx="14" fill="#16324f" />
+  <rect x="110" y="220" width="1220" height="210" rx="14" fill="#f8fafc" stroke="#d7e1ef" stroke-width="4" />
+  <rect x="110" y="470" width="580" height="300" rx="14" fill="#f8fafc" stroke="#d7e1ef" stroke-width="4" />
+  <rect x="750" y="470" width="580" height="300" rx="14" fill="#f8fafc" stroke="#d7e1ef" stroke-width="4" />
+  <text x="140" y="157" fill="#ffffff" font-size="34" font-family="Arial, Helvetica, sans-serif" font-weight="700">af_analysis_gui</text>
+  <text x="140" y="265" fill="#17324d" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Dataset table placeholder</text>
+  <text x="140" y="520" fill="#17324d" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Mol* panel placeholder</text>
+  <text x="780" y="520" fill="#17324d" font-size="30" font-family="Arial, Helvetica, sans-serif" font-weight="700">Plot panel placeholder</text>
+  <text x="720" y="400" text-anchor="middle" fill="#4d6480" font-size="42" font-family="Arial, Helvetica, sans-serif" font-weight="700">Replace with an overview screenshot of the full GUI</text>
+  <text x="720" y="450" text-anchor="middle" fill="#6b7f99" font-size="28" font-family="Arial, Helvetica, sans-serif">Suggested capture: toolbar, dataset table, Mol* viewer, and active plot</text>
+</svg>

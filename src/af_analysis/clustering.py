@@ -18,7 +18,7 @@ __author__ = "Alaa Reguei, Samuel Murail"
 __copyright__ = "Copyright 2023, RPBS"
 __credits__ = ["Samuel Murail", "Alaa Reguei"]
 __license__ = "GNU General Public License version 2"
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 __maintainer__ = "Samuel Murail"
 __email__ = "samuel.murail@u-paris.fr"
 __status__ = "Beta"
@@ -75,8 +75,8 @@ def read_numerous_pdb(pdb_files, batch_size=1000):
             assert (
                 model.len == local_model.len
             ), "Different number of atoms between the pdb files"
-            model.models.append(local_model.models[0])
-        model.write("tmp.pdb", overwrite=True)
+            model.add_Model(local_model.models[0])
+        model.write("tmp.pdb")
         return mda.Universe("tmp.pdb", "tmp.pdb")
 
     for i in range(0, len(pdb_files), batch_size):
@@ -166,7 +166,7 @@ def compute_distance_matrix(
         select=distance_selection,
     ).run(verbose=True)
 
-    return matrix.results.dist_matrix
+    return matrix.results.dist_matrix, u
 
 
 def hierarchical(
@@ -177,6 +177,8 @@ def hierarchical(
     show_dendrogram=True,
     MDS_coors=True,
     rmsd_scale=False,
+    return_universe=False,
+    return_distance_matrix=False,
 ):
     """Clustering of AlphaFold models.
 
@@ -192,7 +194,7 @@ def hierarchical(
     distance matrix. The threshold value is used to cut the dendrogram and define the clusters.
 
     Optionally, this function can also plot the dendrogram of each PDB and the clusters distribution
-    plot using the `clusters_distribution`.
+    plot using the `clusters_distribution`.clust.hierarchical
 
     Multidimensional scaling coordinates can be computed from the distance matrix if `MDS_coors` is set
     to `True`.
@@ -223,6 +225,8 @@ def hierarchical(
     cluster_list = []
     MDS_1 = []
     MDS_2 = []
+    universes = {} if return_universe else None
+    distance_matrices = {} if return_distance_matrix else None
 
     query_list = df["query"].unique().tolist()
 
@@ -246,15 +250,26 @@ def hierarchical(
         ), f"Missing pdb data in the middle of the query {pdb}"
 
         logger.info("Read all structures")
-        dist_matrix = compute_distance_matrix(
+        dist_matrix, u = compute_distance_matrix(
             files,
             align_selection=align_selection[pdb],
             distance_selection=distance_selection[pdb],
         )
 
-        logger.info(f"Max RMSD is {np.max(dist_matrix):.2f} A")
         if rmsd_scale:
             dist_matrix = 1 - scale(dist_matrix)
+            # Ensure a valid distance matrix for clustering:
+            np.fill_diagonal(dist_matrix, 0.0)
+            dist_matrix = np.clip(dist_matrix, 0.0, None)
+            dist_matrix = 0.5 * (dist_matrix + dist_matrix.T)
+        
+        if return_universe:
+            universes[pdb] = (u, list(files))
+        if return_distance_matrix:
+            distance_matrices[pdb] = dist_matrix.copy()
+
+        logger.info(f"Max RMSD is {np.max(dist_matrix):.2f} A")
+
 
         logger.info("Compute Linkage clustering")
         h, _ = dist_matrix.shape
@@ -296,7 +311,13 @@ def hierarchical(
         df["MDS 1"] = MDS_1 + null_number * [None]
         df["MDS 2"] = MDS_2 + null_number * [None]
 
-    return
+    if return_universe and return_distance_matrix:
+        return universes, distance_matrices
+    if return_universe:
+        return universes
+    if return_distance_matrix:
+        return distance_matrices
+    return None
 
 
 def reorder_by_size(clust_list):

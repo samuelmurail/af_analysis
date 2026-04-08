@@ -31,7 +31,8 @@ def read_dir(directory):
     log_dict_list = []
 
     for file in os.listdir(directory):
-        if file.endswith(".pdb"):
+        # We only consider .cif files that do not start with a dot (hidden files)
+        if file.endswith(".pdb") and not file.startswith("."):
             token = file.split("_")
             if token[0] == "ranked":
                 continue

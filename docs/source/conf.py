@@ -9,7 +9,7 @@
 project = 'AlphaFold Analysis'
 copyright = '2023, Samuel Murail'
 author = 'Samuel Murail'
-release = '0.1.5'
+release = '0.2.0'
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -22,6 +22,20 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 
 # This command doesn't get any sense for me (previous one should be enough)
 sys.path.insert(0, os.path.abspath('../../src/af_analysis/'))
+
+try:
+    import pypandoc
+except ImportError:
+    pypandoc = None
+else:
+    try:
+        pandoc_path = pypandoc.get_pandoc_path()
+    except OSError:
+        pandoc_path = None
+    if pandoc_path:
+        pandoc_dir = os.path.dirname(pandoc_path)
+        os.environ['PYPANDOC_PANDOC'] = pandoc_path
+        os.environ['PATH'] = pandoc_dir + os.pathsep + os.environ.get('PATH', '')
 
 print(sys.path)
 

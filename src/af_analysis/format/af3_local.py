@@ -44,9 +44,11 @@ def read_dir(directory):
     ]
 
     for dir_path in dir_path_list:
-
         # Get the file ending by "_model.cif"
-        cif_files = glob.glob(os.path.join(dir_path, "*model.cif"))
+        cif_files = [
+            f for f in glob.glob(os.path.join(dir_path, "*model.cif"))
+            if not os.path.basename(f).startswith(".")
+        ]
         # print("looking at :", os.path.join(dir_path, "*model.cif"))
         if not cif_files:
             logger.warning(f"No _model.cif file found in {dir_path}")

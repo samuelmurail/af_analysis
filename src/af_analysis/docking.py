@@ -10,7 +10,7 @@ __author__ = "Alaa Reguei, Samuel Murail"
 __copyright__ = "Copyright 2023, RPBS"
 __credits__ = ["Samuel Murail", "Alaa Reguei"]
 __license__ = "GNU General Public License version 2"
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 __maintainer__ = "Samuel Murail"
 __email__ = "samuel.murail@u-paris.fr"
 __status__ = "Beta"
@@ -23,7 +23,7 @@ The module contains functions to extract and compute docking scores.
 """
 
 
-def pae_pep(my_data, fun=np.mean, verbose=True):
+def pae_pep(my_data, fun=np.mean):
     """Extract the PAE score for the receptor(s)-peptide interface.
 
     Parameters
@@ -42,7 +42,7 @@ def pae_pep(my_data, fun=np.mean, verbose=True):
     pep_rec_pae_list = []
     rec_pep_pae_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, data_file) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["data_file"])),
@@ -76,7 +76,7 @@ def pae_pep(my_data, fun=np.mean, verbose=True):
     my_data.df.loc[:, "PAE_rec_pep"] = rec_pep_pae_list
 
 
-def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True, max_pae=30.98):
+def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, max_pae=30.98):
     """Extract the PAE score for the receptor(s)-peptide interface.
 
     Parameters
@@ -95,7 +95,7 @@ def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True, max_pae=30.9
     pep_rec_pae_list = []
     rec_pep_pae_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, data_file, pdb) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["data_file"], my_data.df["pdb"])),
@@ -142,7 +142,7 @@ def pae_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True, max_pae=30.9
     my_data.df.loc[:, "PAE_contact_rec_pep"] = rec_pep_pae_list
 
 
-def plddt_pep(my_data, fun=np.mean, verbose=True):
+def plddt_pep(my_data, fun=np.mean):
     """Extract the pLDDT score for the peptide-peptide interface.
 
     Parameters
@@ -159,7 +159,7 @@ def plddt_pep(my_data, fun=np.mean, verbose=True):
     """
     pep_plddt_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, pdb) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["pdb"])),
@@ -178,7 +178,7 @@ def plddt_pep(my_data, fun=np.mean, verbose=True):
     my_data.df.loc[:, "plddt_pep"] = pep_plddt_list
 
 
-def plddt_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True):
+def plddt_contact_pep(my_data, fun=np.mean, cutoff=8.0):
     """Extract the pLDDT score for the peptide-peptide interface.
 
     Parameters
@@ -196,7 +196,7 @@ def plddt_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True):
     lig_plddt_list = []
     rec_plddt_list = []
 
-    disable = False if verbose else True
+    disable = not getattr(my_data, "verbose", True)
 
     for i, (query, pdb) in tqdm(
         enumerate(zip(my_data.df["query"], my_data.df["pdb"])),
@@ -237,7 +237,7 @@ def plddt_contact_pep(my_data, fun=np.mean, cutoff=8.0, verbose=True):
     my_data.df.loc[:, "plddt_contact_rec"] = rec_plddt_list
 
 
-def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
+def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max):
     """Compute the LIS score for the peptide-peptide interface.
 
     Parameters
@@ -248,8 +248,6 @@ def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
         cutoff for native contacts, default is 12.0 A
     fun : function
         function to apply to the LIS matrix
-    verbose : bool
-        whether to print progress information
 
     Returns
     -------
@@ -258,7 +256,7 @@ def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
 
     """
 
-    analysis.LIS_matrix(my_data, pae_cutoff=pae_cutoff, verbose=verbose)
+    analysis.LIS_matrix(my_data, pae_cutoff=pae_cutoff)
 
     pep_LIS_list = []
     pep_LIS2_list = []
@@ -282,7 +280,7 @@ def LIS_pep(my_data, pae_cutoff=12.0, fun=np.max, verbose=True):
     my_data.df.loc[:, "LIS_pep_rec"] = pep_LIS_list
 
 
-def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True):
+def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max):
     """Compute the cLIS score for the peptide-peptide interface.
 
     Parameters
@@ -295,8 +293,6 @@ def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
         cutoff for distance contacts, default is 8.0 A
     fun : function
         function to apply to the LIS matrix
-    verbose : bool
-        whether to print progress information
 
     Returns
     -------
@@ -305,14 +301,12 @@ def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
 
     """
 
-    analysis.LIA_matrix(
-        my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff, verbose=verbose
-    )
+    analysis.cLIS_matrix(my_data, pae_cutoff=pae_cutoff, dist_cutoff=dict_cutoff)
 
     pep_LIA_list = []
     pep_LIA2_list = []
 
-    for query, LIA in zip(my_data.df["query"], my_data.df["LIA"]):
+    for query, LIA in zip(my_data.df["query"], my_data.df["cLIS"]):
         if LIA is None:
             pep_LIA_list.append(None)
             pep_LIA2_list.append(None)
@@ -331,7 +325,7 @@ def cLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
     my_data.df.loc[:, "cLIS_lig_rec"] = pep_LIA_list
 
 
-def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True):
+def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max):
     """Compute the cLIS score for the peptide-peptide interface.
 
     Parameters
@@ -344,8 +338,6 @@ def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
         cutoff for distance contacts, default is 8.0 A
     fun : function
         function to apply to the LIS matrix
-    verbose : bool
-        whether to print progress information
 
     Returns
     -------
@@ -354,13 +346,12 @@ def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
 
     """
 
-    LIS_pep(my_data, pae_cutoff=pae_cutoff, fun=fun, verbose=verbose)
+    LIS_pep(my_data, pae_cutoff=pae_cutoff, fun=fun)
     cLIS_lig(
         my_data,
         pae_cutoff=pae_cutoff,
         dict_cutoff=dict_cutoff,
         fun=fun,
-        verbose=verbose,
     )
 
     my_data.df.loc[:, "iLIS_rec_lig"] = (
@@ -371,7 +362,7 @@ def iLIS_lig(my_data, pae_cutoff=12.0, dict_cutoff=8.0, fun=np.max, verbose=True
     ) ** 0.5
 
 
-def pdockq2_lig(my_data, verbose=True):
+def pdockq2_lig(my_data):
     """Compute the LIS score for the receptor-ligand interface.
 
     Parameters
@@ -390,7 +381,7 @@ def pdockq2_lig(my_data, verbose=True):
 
     """
 
-    analysis.pdockq2(my_data, verbose=verbose)
+    analysis.pdockq2(my_data)
 
     old_query = ""
     pdockq2_list = []
@@ -407,7 +398,7 @@ def pdockq2_lig(my_data, verbose=True):
     my_data.df.loc[:, "pdockq2_lig"] = pdockq2_list
 
 
-def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
+def ipTM_d0_lig(my_data, weight_avg=False):
     """Compute the ipTM_d0 score for the receptor-ligand interface.
 
     Parameters
@@ -416,8 +407,6 @@ def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
         object containing the data
     weight_avg : bool
         whether to weight the ipTM_d0 by the receptor chain lengths
-    verbose : bool
-        whether to print progress information
 
     Returns
     -------
@@ -426,7 +415,7 @@ def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
 
     """
 
-    analysis.ipTM_d0(my_data, verbose=verbose)
+    analysis.ipTM_d0(my_data)
 
     old_query = ""
     ipTM_list = []
@@ -494,15 +483,13 @@ def ipTM_d0_lig(my_data, weight_avg=False, verbose=True):
     my_data.df.loc[:, "ipTM_d0_lig_rec"] = ipTM_lig_rec_list
 
 
-def ipSAE_lig(my_data, weight_avg=False, verbose=True):
+def ipSAE_lig(my_data, weight_avg=False):
     """Compute the ipSAE score for the receptor-ligand interface.
 
     Parameters
     ----------
     my_data : AF2Data
         object containing the data
-    verbose : bool
-        whether to print progress information
 
     Returns
     -------
@@ -511,7 +498,7 @@ def ipSAE_lig(my_data, weight_avg=False, verbose=True):
 
     """
 
-    analysis.ipSAE(my_data, verbose=verbose)
+    analysis.ipSAE(my_data)
 
     old_query = ""
     ipTM_list = []
@@ -553,7 +540,7 @@ def ipSAE_lig(my_data, weight_avg=False, verbose=True):
     my_data.df.loc[:, "ipSAE_lig"] = ipTM_list
 
 
-def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
+def ipTM_d0_interface_lig(my_data, weight_avg=False):
     """Compute the ipTM_d0 score for the receptor-ligand interface.
 
     Parameters
@@ -562,8 +549,6 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
         object containing the data
     weight_avg : bool
         whether to weight the ipTM_d0 by the receptor chain lengths
-    verbose : bool
-        whether to print progress information
 
     Returns
     -------
@@ -572,7 +557,7 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
 
     """
 
-    analysis.ipTM_d0_interface(my_data, verbose=verbose)
+    analysis.ipTM_d0_interface(my_data)
 
     old_query = ""
     ipTM_list = []
@@ -614,7 +599,8 @@ def ipTM_d0_interface_lig(my_data, weight_avg=False, verbose=True):
 
     my_data.df.loc[:, "ipTM_interface_lig"] = ipTM_list
 
-def ipTM_between_chains(my_data, chain_groups, verbose=True):
+
+def ipTM_between_chains(my_data, chain_groups):
     r"""
     Extract ipTM from pair_chain_iptm's array between user-specified chain groups.
 
@@ -623,12 +609,10 @@ def ipTM_between_chains(my_data, chain_groups, verbose=True):
     chains: list
         list of length 2 for the chain groups in the form of concatenated
         chain ids, between which the ipTM is extracted
-    verbose : bool
-        print progress bar
     """
     id_group1 = list(chain_groups[0])
     id_group2 = list(chain_groups[1])
-    colname = ','.join(id_group1) + "-" + ','.join(id_group2) + "_ipTM"
+    colname = ",".join(id_group1) + "-" + ",".join(id_group2) + "_ipTM"
     try:
         my_data.df["chain_pair_iptm"]
     except KeyError:
@@ -637,12 +621,14 @@ def ipTM_between_chains(my_data, chain_groups, verbose=True):
 
     # get chain index in chain_pair_iptm array from ids
     # /!\ this code assumes that the model's first chain id is A
-    group1 = [ ord(chain_id) - ord('A') for chain_id in id_group1 ]
-    group2 = [ ord(chain_id) - ord('A') for chain_id in id_group2 ]
+    group1 = [ord(chain_id) - ord("A") for chain_id in id_group1]
+    group2 = [ord(chain_id) - ord("A") for chain_id in id_group2]
 
     chain_group_iptm = []
-    disable = False if verbose else True
-    for iptm_array in tqdm(my_data.df["chain_pair_iptm"], total=len(my_data.df["pdb"]), disable=disable):
+    disable = not getattr(my_data, "verbose", True)
+    for iptm_array in tqdm(
+        my_data.df["chain_pair_iptm"], total=len(my_data.df["pdb"]), disable=disable
+    ):
         if isinstance(iptm_array, float) and np.isnan(iptm_array):
             chain_group_iptm.append(np.nan)
             continue

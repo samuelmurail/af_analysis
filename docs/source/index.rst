@@ -16,14 +16,31 @@ Welcome to AlphaFold Analysis's documentation!
 
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Table of Contents:
+   :maxdepth: 4
+   :caption: Getting Started
 
    readme
    installation
-   contributing
+
+.. toctree::
+   :maxdepth: 4
+   :caption: User Guide
+
    analysis
    notebooks/basic_example.ipynb
+   af_analysis_gui
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Development
+
+   contributing
+   Github Repository <https://github.com/samuelmurail/af_analysis>
+
+.. toctree::
+   :maxdepth: 4
+   :caption: API Reference
+
    modules
 
 Indices and tables

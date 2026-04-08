@@ -15,6 +15,8 @@ import pickle
 import logging
 import ipywidgets as widgets
 
+logger = logging.getLogger(__name__)
+
 from .format import (
     colabfold_1_5,
     af3_webserver,
@@ -34,7 +36,7 @@ __author__ = "Alaa Reguei, Samuel Murail"
 __copyright__ = "Copyright 2023, RPBS"
 __credits__ = ["Samuel Murail", "Alaa Reguei"]
 __license__ = "GNU General Public License version 2"
-__version__ = "0.1.5"
+__version__ = "0.2.0"
 __maintainer__ = "Samuel Murail"
 __email__ = "samuel.murail@u-paris.fr"
 __status__ = "Beta"
@@ -75,6 +77,8 @@ class Data:
 
     Parameters
     ----------
+    verbose : bool
+        Print progress bar during analysis.
     dir : str
         Path to the directory containing the `log.txt` file.
     format : str
@@ -123,6 +127,7 @@ class Data:
         self, directory=None, data_dict=None, csv=None, verbose=True, format=None
     ):
         """ """
+        self.verbose = verbose
 
         if directory is not None:
             self.read_directory(directory, verbose=verbose, format=format)
@@ -226,34 +231,36 @@ class Data:
         -------
         None
         """
+        nuc_list = ["DA", "DC", "DT", "DG", "A", "C", "U", "G", "T"]
+        aa_list = [
+            "ALA",
+            "ARG",
+            "ASN",
+            "ASP",
+            "CYS",
+            "GLU",
+            "GLN",
+            "GLY",
+            "HIS",
+            "ILE",
+            "LEU",
+            "LYS",
+            "MET",
+            "PHE",
+            "PRO",
+            "SER",
+            "THR",
+            "TRP",
+            "TYR",
+            "VAL",
+        ]
+        aa_nuc_list = aa_list + nuc_list
 
         def get_type(resnames):
-            nuc_list = ["DA", "DC", "DT", "DG", "A", "C", "U", "G", "T"]
             for resname in resnames:
                 if resname in nuc_list:
                     return "nucleic_acid"
-            aa_list = [
-                "ALA",
-                "ARG",
-                "ASN",
-                "ASP",
-                "CYS",
-                "GLU",
-                "GLN",
-                "GLY",
-                "HIS",
-                "ILE",
-                "LEU",
-                "LYS",
-                "MET",
-                "PHE",
-                "PRO",
-                "SER",
-                "THR",
-                "TRP",
-                "TYR",
-                "VAL",
-            ]
+
             for resname in resnames:
                 if resname in aa_list:
                     return "protein"
@@ -265,19 +272,41 @@ class Data:
 
         for querie in self.df["query"].unique():
             # print(querie, self.df[self.df['query'] == querie])
-            first_model = pdb_cpp.Coor(
-                self.df[self.df["query"] == querie].iloc[0]["pdb"]
-            )
+            query_rows = self.df[self.df["query"] == querie]
+            first_model = None
+            for _, qrow in query_rows.iterrows():
+                pdb_path = qrow["pdb"]
+                if pdb_path and os.path.isfile(pdb_path):
+                    coor = pdb_cpp.Coor(pdb_path)
+                    if coor.models:
+                        first_model = coor
+                        break
+            if first_model is None or not first_model.models:
+                logger.warning(f"No valid PDB found for query {querie}, skipping chain info")
+                self.chains[querie] = []
+                self.chain_length[querie] = []
+                self.chain_type[querie] = []
+                continue
             model = first_model.models[0]
             chain_arr = np.asarray(model.chain_str)
             uniq_resid = _flatten_1d(model.uniq_resid)
             resname = np.asarray(model.resname_str)
 
             self.chains[querie] = _unique_preserve_order(chain_arr.tolist())
-            self.chain_length[querie] = [
-                len(np.unique(uniq_resid[chain_arr == chain]))
-                for chain in self.chains[querie]
-            ]
+            # self.chain_length[querie] = [
+            #     len(np.unique(uniq_resid[chain_arr == chain]))
+            #     for chain in self.chains[querie]
+            # ]
+            self.chain_length[querie] = []
+            for chain in self.chains[querie]:
+                # check that all resname are in aa)=_list or nuc_list
+                resname_chain = resname[chain_arr == chain]
+                if all(res in aa_nuc_list for res in resname_chain):
+                    self.chain_length[querie].append(
+                        len(np.unique(uniq_resid[chain_arr == chain]))
+                    )
+                else:
+                    self.chain_length[querie].append(sum(chain_arr == chain))
 
             self.chain_type[querie] = [
                 get_type(resname[chain_arr == chain]) for chain in self.chains[querie]
@@ -310,9 +339,25 @@ class Data:
         -------
         None
         """
+        import ast
 
         self.df = pd.read_csv(path)
         self.dir = os.path.dirname(self.df["pdb"][0])
+
+        # Restore array/list columns that were serialized as strings by export_csv.
+        _array_cols = ["LIS", "LIA", "ipTM_d0_matrix", "ipSAE_matrix"]
+        for col in _array_cols:
+            if col in self.df.columns:
+                def _parse(v):
+                    if isinstance(v, str):
+                        try:
+                            parsed = ast.literal_eval(v)
+                            if isinstance(parsed, list):
+                                return np.array(parsed)
+                        except (ValueError, SyntaxError):
+                            pass
+                    return v
+                self.df[col] = self.df[col].apply(_parse)
 
         self.set_chain_length()
 
@@ -560,8 +605,30 @@ class Data:
             "massivefold",
         ]:
             model = pdb_cpp.Coor(row["pdb"])
-            name_arr = np.asarray(model.models[0].name_str)
-            beta_arr = _flatten_1d(model.models[0].beta)
+            m = model.models[0]
+            chain_arr = np.asarray(m.chain_str)
+            name_arr = np.asarray(m.name_str)
+            beta_arr = _flatten_1d(m.beta)
+
+            query = row["query"]
+            chains = self.chains.get(query, [])
+            chain_types = self.chain_type.get(query, [])
+
+            # For ligand chains PAE has one row per heavy atom, so pLDDT must match.
+            if chains and chain_types and "ligand" in chain_types:
+                parts = []
+                for chain_id, ctype in zip(chains, chain_types):
+                    c_mask = chain_arr == chain_id
+                    c_names = name_arr[c_mask]
+                    c_beta = beta_arr[c_mask]
+                    if ctype == "ligand":
+                        # All heavy atoms (no hydrogen)
+                        heavy = np.array([not n.startswith("H") for n in c_names])
+                        parts.append(c_beta[heavy])
+                    else:
+                        parts.append(c_beta[np.isin(c_names, plddt_main_atom_list)])
+                return np.concatenate(parts) if parts else np.array([])
+
             plddt_array = beta_arr[np.isin(name_arr, plddt_main_atom_list)]
             return plddt_array
 
@@ -754,9 +821,9 @@ class Data:
                         seq_dict[chain_list[i]] += 1
                     start += num
 
-            alignement_len[querie] = (
-                seq_dict  # [seq_dict[chain] for chain in self.chains[querie]]
-            )
+            alignement_len[
+                querie
+            ] = seq_dict  # [seq_dict[chain] for chain in self.chains[querie]]
         return alignement_len
 
     def show_plot_info(self, cmap=cm.vik):

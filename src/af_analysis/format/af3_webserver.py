@@ -31,11 +31,13 @@ def read_dir(directory):
     log_dict_list = []
 
     for file in os.listdir(directory):
-        if file.endswith(".cif"):
+        # We only consider .cif files that do not start with a dot (hidden files)
+        if file.endswith(".cif") and not file.startswith("."):
             token = file[:-4].split("_")
 
             model = int(token[-1])
             query = "_".join(token[1:-2])
+            # print(token, query, model)
             json_score = os.path.join(
                 directory, f"fold_{query}_summary_confidences_{model}.json"
             )
