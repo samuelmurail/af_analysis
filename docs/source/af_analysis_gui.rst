@@ -1,4 +1,4 @@
-AF\_Analysis GUI
+Graphical User Interface (GUI)
 ==================
 
 ``af_analysis_gui`` provides a local web interface for browsing AlphaFold result sets loaded through ``af_analysis``. The GUI combines a dataset table, a Mol* structure viewer, score plots, and clustering views so the same loaded dataset can be inspected without writing a notebook.
