@@ -895,3 +895,59 @@ def test_ipSAE_af3_webserver_protein_rna_ligand_ion():
             for i in range(len(my_data.df))
         ]
     )
+
+
+def test_chain_plddt():
+    """Test chain_plddt for two datasets:
+    - ColabFold 1.5.5 dimer (chains A, B)
+    - AF3 webserver protein+DNA+Zn complex (chains A–F)
+    """
+    precision = 0.01
+
+    # --- ColabFold 1.5.5: two equal-length chains ---
+    data_path = os.path.join(TEST_FILE_PATH, "beta_amyloid_dimer_cf_1.5.5")
+    my_data = af_analysis.Data(data_path)
+    analysis.chain_plddt(my_data)
+
+    assert "plddt_A" in my_data.df.columns
+    assert "plddt_B" in my_data.df.columns
+
+    expected_plddt_A = [
+        38.8579, 35.3945, 44.4719, 44.3233, 64.2283, 42.9943, 35.3655, 50.2064,
+        34.2752, 51.9205, 38.3855, 36.6088, 43.389, 53.7376, 68.254, 39.945,
+        34.9669, 43.5876, 49.415, 67.2969, 37.9629, 35.22, 43.6388, 54.0088,
+        65.5083, 37.6564, 35.4057, 43.5219, 34.2279, 50.811, 39.0902, 35.2129,
+        43.9102, 52.4645, 66.5879, 37.8429, 35.0824, 44.2781, 47.5729, 67.411,
+    ]
+    expected_plddt_B = [
+        38.6855, 34.9029, 44.5602, 44.121, 64.0917, 42.8952, 36.0336, 50.2036,
+        34.5495, 51.8779, 38.7521, 36.5993, 43.4193, 53.8688, 68.3848, 39.9105,
+        35.4333, 43.4967, 49.2214, 67.2562, 37.9483, 35.9088, 43.8031, 53.7331,
+        65.1902, 37.6521, 34.7769, 43.4538, 34.3129, 50.8145, 38.8152, 35.1848,
+        44.024, 52.7005, 66.8148, 38.0686, 35.42, 44.1112, 47.91, 67.394,
+    ]
+
+    np.testing.assert_allclose(my_data.df["plddt_A"].values, expected_plddt_A, atol=precision)
+    np.testing.assert_allclose(my_data.df["plddt_B"].values, expected_plddt_B, atol=precision)
+
+    # Both chains are the same length, so per-chain pLDDT should be close but not identical
+    assert not np.allclose(my_data.df["plddt_A"].values, my_data.df["plddt_B"].values)
+
+    # --- AF3 webserver: protein + DNA + Zn (chains A–F) ---
+    data_path2 = os.path.join(TEST_FILE_PATH, "fold_2024_07_01_12_14_prot_dna_zn")
+    my_data2 = af_analysis.Data(data_path2)
+    analysis.chain_plddt(my_data2)
+
+    for chain in ["A", "B", "C", "D", "E", "F"]:
+        assert f"plddt_{chain}" in my_data2.df.columns
+
+    expected_af3 = {
+        "plddt_A": [97.8078, 97.9736, 97.568,  97.5618, 97.6571],
+        "plddt_B": [98.9,    98.87,   98.92,   98.9,    98.91  ],
+        "plddt_C": [98.94,   98.94,   98.94,   98.93,   98.94  ],
+        "plddt_D": [98.98,   98.98,   98.99,   98.98,   98.99  ],
+        "plddt_E": [98.2655, 98.2445, 98.1927, 98.2045, 98.2309],
+        "plddt_F": [96.65,   96.5782, 96.5245, 96.5345, 96.4827],
+    }
+    for col, expected in expected_af3.items():
+        np.testing.assert_allclose(my_data2.df[col].values, expected, atol=precision)

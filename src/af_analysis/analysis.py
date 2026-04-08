@@ -1826,3 +1826,53 @@ def iplddt(data, sel=TOKEN_SEL_IPLDDT, cutoff=10.0):
     iplddt_df = pd.DataFrame(iplddt_list)
 
     data.df = data.df.merge(iplddt_df, on="pdb", how="inner")
+
+def chain_plddt(data):
+    r"""Compute for each chain the average plddt from the pdb file.
+
+    Parameters
+    ----------
+    data : AFData
+        object containing the data
+
+    Returns
+    -------
+    None
+        The `data.df` dataframe is modified in place.
+
+
+    References
+    ----------
+
+    """
+
+    chain_plddt_list = []
+
+    disable = not getattr(data, "verbose", True)
+
+    for pos, query in tqdm(
+        enumerate(data.df["query"]),
+        total=len(data.df["query"]),
+        disable=disable,
+        desc="chain_plddt",
+    ):
+        plddt_dict = {}
+        plddt = data.get_plddt(pos)
+
+        chain_lens = data.chain_length[query]
+        chain_len_sums = np.cumsum([0] + chain_lens)
+        chain_ids = data.chains[query]
+
+
+        for i, chain in enumerate(chain_ids):
+            plddt_dict[f"plddt_{chain}"] = np.mean(plddt[chain_len_sums[i] : chain_len_sums[i + 1]])
+        
+        chain_plddt_list.append(plddt_dict)
+
+    chain_plddt_df = pd.DataFrame(chain_plddt_list)
+
+    for column in chain_plddt_df.columns:
+        data.df.loc[:, column] = chain_plddt_df.loc[:, column].to_numpy()
+
+
+
