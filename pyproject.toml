@@ -35,6 +35,14 @@ classifiers = [
     "Topic :: Software Development",
 ]
 
+[tool.setuptools.package-data]
+af_analysis_gui = [
+    "templates/*",
+    "static/css/*",
+    "static/img/*",
+    "static/js/*",
+]
+
 [project.scripts]
 af_analysis = "af_analysis.__main__:main"
 af_analysis_gui = "af_analysis_gui.__main__:main_cli"
