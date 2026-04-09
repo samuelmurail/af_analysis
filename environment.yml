@@ -16,5 +16,5 @@ dependencies:
   - scikit-learn
   - pip
   - pip:
-      - pdb_cpp>=0.0.1
+      - pdb_cpp>=0.0.2
       - af-analysis @ file:.
