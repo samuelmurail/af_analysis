@@ -373,6 +373,7 @@ function initEvents() {
   loadBtn.addEventListener('click', async () => {
     const path = document.getElementById('directory').value.trim();
     const format = document.getElementById('format').value;
+    const resetDataset = document.getElementById('reset-dataset')?.checked ?? true;
     const csvMode = path.toLowerCase().endsWith('.csv');
     const directory = csvMode ? '' : path;
     if (!path) {
@@ -414,11 +415,11 @@ function initEvents() {
       const payload = await api('/api/load', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(csvMode ? { csv: path } : { directory, format }),
+        body: JSON.stringify(csvMode ? { csv: path, reset_dataset: resetDataset } : { directory, format, reset_dataset: resetDataset }),
       });
       await sseDone;
       hideProgress();
-      setStatus(`Dataset loaded (${payload.rows} rows)`);
+      setStatus(resetDataset ? `Dataset loaded (${payload.rows} rows)` : `Dataset merged (${payload.rows} rows)`);
       _hideDialog('load-dialog');
       enableToolbarButtons();
       _resetForNewDataset();

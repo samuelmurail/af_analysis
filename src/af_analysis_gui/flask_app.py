@@ -15,6 +15,7 @@ import scipy.spatial.distance as _ssd
 from flask import Flask, Response, jsonify, render_template, request, send_from_directory
 
 import af_analysis
+from af_analysis.data import concat_data
 
 APP_DIR = Path(__file__).resolve().parent
 
@@ -179,6 +180,7 @@ def api_load_dataset():
     directory = str(payload.get("directory", "")).strip()
     csv_path  = str(payload.get("csv", "")).strip()
     format_name = str(payload.get("format", "auto")).strip() or "auto"
+    reset_dataset = bool(payload.get("reset_dataset", True))
 
     if not directory and not csv_path:
         return jsonify({"error": "Results directory or CSV file path is required"}), 400
@@ -202,11 +204,15 @@ def api_load_dataset():
 
     try:
         if csv_path:
-            data = af_analysis.Data(csv=csv_path, verbose=True)
+            new_data = af_analysis.Data(csv=csv_path, verbose=True)
         else:
             format_arg = None if format_name == "auto" else format_name
-            data = af_analysis.Data(directory=directory, format=format_arg, verbose=True)
+            new_data = af_analysis.Data(directory=directory, format=format_arg, verbose=True)
         with STATE.lock:
+            if reset_dataset or STATE.af_data is None:
+                data = new_data
+            else:
+                data = concat_data([STATE.af_data, new_data])
             STATE.af_data = data
             STATE.last_error = ""
     except Exception:
@@ -226,7 +232,7 @@ def api_load_dataset():
         _tqdm_mod.auto.tqdm = _orig_auto
 
     _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
-    return jsonify({"ok": True, "rows": int(len(data.df))})
+    return jsonify({"ok": True, "rows": int(len(data.df)), "reset_dataset": reset_dataset})
 
 
 @app.get("/api/browse")
