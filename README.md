@@ -2,7 +2,7 @@
 [![codecov](https://codecov.io/gh/samuelmurail/af_analysis/graph/badge.svg?token=WOJYQKKOP7)](https://codecov.io/gh/samuelmurail/af_analysis)
 [![Build Status](https://dev.azure.com/samuelmurailRPBS/af_analysis/_apis/build/status%2Fsamuelmurail.af_analysis?branchName=main)](https://dev.azure.com/samuelmurailRPBS/af_analysis/_build/latest?definitionId=2&branchName=main)
 [![PyPI - Version](https://img.shields.io/pypi/v/af-analysis)](https://pypi.org/project/af-analysis/)
-[![Downloads](https://static.pepy.tech/badge/af2-analysis)](https://pepy.tech/project/af2-analysis)
+[![Downloads](https://static.pepy.tech/badge/af-analysis)](https://pepy.tech/project/af-analysis)
 [![status](https://joss.theoj.org/papers/0c359e32dc2f159688848361530239f5/status.svg)](https://joss.theoj.org/papers/0c359e32dc2f159688848361530239f5)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 [![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/samuelmurail/af_analysis/blob/main/basic_example_colab.ipynb)
