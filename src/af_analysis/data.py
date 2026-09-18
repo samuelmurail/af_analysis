@@ -342,6 +342,18 @@ class Data:
         import ast
 
         self.df = pd.read_csv(path)
+
+        # Strip any spurious surrounding quotes from path columns that can
+        # appear when a CSV was produced by tools that repr()-format strings.
+        for _path_col in ["pdb", "relaxed_pdb", "data_file"]:
+            if _path_col in self.df.columns:
+                self.df[_path_col] = self.df[_path_col].apply(
+                    lambda v: v.strip("'\"")
+                    if isinstance(v, str) and len(v) >= 2
+                    and v[0] in ("'", '"') and v[-1] == v[0]
+                    else v
+                )
+
         self.dir = os.path.dirname(self.df["pdb"][0])
 
         # Restore array/list columns that were serialized as strings by export_csv.

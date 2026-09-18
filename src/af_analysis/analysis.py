@@ -1131,7 +1131,12 @@ def compute_ftdmp(
     return
 
 
-def compute_dockq(data, ref_dict, fun=np.average, dockq_thresold=0.3):
+def compute_dockq(
+        data,
+        ref_dict,
+        dockq_thresold=0.3,
+        peptide=False,
+    ):
     """Compute the DockQ score from the PAE matrix.
 
     Parameters
@@ -1140,10 +1145,10 @@ def compute_dockq(data, ref_dict, fun=np.average, dockq_thresold=0.3):
         object containing the data
     ref_dict : dict
         dictionary containing the reference PAE matrix for each query
-    fun : function
-        function to apply to the PAE scores
     dockq_thresold : float
         threshold with multiple chain to recompute DockQ score, default is 0.3
+    peptide : bool
+        whether to compute DockQ for peptide complexes, default is False
 
     Returns
     -------
@@ -1206,32 +1211,39 @@ def compute_dockq(data, ref_dict, fun=np.average, dockq_thresold=0.3):
             lig_chains=lig_chains,
             native_rec_chains=native_rec_chains,
             native_lig_chains=native_lig_chains,
+            peptide=peptide,
         )
 
         if len(rec_chains) > 1 and dockq_score["DockQ"][0] < dockq_thresold:
             # If the model has multiple chains and the DockQ score is below the threshold,
             # recompute the DockQ score using different alignement modes
             new_results = [dockq_score]
-            for chain_perm in list(itertools.permutations(rec_chains, len(rec_chains)))[
-                1:
-            ]:
-                new_results.append(
-                    pdb_cpp_analysis.dockQ(
-                        model,
-                        ref_coor,
-                        rec_chains=list(chain_perm),
-                        lig_chains=lig_chains,
-                        native_rec_chains=native_rec_chains,
-                        native_lig_chains=native_lig_chains,
-                    )
+
+            new_dockq = pdb_cpp_analysis.dockQ_multimer(
+                    model,
+                    ref_coor,
+                    peptide=peptide,
                 )
+            # print(new_dockq)
+            # print(f"DockQ scores for different alignement modes: {new_dockq['interfaces']}")
+            for value in new_dockq['interfaces']:
+                # print(value)
+                # print(type(new_dockq['interfaces']))
+                # print(new_dockq['interfaces'][value])
+
+                #print(f"Interface {key}: DockQ={value:.3f}")
+                if new_dockq['interfaces'][value] is not None:
+                    # print(new_dockq['interfaces'][value]['DockQ'])
+                    new_results.append(new_dockq['interfaces'][value])
+
             # Select the best result
+            # print(new_results)
             dockq_score = max(new_results, key=lambda x: x["DockQ"][0])
 
         # print(dockq_score)
         # print(f"dockq: {dockq_score['DockQ'][0]:.3f} Lrms:  {dockq_score['LRMS'][0]:.2f}")
         dockq_list.append(dockq_score["DockQ"][0])
-        lrmsd_list.append(dockq_score["LRMS"][0])
+        lrmsd_list.append(dockq_score["LRMSD"][0])
         fnat_list.append(dockq_score["Fnat"][0])
 
     assert len(dockq_list) == len(data.df["query"])

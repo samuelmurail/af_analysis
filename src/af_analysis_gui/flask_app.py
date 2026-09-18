@@ -687,8 +687,10 @@ def api_cluster():
     Returns:   { "queries": [ { "query": str, "n_clusters": int,
                                 "points": [{"row", "x", "y", "cluster"}] } ] }
     """
+    import sys
     import pandas as pd
-    from af_analysis import clustering as _clust
+    import tqdm as _tqdm_mod
+    import af_analysis.clustering as _clust_mod
 
     try:
         data = _require_data()
@@ -701,8 +703,20 @@ def api_cluster():
     distance_selection = payload.get("distance_selection") or "backbone"
     rmsd_scale = bool(payload.get("rmsd_scale", False))
 
+    # Drain stale progress events from any previous operation.
+    while not _PROGRESS_QUEUE.empty():
+        try:
+            _PROGRESS_QUEUE.get_nowait()
+        except queue.Empty:
+            break
+
+    _orig_clust = _clust_mod.tqdm
+    _orig_auto  = _tqdm_mod.auto.tqdm
+    _clust_mod.tqdm      = _TqdmStream
+    _tqdm_mod.auto.tqdm  = _TqdmStream
+
     try:
-        cluster_result = _clust.hierarchical(
+        cluster_result = _clust_mod.hierarchical(
             data.df,
             threshold=threshold,
             align_selection=align_selection,
@@ -723,10 +737,20 @@ def api_cluster():
         if isinstance(universes, dict):
             STATE.cluster_universes = universes
     except Exception:
+        _clust_mod.tqdm     = _orig_clust
+        _tqdm_mod.auto.tqdm = _orig_auto
+        _PROGRESS_QUEUE.put_nowait(
+            {"desc": "__end__", "n": 0, "total": 0, "done": True}
+        )
         return (
             jsonify({"error": "Clustering failed", "details": traceback.format_exc()}),
             500,
         )
+    finally:
+        _clust_mod.tqdm     = _orig_clust
+        _tqdm_mod.auto.tqdm = _orig_auto
+
+    _PROGRESS_QUEUE.put_nowait({"desc": "__end__", "n": 0, "total": 0, "done": True})
 
     # Build per-query response using positional (reset) row indices so they
     # match the `row` field used by the table and structure endpoints.

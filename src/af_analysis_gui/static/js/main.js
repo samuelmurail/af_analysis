@@ -363,9 +363,9 @@ function initEvents() {
   if (plotPanelEl && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => {
       const pEl = document.getElementById('plddt-plot');
-      if (pEl?._fullLayout) Plotly.Plots.resize(pEl);
+      if (pEl?._fullLayout && pEl.offsetParent !== null) Plotly.Plots.resize(pEl);
       const cEl = document.getElementById('cluster-main-plot');
-      if (cEl?._fullLayout) Plotly.Plots.resize(cEl);
+      if (cEl?._fullLayout && cEl.offsetParent !== null) Plotly.Plots.resize(cEl);
     }).observe(plotPanelEl);
   }
 
@@ -585,19 +585,58 @@ function initEvents() {
     const alignSel    = document.getElementById('cluster-align-sel')?.value.trim() || 'backbone';
     const distSel     = document.getElementById('cluster-dist-sel')?.value.trim()  || 'backbone';
     const rmsdScale = !!document.getElementById('cluster-rmsd-scale')?.checked;
-    const statusEl = document.getElementById('cluster-status');
+    const statusEl    = document.getElementById('cluster-status');
+    const progressEl  = document.getElementById('cluster-progress');
+    const barEl       = document.getElementById('cluster-progress-bar');
+    const labelEl     = document.getElementById('cluster-progress-label');
+
+    const showProgress = (desc, n, total) => {
+      if (!progressEl) return;
+      progressEl.style.display = '';
+      const pct = total > 0 ? Math.round(100 * n / total) : 0;
+      if (barEl)   barEl.style.width = `${pct}%`;
+      if (labelEl) labelEl.textContent = total > 0
+        ? `${desc}: ${n} / ${total} (${pct}%)`
+        : `${desc}…`;
+    };
+    const hideProgress = () => { if (progressEl) progressEl.style.display = 'none'; };
+
     if (statusEl) { statusEl.textContent = 'Clustering…'; statusEl.style.color = '#2d3a57'; }
-    _hideDialog('cluster-dialog');
+    hideProgress();
+
+    // Open SSE stream first, then fire the cluster request (dialog stays open to show progress).
+    let sseResolve;
+    const sseDone = new Promise(r => { sseResolve = r; });
+    const es = new EventSource('/api/progress/stream');
+    es.onmessage = (ev) => {
+      try {
+        const d = JSON.parse(ev.data);
+        if (d.desc === '__end__') {
+          es.close();
+          sseResolve();
+        } else {
+          showProgress(d.desc, d.n, d.total);
+        }
+      } catch {}
+    };
+    es.onerror = () => { es.close(); sseResolve(); };
+
     try {
       const data = await api('/api/cluster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ threshold, align_selection: alignSel, distance_selection: distSel, rmsd_scale: rmsdScale }),
       });
+      await sseDone;
+      hideProgress();
       if (statusEl) statusEl.textContent = '';
+      _hideDialog('cluster-dialog');
       renderClusterPanel(data.queries);
       await refreshTableAndPanels();
     } catch (err) {
+      await sseDone;
+      hideProgress();
+      _hideDialog('cluster-dialog');
       if (statusEl) {
         statusEl.style.color = '#a11927';
         statusEl.title = err.details || '';
@@ -756,33 +795,55 @@ function _renderMdsPlot(plotDiv, q) {
 }
 
 // Returns an array (one entry per arm) of Sets of row indices under that arm.
+// Uses an iterative post-order traversal to avoid call-stack overflow with large
+// dendrograms (500+ leaves would blow JS recursion limits with a naive approach).
 function _computeArmLeaves(d, tickvals) {
   const n = d.icoord.length;
-  // Map arm x-center (×100, rounded) → arm index for fast lookup.
   const byCenter = new Map();
   for (let i = 0; i < n; i++) {
     const key = Math.round((d.icoord[i][0] + d.icoord[i][3]) / 2 * 100);
     byCenter.set(key, i);
   }
-  const cache = new Array(n).fill(null);
-  function get(i) {
-    if (cache[i]) return cache[i];
-    const ic = d.icoord[i], dc = d.dcoord[i];
-    const s = new Set();
-    for (const [fx, fy] of [[ic[0], dc[0]], [ic[3], dc[3]]]) {
-      if (fy === 0) {
-        // Foot touches the baseline → this is a leaf.
-        const li = tickvals.findIndex(tv => Math.abs(tv - fx) < 1e-6);
-        if (li >= 0) s.add(d.leaves[li]);
+  const armLeaves = new Array(n).fill(null);
+
+  for (let start = 0; start < n; start++) {
+    if (armLeaves[start] !== null) continue;
+    // Each stack frame: { idx, done }.
+    // First visit (done=false): mark done=true, push uncomputed children.
+    // Second visit (done=true): compute this arm's leaf set and pop.
+    const stack = [{ idx: start, done: false }];
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1];
+      if (frame.done) {
+        stack.pop();
+        const i = frame.idx;
+        const ic = d.icoord[i], dc = d.dcoord[i];
+        const s = new Set();
+        for (const [fx, fy] of [[ic[0], dc[0]], [ic[3], dc[3]]]) {
+          if (fy === 0) {
+            const li = tickvals.findIndex(tv => Math.abs(tv - fx) < 1e-6);
+            if (li >= 0) s.add(d.leaves[li]);
+          } else {
+            const ci = byCenter.get(Math.round(fx * 100));
+            if (ci !== undefined) for (const r of armLeaves[ci]) s.add(r);
+          }
+        }
+        armLeaves[i] = s;
       } else {
-        // Foot connects to a child arm whose center is at fx.
-        const ci = byCenter.get(Math.round(fx * 100));
-        if (ci !== undefined) for (const r of get(ci)) s.add(r);
+        frame.done = true;
+        const ic = d.icoord[frame.idx], dc = d.dcoord[frame.idx];
+        for (const [fx, fy] of [[ic[0], dc[0]], [ic[3], dc[3]]]) {
+          if (fy !== 0) {
+            const ci = byCenter.get(Math.round(fx * 100));
+            if (ci !== undefined && armLeaves[ci] === null) {
+              stack.push({ idx: ci, done: false });
+            }
+          }
+        }
       }
     }
-    return (cache[i] = s);
   }
-  return Array.from({ length: n }, (_, i) => get(i));
+  return armLeaves;
 }
 
 function _renderDendrogram(plotDiv, q) {

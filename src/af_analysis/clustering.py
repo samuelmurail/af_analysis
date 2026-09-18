@@ -11,6 +11,7 @@ import pandas as pd
 import pdb_cpp
 import logging
 from collections import Counter
+from tqdm.auto import tqdm
 
 
 # Autorship information
@@ -68,6 +69,15 @@ def read_numerous_pdb(pdb_files, batch_size=1000):
 
     all_frames = []
 
+    # Strip any spurious surrounding quotes that can appear when paths were
+    # loaded from a CSV produced by tools that include Python string delimiters.
+    pdb_files = [
+        f.strip("'\"")
+        if isinstance(f, str) and len(f) >= 2 and f[0] in ("'", '"') and f[-1] == f[0]
+        else f
+        for f in pdb_files
+    ]
+
     if any([pdb.endswith("cif") for pdb in pdb_files]):
         model = pdb_cpp.Coor(pdb_files[0])
         for file in pdb_files[1:]:
@@ -79,8 +89,8 @@ def read_numerous_pdb(pdb_files, batch_size=1000):
         model.write("tmp.pdb")
         return mda.Universe("tmp.pdb", "tmp.pdb")
 
-    for i in range(0, len(pdb_files), batch_size):
-        # print(f"Reading frames {i:5} to {i+batch_size:5}, total : {len(pdb_files[i:i+batch_size])} frames")
+    for i in tqdm(range(0, len(pdb_files), batch_size), desc="reading_pdb",
+                   total=(len(pdb_files) + batch_size - 1) // batch_size):
         local_u = mda.Universe(pdb_files[0], pdb_files[i : i + batch_size])
         for ts in local_u.trajectory:
             all_frames.append(ts.positions.copy())
@@ -240,7 +250,7 @@ def hierarchical(
     elif isinstance(distance_selection, str):
         distance_selection = {pdb: distance_selection for pdb in query_list}
 
-    for pdb in query_list:
+    for pdb in tqdm(query_list, total=len(query_list), desc="clustering"):
         files = [file for file in df[df["query"] == pdb]["pdb"] if not pd.isnull(file)]
 
         # Check that only the last df rows are missing
